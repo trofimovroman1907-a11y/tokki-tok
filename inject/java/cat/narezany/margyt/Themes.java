@@ -962,6 +962,12 @@ public final class Themes {
      * window's own background is read first, and the configuration is only the
      * answer when there is no window to look at.
      */
+    /** Look at TikTok's screen again now, whatever was seen a moment ago. */
+    static void relook() {
+        asked = 0;
+        isDark();
+    }
+
     public static boolean isDark() {
         long now = android.os.SystemClock.uptimeMillis();
         if (mode != 0 && now - asked < 1000) return mode == 1;

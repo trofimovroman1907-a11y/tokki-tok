@@ -87,7 +87,9 @@ final class ProfileVerdict {
             LinearLayout block = (LinearLayout) view;
             String uid = uid(component);
             Badges.Verdict verdict = Badges.verdict(uid);
+            ground = Md3.behind(block);
             View plate = find(block);
+            if (plate != null) recolour(plate);
             boolean marking = uid != null && owner() && !uid.equals(Account.id());
             if (verdict == null && !marking) {
                 if (plate != null) drop(block, plate);
@@ -245,9 +247,24 @@ final class ProfileVerdict {
         });
     }
 
-    /** The words on TikTok's own page, light or dark as the page is, not the mod's settings. */
+    /** What the profile's own page is painted with, read off the screen like the counters do. */
+    private static int ground = 0xFF121212;
+
+    /** The words on TikTok's own page, light or dark as the page under the plate really is. */
     private static int ink() {
-        return Themes.isDark() ? 0xFFFFFFFF : 0xFF161823;
+        return Md3.ink(ground);
+    }
+
+    /** Words and rim again, for a page that turned light or dark since the plate was made. */
+    private static void recolour(View plate) {
+        int ink = ink();
+        if (plate instanceof TextView) ((TextView) plate).setTextColor(ink);
+        if (plate instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) plate;
+            for (int i = 0; i < group.getChildCount(); i++) if (group.getChildAt(i) instanceof TextView) ((TextView) group.getChildAt(i)).setTextColor(ink);
+        }
+        if (plate.getBackground() instanceof GradientDrawable && plate instanceof TextView)
+            ((GradientDrawable) plate.getBackground()).setStroke(Math.max(1, dp(plate.getContext(), 1)), (ink & 0xFFFFFF) | 0x44000000);
     }
 
     private static View make(Context c, Badges.Verdict verdict) {

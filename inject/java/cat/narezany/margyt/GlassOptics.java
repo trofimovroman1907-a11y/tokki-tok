@@ -13,11 +13,15 @@ final class GlassOptics {
     private Lens lens;
     private boolean failed;
     private Integer surfaceColour;
+    private boolean surfaceDark;
 
     void draw(Canvas canvas, View view, RectF bounds, float top, float bottom, int colour, float press) {
         float density = view.getResources().getDisplayMetrics().density;
         if (Color.alpha(colour) < 255) {
-            if (surfaceColour == null) surfaceColour = Skin.remembered(view.getContext()).card;
+            // taken again when TikTok's theme turns: a card colour kept from the other theme
+            // painted a light screen's glass dark
+            boolean dark = Themes.isDark();
+            if (surfaceColour == null || surfaceDark != dark) { surfaceColour = Skin.remembered(view.getContext()).card; surfaceDark = dark; }
             float alpha = Color.alpha(colour) / 255f;
             colour = Color.rgb(Math.round(Color.red(colour)*alpha+Color.red(surfaceColour)*(1-alpha)),
                     Math.round(Color.green(colour)*alpha+Color.green(surfaceColour)*(1-alpha)),
@@ -41,7 +45,7 @@ final class GlassOptics {
                         && busy(frame, point[0] - frame.x + bounds.left, point[1] - frame.y + bounds.top, local.width(), local.height())) {
                     float x=point[0]-frame.x+bounds.left, y=point[1]-frame.y+bounds.top;
                     lens.paint(canvas,frame,transform,x,y,local.width(),local.height(),top,bottom,colour,press,density);
-                    veil(canvas,view,top,bottom,density);
+                    veil(canvas,view,top,bottom,density,colour);
                     canvas.restoreToCount(save);
                     return;
                 }
@@ -60,7 +64,7 @@ final class GlassOptics {
                 ?new int[]{0x30ffffff,0x14ffffff}:new int[]{0x90ffffff,0x08ffffff,0x65ffffff},null,Shader.TileMode.CLAMP));
         local.inset(density*.4f,density*.4f);canvas.drawRoundRect(local,top,top,paint);
         paint.setShader(null);paint.setStyle(Paint.Style.FILL);
-        local.inset(-density*.4f,-density*.4f);veil(canvas,view,top,bottom,density);
+        local.inset(-density*.4f,-density*.4f);veil(canvas,view,top,bottom,density,colour);
         canvas.restoreToCount(save);
     }
 
@@ -104,11 +108,13 @@ final class GlassOptics {
      * material, not a clear one. Liquid glass keeps the small things clear (buttons,
      * the tab bar) and lays it only under the big ones, the cards and sheets with text.
      */
-    private void veil(Canvas canvas, View view, float top, float bottom, float density) {
+    private void veil(Canvas canvas, View view, float top, float bottom, float density, int surface) {
         float w = local.width(), h = local.height();
         boolean big = h >= density * 120 && w >= view.getResources().getDisplayMetrics().widthPixels * .55f;
         if (!Design.fluent() && !big) return;
         int page = Design.pageColour(view.getContext());
+        // the surface's own colour knows which theme it is in; a remembered page may not
+        if ((NavBar.bright(page) < .5f) != (NavBar.bright(surface | 0xFF000000) < .5f)) page = surface;
         float amount = Design.fluent() ? (big ? .76f : .66f) : .5f;
         paint.setShader(null);
         paint.setStyle(Paint.Style.FILL);
