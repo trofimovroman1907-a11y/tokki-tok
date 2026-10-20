@@ -47,13 +47,17 @@ final class ProfileVerdict {
         apply(block);
     }
 
-    private static final int WATCHED = 0x7e0c0339;
+    private static final int WATCHED = 0x7e0c0339, LOGGED = 0x7e0c033b;
 
     private static boolean vertical(View view) {
         return view instanceof LinearLayout && ((LinearLayout) view).getOrientation() == LinearLayout.VERTICAL;
     }
 
     private static View column(Object component, View view) {
+        // TikTok 47.2.41: the header's own column, holding the name and counts, the bio,
+        // the chips and the highlights. The container's fields hold the whole page instead.
+        View header = named(view, "t7l", 0);
+        if (vertical(header)) return header;
         for (Class<?> step = component.getClass(); step != null && step != Object.class; step = step.getSuperclass()) {
             if (!step.getName().endsWith("HeaderBaseContainerComponent")) continue;
             for (java.lang.reflect.Field field : step.getDeclaredFields()) {
@@ -85,7 +89,6 @@ final class ProfileVerdict {
             LinearLayout block = (LinearLayout) view;
             String uid = uid(component);
             Badges.Verdict verdict = Badges.verdict(uid);
-            android.util.Log.e("MargyTVerdict", "apply uid=" + uid + " verdict=" + (verdict != null) + " children=" + block.getChildCount());
             View plate = find(block);
             if (verdict == null) {
                 if (plate != null) block.removeView(plate);
@@ -102,17 +105,44 @@ final class ProfileVerdict {
                 where.setMargins(side, dp(block.getContext(), 10), side, dp(block.getContext(), 4));
                 // posted: the block is in the middle of being laid out when it is asked
                 final View made = plate;
-                block.post(() -> { if (made.getParent() == null) block.addView(made, where); });
+                // right under the name and the counts, above the bio
+                block.post(() -> { if (made.getParent() == null) block.addView(made, Math.min(1, block.getChildCount()), where); });
                 return;
             }
-            // TikTok adds its rows to the end as they load; the plate stays the last of them
-            if (block.indexOfChild(plate) != block.getChildCount() - 1) {
-                final View moved = plate;
-                block.post(() -> { if (moved.getParent() == block) { block.removeView(moved); block.addView(moved); } });
+            // Where it stands is left alone once it is in: moving it back to the end on every
+            // layout fought TikTok, which keeps its rows in an order of its own, and the two
+            // took turns forever.
+            if (!Boolean.TRUE.equals(plate.getTag(LOGGED))) {
+                plate.setTag(LOGGED, Boolean.TRUE);
+                final View shown = plate;
+                plate.postDelayed(() -> {
+                    int[] at = new int[2]; shown.getLocationOnScreen(at);
+                    StringBuilder chain = new StringBuilder();
+                    for (View step = block; step != null; step = step.getParent() instanceof View ? (View) step.getParent() : null) {
+                        chain.append(step.getClass().getSimpleName()).append(step.getVisibility() == View.VISIBLE ? "" : "(hidden)")
+                                .append(' ').append(step.getHeight()).append(" > ");
+                        if (chain.length() > 600) break;
+                    }
+                    android.util.Log.e("MargyTVerdict", "plate at " + at[0] + "," + at[1] + " " + shown.getWidth() + "x" + shown.getHeight()
+                            + " index " + block.indexOfChild(shown) + "/" + block.getChildCount() + " shown=" + shown.isShown() + " chain " + chain);
+                }, 1500);
             }
         } catch (Throwable error) {
             Diary.note("profile verdict: " + error);
         }
+    }
+
+    private static View named(View view, String name, int depth) {
+        if (view == null || depth > 12) return null;
+        if (name.equals(Names.of(view))) return view;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                View found = named(group.getChildAt(i), name, depth + 1);
+                if (found != null) return found;
+            }
+        }
+        return null;
     }
 
     private static View find(ViewGroup block) {

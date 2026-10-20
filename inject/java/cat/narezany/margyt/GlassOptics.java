@@ -88,7 +88,7 @@ final class GlassOptics {
         private static final String BLUR="uniform shader content;uniform float2 axis;half4 main(float2 p){return content.eval(p)*.4026+(content.eval(p+axis)+content.eval(p-axis))*.2442+(content.eval(p+axis*2.)+content.eval(p-axis*2.))*.0545;}";
         private RuntimeShader shader;
         private RuntimeShader acrylic;
-        private final RuntimeShader blurX=new RuntimeShader(BLUR),blurY=new RuntimeShader(BLUR),wideX=new RuntimeShader(BLUR),wideY=new RuntimeShader(BLUR);
+        private final RuntimeShader blurX=new RuntimeShader(BLUR),blurY=new RuntimeShader(BLUR);
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final float[] hsv=new float[3];
         private Bitmap bound;
@@ -103,15 +103,16 @@ final class GlassOptics {
             matrix.setScale(1/frame.scale,1/frame.scale);matrix.postTranslate(-x,-y);
             input.setLocalMatrix(matrix);
             // Fluent deliberately softens only slightly; Liquid Glass keeps its own optics.
-            // two passes, the second wider: more blur than one wide pass could give without banding
-            float blur=dp*(Design.fluent()?1.05f:1.3f);
+            // One pass across and one down, a little wider than before. Never more passes:
+            // shaders chained this way are not drawn into a buffer between them, each one
+            // samples the whole chain under it, and two more passes made it 625 reads a
+            // pixel, which stalled the GPU and with it the app.
+            float blur=dp*(Design.fluent()?1.15f:1.45f);
             blurX.setInputShader("content",input);blurX.setFloatUniform("axis",blur,0);
             blurY.setInputShader("content",blurX);blurY.setFloatUniform("axis",0,blur);
-            wideX.setInputShader("content",blurY);wideX.setFloatUniform("axis",blur*1.9f,0);
-            wideY.setInputShader("content",wideX);wideY.setFloatUniform("axis",0,blur*1.9f);
             if(Design.fluent()){
                 if(acrylic==null)acrylic=new RuntimeShader(FluentShader.ACRYLIC);
-                acrylic.setInputShader("content",wideY);
+                acrylic.setInputShader("content",blurY);
                 acrylic.setFloatUniform("size",w,h);
                 acrylic.setFloatUniform("radii",Math.min(top,dp*8),Math.min(bottom,dp*8));
                 acrylic.setFloatUniform("tint",Color.red(colour)/255f,Color.green(colour)/255f,Color.blue(colour)/255f,.24f);
@@ -119,7 +120,7 @@ final class GlassOptics {
                 paint.setShader(acrylic);canvas.drawRect(0,0,w,h,paint);return;
             }
             if(shader==null)shader=new RuntimeShader(GlassShader.LENS);
-            shader.setInputShader("content",wideY);
+            shader.setInputShader("content",blurY);
             shader.setFloatUniform("margin",0);
             shader.setFloatUniform("viewSize",w,h);
             shader.setFloatUniform("shape1",w/2,h/2,w/2,h/2);

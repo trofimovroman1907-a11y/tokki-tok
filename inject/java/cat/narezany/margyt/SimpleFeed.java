@@ -13,7 +13,7 @@ import java.util.WeakHashMap;
 /**
  * The simplified feed: less on top of the video.
  *
- * Gone are the For You / Following tabs and the search button above, the
+ * Gone are the For You / Following tabs above (the search button stays), the
  * author's picture with its follow button, the line naming the sound and the
  * spinning record at the bottom right. The buttons on the right are a little
  * smaller and the caption is smaller and shorter. The idea is the TikTok You
@@ -107,13 +107,15 @@ final class SimpleFeed {
         }
     }
 
-    /** The tabs and the search button go; the LIVE button stays while the eye stands in it. */
+    /** The tabs go; search stays, and the LIVE button while the eye stands in it. */
     private static void top(View row) {
         if (!(row instanceof ViewGroup)) { hide(row, View.INVISIBLE); return; }
         ViewGroup group = (ViewGroup) row;
         for (int i = 0; i < group.getChildCount(); i++) {
             View child = group.getChildAt(i);
-            if ("k_2".equals(Names.of(child)) && Dim.isConfigured()) { show(child); continue; }
+            String name = Names.of(child);
+            // search stays, and LIVE while the eye stands in it
+            if ("k_5".equals(name) || "k_2".equals(name) && Dim.isConfigured()) { show(child); continue; }
             hide(child, View.INVISIBLE);
         }
     }
