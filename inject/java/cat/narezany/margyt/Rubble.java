@@ -30,10 +30,13 @@ import java.util.Random;
  * fall, roll with the phone and jump when it is shaken.
  *
  * Every piece is a picture of a real view, taken once; the view itself is made
- * see-through and kept that way, so it still answers a tap where it used to be.
- * The video underneath is left alone. Pieces that turn up later (the next video's
- * buttons) are thrown in as well, up to a limit. Nothing is saved: it lasts until
- * TikTok is closed for good and opened again.
+ * see-through and kept that way. A tap on a piece, wherever it has rolled, is
+ * handed to the view it came from, at the view's real place; a tap on the empty
+ * place a piece left does nothing. The video underneath is left alone. Pieces
+ * that turn up later (the next video's buttons) are thrown in as well, up to a
+ * limit, and a piece whose view is no longer on the screen (the profile, once
+ * the feed is open) is put away until it is back. Nothing is saved: it lasts
+ * until TikTok is closed for good and opened again.
  */
 final class Rubble {
 
@@ -80,7 +83,11 @@ final class Rubble {
     private static final class Piece {
         View source;
         Bitmap picture;
-        float x, y, w, h, vx, vy, angle, spin, mass;
+        float x, y, w, h, vx, vy, angle, spin, mass, alpha;
+        /** Still lying where it came from, over its neighbours: it touches nothing until it is clear of them. */
+        boolean ghost = true;
+        /** Its view is not on the screen just now. */
+        boolean away;
     }
 
     private static final class World extends View implements Choreographer.FrameCallback, SensorEventListener {
@@ -121,7 +128,6 @@ final class Rubble {
             ticking = false;
         }
 
-        @Override public boolean onTouchEvent(android.view.MotionEvent event) { return false; }
 
         private void tick() {
             if (ticking) return;
@@ -191,9 +197,9 @@ final class Rubble {
             piece.h = view.getHeight();
             piece.x = at[0] - origin[0];
             piece.y = at[1] - origin[1];
-            piece.vx = (random.nextFloat() - .5f) * unit * 60;
-            piece.vy = -random.nextFloat() * unit * 80;
-            piece.spin = (random.nextFloat() - .5f) * 120;
+            // it starts exactly where it was, at rest, and falls from there
+            piece.spin = (random.nextFloat() - .5f) * 30;
+            piece.alpha = view.getAlpha();
             piece.mass = Math.max(1f, piece.w * piece.h / (unit * unit * 100));
             pieces.add(piece);
             taken.put(view, Boolean.TRUE);
@@ -242,8 +248,9 @@ final class Rubble {
                 long now = android.os.SystemClock.uptimeMillis();
                 // what TikTok shows later comes apart too
                 if (now - collected > 1500 && pieces.size() < MOST) collect();
+                watch();
                 for (int i = 0; i < 4; i++) step(dt / 4);
-                for (Piece piece : pieces) if (piece.source.getAlpha() != 0f) piece.source.setAlpha(0f);
+                for (Piece piece : pieces) if (!piece.away && piece.source.getAlpha() != 0f) piece.source.setAlpha(0f);
             } catch (Throwable error) {
                 Diary.note("rubble frame: " + error);
             }
@@ -251,10 +258,90 @@ final class Rubble {
             tick();
         }
 
+        private final Rect seen = new Rect();
+
+        /** Puts away the pieces whose views have left the screen, and gives up those that are gone for good. */
+        private void watch() {
+            for (int i = pieces.size() - 1; i >= 0; i--) {
+                Piece p = pieces.get(i);
+                if (!p.source.isAttachedToWindow()) {
+                    // a recycled view may come back as something else: it gets its look back
+                    p.source.setAlpha(p.alpha);
+                    p.source.setTag(TAG, null);
+                    taken.remove(p.source);
+                    pieces.remove(i);
+                    continue;
+                }
+                p.away = !p.source.isShown() || !p.source.getGlobalVisibleRect(seen);
+            }
+        }
+
+        // ------------------------------------------------------------ taps
+
+        private Piece held;
+        private boolean swallowing, forwarding;
+        private float downX, downY;
+
+        @Override public boolean dispatchTouchEvent(android.view.MotionEvent event) {
+            if (forwarding) return false;
+            int action = event.getActionMasked();
+            if (action == android.view.MotionEvent.ACTION_DOWN) {
+                held = hit(event.getX(), event.getY());
+                downX = event.getRawX(); downY = event.getRawY();
+                if (held != null) return true;
+                // the empty place a piece came from does nothing any more
+                swallowing = leftBehind((int) event.getRawX(), (int) event.getRawY());
+                return swallowing;
+            }
+            if (held != null) {
+                if (action == android.view.MotionEvent.ACTION_UP) {
+                    Piece tapped = held;
+                    held = null;
+                    if (Math.hypot(event.getRawX() - downX, event.getRawY() - downY) < unit * 12) tap(tapped);
+                    else { tapped.vx += (event.getRawX() - downX) * 4; tapped.vy += (event.getRawY() - downY) * 4; }
+                } else if (action == android.view.MotionEvent.ACTION_CANCEL) held = null;
+                return true;
+            }
+            if (swallowing) {
+                if (action == android.view.MotionEvent.ACTION_UP || action == android.view.MotionEvent.ACTION_CANCEL) swallowing = false;
+                return true;
+            }
+            return false;
+        }
+
+        private Piece hit(float x, float y) {
+            for (int i = pieces.size() - 1; i >= 0; i--) {
+                Piece p = pieces.get(i);
+                if (!p.away && x >= p.x && x <= p.x + p.w && y >= p.y && y <= p.y + p.h) return p;
+            }
+            return null;
+        }
+
+        private boolean leftBehind(int x, int y) {
+            for (Piece p : pieces) if (!p.away && p.source.getGlobalVisibleRect(seen) && seen.contains(x, y)) return true;
+            return false;
+        }
+
+        /** A tap at the middle of the piece's own view, where it really is, past this overlay. */
+        private void tap(Piece piece) {
+            int[] at = new int[2], origin = new int[2];
+            piece.source.getLocationOnScreen(at);
+            screen.getLocationOnScreen(origin);
+            float x = at[0] - origin[0] + piece.source.getWidth() / 2f, y = at[1] - origin[1] + piece.source.getHeight() / 2f;
+            long now = android.os.SystemClock.uptimeMillis();
+            android.view.MotionEvent down = android.view.MotionEvent.obtain(now, now, android.view.MotionEvent.ACTION_DOWN, x, y, 0);
+            android.view.MotionEvent up = android.view.MotionEvent.obtain(now, now + 40, android.view.MotionEvent.ACTION_UP, x, y, 0);
+            forwarding = true;
+            try { screen.dispatchTouchEvent(down); screen.dispatchTouchEvent(up); }
+            catch (Throwable error) { Diary.note("rubble tap: " + error); }
+            finally { forwarding = false; down.recycle(); up.recycle(); }
+        }
+
         private void step(float dt) {
             float width = getWidth(), height = getHeight();
             float pull = unit * 160; // pixels per second squared for each m/s²
             for (Piece p : pieces) {
+                if (p.away) continue;
                 p.vx += gx * pull * dt;
                 p.vy += gy * pull * dt;
                 p.vx *= 0.999f;
@@ -271,10 +358,25 @@ final class Rubble {
             }
             // pieces push each other apart, the light ones more
             int n = pieces.size();
+            // a piece that came off lying over others falls through them until it is clear;
+            // pushing them apart at once is what flung everything across the screen
             for (int i = 0; i < n; i++) {
                 Piece a = pieces.get(i);
+                if (!a.ghost || a.away) continue;
+                boolean clear = true;
+                for (int j = 0; j < n && clear; j++) {
+                    Piece b = pieces.get(j);
+                    if (b == a || b.away) continue;
+                    if (Math.min(a.x + a.w, b.x + b.w) > Math.max(a.x, b.x) && Math.min(a.y + a.h, b.y + b.h) > Math.max(a.y, b.y)) clear = false;
+                }
+                if (clear) a.ghost = false;
+            }
+            for (int i = 0; i < n; i++) {
+                Piece a = pieces.get(i);
+                if (a.ghost || a.away) continue;
                 for (int j = i + 1; j < n; j++) {
                     Piece b = pieces.get(j);
+                    if (b.ghost || b.away) continue;
                     float ox = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x);
                     if (ox <= 0) continue;
                     float oy = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
@@ -306,7 +408,7 @@ final class Rubble {
 
         @Override protected void onDraw(Canvas canvas) {
             for (Piece p : pieces) {
-                if (p.picture == null || p.picture.isRecycled()) continue;
+                if (p.away || p.picture == null || p.picture.isRecycled()) continue;
                 int save = canvas.save();
                 // the boxes knock about square; the tilt is for the eye and stays small
                 float tilt = (float) Math.toDegrees(Math.sin(Math.toRadians(p.angle))) * .35f;

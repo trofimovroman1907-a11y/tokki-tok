@@ -72,7 +72,7 @@ final class GlassOptics {
         boolean big = h >= density * 120 && w >= view.getResources().getDisplayMetrics().widthPixels * .55f;
         if (!Design.fluent() && !big) return;
         int page = Design.pageColour(view.getContext());
-        float amount = Design.fluent() ? (big ? .62f : .5f) : .5f;
+        float amount = Design.fluent() ? (big ? .76f : .66f) : .5f;
         paint.setShader(null);
         paint.setStyle(Paint.Style.FILL);
         paint.setColor((page & 0xffffff) | (Math.round(amount * 255f) << 24));

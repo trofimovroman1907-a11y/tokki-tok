@@ -38,8 +38,6 @@ final class ProfileVerdict {
         // component was handed: that one can be a frame round it. The column is found by
         // its type on the container class, then by looking inside the view.
         View block = column(component, view);
-        android.util.Log.e("MargyTVerdict", "bind " + component.getClass().getSimpleName() + " view=" + view.getClass().getName()
-                + " column=" + (block == null ? "none" : block.getClass().getName()) + " uid=" + uid(component));
         if (block == null) return;
         synchronized (owners) { owners.put(block, new WeakReference<>(component)); }
         if (block != view && !Boolean.TRUE.equals(block.getTag(WATCHED)))
@@ -47,7 +45,7 @@ final class ProfileVerdict {
         apply(block);
     }
 
-    private static final int WATCHED = 0x7e0c0339, LOGGED = 0x7e0c033b;
+    private static final int WATCHED = 0x7e0c0339, PENDING = 0x7e0c033b;
 
     private static boolean vertical(View view) {
         return view instanceof LinearLayout && ((LinearLayout) view).getOrientation() == LinearLayout.VERTICAL;
@@ -90,43 +88,36 @@ final class ProfileVerdict {
             String uid = uid(component);
             Badges.Verdict verdict = Badges.verdict(uid);
             View plate = find(block);
-            if (verdict == null) {
-                if (plate != null) block.removeView(plate);
+            boolean marking = uid != null && owner() && !uid.equals(Account.id());
+            if (verdict == null && !marking) {
+                if (plate != null) drop(block, plate);
                 return;
             }
-            String key = (verdict.good ? "1" : "0") + verdict.reason;
-            if (plate != null && !key.equals(plate.getTag(PLATE))) { block.removeView(plate); plate = null; }
-            if (plate == null) {
-                plate = make(block.getContext(), verdict);
-                plate.setTag(PLATE, key);
-                LinearLayout.LayoutParams where = new LinearLayout.LayoutParams(
-                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-                int side = dp(block.getContext(), 16);
-                where.setMargins(side, dp(block.getContext(), 10), side, dp(block.getContext(), 4));
-                // posted: the block is in the middle of being laid out when it is asked
-                final View made = plate;
-                // right under the name and the counts, above the bio
-                block.post(() -> { if (made.getParent() == null) block.addView(made, Math.min(1, block.getChildCount()), where); });
-                return;
+            String key = verdict == null ? "mark" : (verdict.good ? "1" : "0") + verdict.reason + (marking ? "+" : "");
+            if (plate != null && !key.equals(plate.getTag(PLATE))) { drop(block, plate); plate = null; }
+            if (plate != null) return;
+            plate = verdict == null ? chip(block.getContext()) : make(block.getContext(), verdict);
+            plate.setTag(PLATE, key);
+            if (marking) {
+                final String target = uid;
+                final Badges.Verdict now = verdict;
+                plate.setOnClickListener(v -> mark(v.getContext(), target, now, block));
             }
-            // Where it stands is left alone once it is in: moving it back to the end on every
-            // layout fought TikTok, which keeps its rows in an order of its own, and the two
-            // took turns forever.
-            if (!Boolean.TRUE.equals(plate.getTag(LOGGED))) {
-                plate.setTag(LOGGED, Boolean.TRUE);
-                final View shown = plate;
-                plate.postDelayed(() -> {
-                    int[] at = new int[2]; shown.getLocationOnScreen(at);
-                    StringBuilder chain = new StringBuilder();
-                    for (View step = block; step != null; step = step.getParent() instanceof View ? (View) step.getParent() : null) {
-                        chain.append(step.getClass().getSimpleName()).append(step.getVisibility() == View.VISIBLE ? "" : "(hidden)")
-                                .append(' ').append(step.getHeight()).append(" > ");
-                        if (chain.length() > 600) break;
-                    }
-                    android.util.Log.e("MargyTVerdict", "plate at " + at[0] + "," + at[1] + " " + shown.getWidth() + "x" + shown.getHeight()
-                            + " index " + block.indexOfChild(shown) + "/" + block.getChildCount() + " shown=" + shown.isShown() + " chain " + chain);
-                }, 1500);
-            }
+            LinearLayout.LayoutParams where = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            int side = dp(block.getContext(), 16);
+            where.setMargins(side, dp(block.getContext(), 10), side, dp(block.getContext(), 4));
+            // Added a moment later, because the block is in the middle of being laid out when
+            // it is asked. Until then the plate is kept on the block itself, so the passes in
+            // between see it is coming: without that each of them made one, and there were three.
+            final View made = plate;
+            block.setTag(PENDING, made);
+            // right under the name and the counts, above the bio. Where it stands is left
+            // alone after that: moving it about fought TikTok's own order of its rows.
+            block.post(() -> {
+                if (block.getTag(PENDING) == made) block.setTag(PENDING, null);
+                if (made.getParent() == null && find(block) == null) block.addView(made, Math.min(1, block.getChildCount()), where);
+            });
         } catch (Throwable error) {
             Diary.note("profile verdict: " + error);
         }
@@ -145,7 +136,14 @@ final class ProfileVerdict {
         return null;
     }
 
+    private static void drop(ViewGroup block, View plate) {
+        if (block.getTag(PENDING) == plate) block.setTag(PENDING, null);
+        if (plate.getParent() == block) block.removeView(plate);
+    }
+
     private static View find(ViewGroup block) {
+        Object pending = block.getTag(PENDING);
+        if (pending instanceof View) return (View) pending;
         for (int i = 0; i < block.getChildCount(); i++) if (plate(block.getChildAt(i))) return block.getChildAt(i);
         return null;
     }
@@ -181,6 +179,71 @@ final class ProfileVerdict {
             }
         }
         return null;
+    }
+
+    /** Whether the one looking wears the owner's badge, which is what the server asks for too. */
+    private static boolean owner() {
+        try {
+            Badges.Badge[] worn = Badges.of(Account.id());
+            if (worn != null) for (Badges.Badge one : worn) if (one != null && "owner".equals(one.id)) return true;
+        } catch (Throwable ignored) {}
+        return false;
+    }
+
+    /** For the owner on somebody else's profile without a mark yet: a small button to give one. */
+    private static View chip(Context c) {
+        Skin skin = Skin.remembered(c);
+        TextView chip = new TextView(c);
+        chip.setText(Text.VERDICT_MARK);
+        chip.setTextColor(skin.text);
+        chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        chip.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        chip.setPadding(dp(c, 14), dp(c, 8), dp(c, 14), dp(c, 8));
+        GradientDrawable back = new GradientDrawable();
+        back.setCornerRadius(dp(c, 16));
+        back.setStroke(Math.max(1, dp(c, 1)), (skin.text & 0xFFFFFF) | 0x44000000);
+        chip.setBackground(back);
+        Fonts.applyTree(chip);
+        return chip;
+    }
+
+    /** The owner's choice: recommended, not recommended or no mark, with a reason. */
+    private static void mark(Context c, String target, Badges.Verdict now, View block) {
+        Skin skin = Skin.remembered(c);
+        Panel panel = Panel.with(c, skin, Text.VERDICT_MARK);
+        final android.widget.EditText reason = panel.field(Text.VERDICT_REASON);
+        if (now != null && now.reason != null) reason.setText(now.reason);
+        panel.primary(Text.VERDICT_GOOD, () -> send(c, target, Boolean.TRUE, reason.getText().toString(), block));
+        panel.quiet(Text.VERDICT_BAD, () -> send(c, target, Boolean.FALSE, reason.getText().toString(), block));
+        if (now != null) panel.quiet(Text.VERDICT_DROP, () -> send(c, target, null, "", block));
+        panel.quiet(Text.CANCEL, null).show();
+    }
+
+    private static void send(Context c, String target, Boolean good, String reason, View block) {
+        final String uid = Account.id(), token = Mine.token();
+        if (uid == null || token.length() == 0) { Screen.say(Text.VERDICT_PROVE); return; }
+        Net.away("verdict", () -> {
+            boolean ok = false;
+            try {
+                org.json.JSONObject body = new org.json.JSONObject().put("uid", uid).put("token", token).put("target", target)
+                        .put("reason", reason == null ? "" : reason.trim());
+                if (good != null) body.put("good", good.booleanValue());
+                Net.Said said = Net.talk(Badges.SERVER + "/verdict", body.toString());
+                ok = said.ok();
+                if (!ok && Mine.asksForProof(said)) { Screen.say(Text.VERDICT_PROVE); ok = true; return; }
+                if (ok) Badges.refresh();
+            } catch (Throwable error) {
+                Diary.note("verdict: " + error);
+            }
+            final boolean done = ok;
+            block.post(() -> {
+                if (!done) { Screen.say(Text.VERDICT_FAILED); return; }
+                Screen.say(Text.VERDICT_SAVED);
+                // the badges are read again in the background; look once they are in
+                block.postDelayed(() -> apply(block), 1500);
+                block.postDelayed(() -> apply(block), 4000);
+            });
+        });
     }
 
     private static View make(Context c, Badges.Verdict verdict) {

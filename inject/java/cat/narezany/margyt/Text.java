@@ -1353,6 +1353,12 @@ final class Text {
     // The administration's mark on a profile.
     static final String VERDICT_GOOD = pick("✅ Рекомендуемый", "✅ Рекомендований", "✅ Recommended");
     static final String VERDICT_BAD = pick("⛔ Не рекомендуемый", "⛔ Не рекомендований", "⛔ Not recommended");
+    static final String VERDICT_PROVE = pick("Сначала подтверди аккаунт в настройках значков", "Спершу підтвердь акаунт у налаштуваннях значків", "Prove the account in the badge settings first");
+    static final String VERDICT_MARK = pick("Пометить аккаунт", "Позначити акаунт", "Mark this account");
+    static final String VERDICT_REASON = pick("Причина", "Причина", "Reason");
+    static final String VERDICT_DROP = pick("Снять пометку", "Зняти позначку", "Remove the mark");
+    static final String VERDICT_SAVED = pick("Пометка сохранена", "Позначку збережено", "Mark saved");
+    static final String VERDICT_FAILED = pick("Не получилось сохранить пометку", "Не вдалося зберегти позначку", "Could not save the mark");
     static String verdictWhy(boolean good, String reason) {
         String said = good
                 ? pick("Администрация MargyT отметила этот аккаунт как хороший.", "Адміністрація MargyT позначила цей акаунт як хороший.", "The MargyT team marked this account as a good one.")

@@ -717,6 +717,39 @@ def gradient(body, ip):
 CRASHED = {}
 
 
+def verdict(body, ip):
+    """A mark on somebody's profile, set from inside TikTok by whoever wears the owner's badge.
+
+    The same thing the panel does, for the one account that runs the project, so
+    that marking somebody does not mean finding their id and opening the panel.
+    The account has to have proved itself, and the badge is looked up here.
+    """
+    db = connect()
+    uid = vouched(db, body)
+    if not uid:
+        db.close()
+        return 403, {"error": "prove"}
+    if not db.execute("SELECT 1 FROM held WHERE uid = ? AND badge = 'owner'", (uid,)).fetchone():
+        db.close()
+        return 403, {"error": "owner only"}
+    target = body.get("target", "")
+    if not sane(target):
+        db.close()
+        return 400, {"error": "target"}
+    good = body.get("good")
+    if good is None:
+        db.execute("DELETE FROM verdict WHERE uid = ?", (target,))
+    else:
+        reason = " ".join(str(body.get("reason") or "").split())[:300]
+        db.execute("INSERT INTO verdict (uid, good, reason, at) VALUES (?, ?, ?, ?)"
+                   " ON CONFLICT(uid) DO UPDATE SET good=excluded.good,"
+                   " reason=excluded.reason, at=excluded.at",
+                   (target, 1 if good else 0, reason, int(time.time())))
+    db.commit()
+    db.close()
+    return 200, {"ok": True}
+
+
 def crash(body, raw, ip):
     """A crash somebody agreed to tell us about.
 
@@ -1533,6 +1566,8 @@ class Handler(BaseHTTPRequestHandler):
             code, out = free(body, ip)
         elif path == "/dep":
             code, out = dep_play(body, ip)
+        elif path == "/verdict":
+            code, out = verdict(body, ip)
         elif path == "/gradient":
             code, out = gradient(body, ip)
         elif path == "/crash":

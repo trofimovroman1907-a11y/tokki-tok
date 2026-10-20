@@ -245,7 +245,7 @@ public class SettingsActivity extends Activity {
 
         if (settingsGroup == 0) {
             if (Badges.freeStillOpen() && !Mine.hasFree()) column.addView(freeBanner());
-            column.addView(donateBanner());
+            if (!donateClosed && !supporter()) column.addView(donateBanner());
             column.addView(groupNavigation());
             column.addView(wrap(actionRow("info",Local.of("Обучение"),null,() -> Tutorial.show(this))));
             column.addView(versions());
@@ -923,6 +923,19 @@ public class SettingsActivity extends Activity {
      * The first thing on the screen, and the only thing here that asks for
      * something. Short, because a long one is an advertisement.
      */
+    /** Closed with its cross: gone until the settings are opened again. */
+    private boolean donateClosed;
+
+    /** Whether this account already wears the supporter's badge, hidden or shown. */
+    private static boolean supporter() {
+        try {
+            if (Mine.holds(Tester.SUPPORTER)) return true;
+            Badges.Badge[] worn = Badges.of(Account.id());
+            if (worn != null) for (Badges.Badge one : worn) if (one != null && Tester.SUPPORTER.equals(one.id)) return true;
+        } catch (Throwable ignored) {}
+        return false;
+    }
+
     private View donateBanner() {
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
@@ -933,12 +946,30 @@ public class SettingsActivity extends Activity {
         background.setColor(skin.card);
         card.setBackground(background);
 
+        LinearLayout top = new LinearLayout(this);
+        top.setOrientation(LinearLayout.HORIZONTAL);
+        top.setGravity(Gravity.CENTER_VERTICAL);
         TextView head = new TextView(this);
         head.setText(Text.DONATE_BANNER);
         head.setTextColor(skin.text);
         head.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
         head.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
-        card.addView(head);
+        top.addView(head, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        TextView close = new TextView(this);
+        close.setText("✕");
+        close.setTextColor(skin.muted());
+        close.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        close.setGravity(Gravity.CENTER);
+        close.setContentDescription(Text.CLOSE);
+        close.setOnClickListener(v -> {
+            donateClosed = true;
+            View banner = card;
+            ViewGroup holder = banner.getParent() instanceof ViewGroup ? (ViewGroup) banner.getParent() : null;
+            View gone = holder != null && holder != column ? holder : banner;
+            gone.animate().alpha(0f).setDuration(160).withEndAction(() -> rebuild()).start();
+        });
+        top.addView(close, new LinearLayout.LayoutParams(dp(36), dp(36)));
+        card.addView(top);
 
         TextView body = new TextView(this);
         body.setText(Text.DONATE_BANNER_TEXT);
