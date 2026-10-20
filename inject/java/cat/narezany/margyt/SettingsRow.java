@@ -55,6 +55,7 @@ public final class SettingsRow implements Application.ActivityLifecycleCallbacks
         long probe = Probe.start();
         Plugins.onActivityResumed(activity);
         Plugins.screen(activity);
+        Rubble.resumed(activity);
         Screen.at(activity);
         if(activity.getClass().getName().startsWith("cat.narezany.margyt.")){
             View owned=activity.findViewById(android.R.id.content);

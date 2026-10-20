@@ -221,7 +221,7 @@ def when(stamp):
     return "%d дн назад" % (gone // 86400)
 
 
-def main_page(badges, plugins, gradients=(), said="", crashes=()):
+def main_page(badges, plugins, gradients=(), said="", crashes=(), verdicts=()):
     rows = []
     for badge in badges:
         rows.append(
@@ -255,6 +255,16 @@ def main_page(badges, plugins, gradients=(), said="", crashes=()):
             "<input type=hidden name=uid value='%s'>"
             "<button class=quiet>Снять</button></form></td></tr>"
             % (html.escape(one["uid"]), strip, strip, html.escape(one["uid"])))
+
+    marked = []
+    for one in verdicts:
+        marked.append(
+            "<tr><td class=dim>%s</td><td>%s</td><td class=dim>%s</td><td class=dim>%s</td>"
+            "<td><form method=post action='/admin/verdict/drop' style='display:inline'>"
+            "<input type=hidden name=uid value='%s'>"
+            "<button class=quiet>Снять</button></form></td></tr>"
+            % (html.escape(one["uid"]), "✅ Рекомендуемый" if one["good"] else "⛔ Не рекомендуемый",
+               html.escape(one["reason"]) or "без причины", when(one["at"]), html.escape(one["uid"])))
 
     fallen = []
     for one in crashes:
@@ -302,6 +312,24 @@ def main_page(badges, plugins, gradients=(), said="", crashes=()):
           %s
         </table></div>
 
+        <h2>Пометки профилей</h2>
+        <p class=dim>Плашка в профиле TikTok у всех, у кого стоит MargyT.</p>
+        <form class=card method=post action="/admin/verdict/set">
+          <label>айди аккаунтов TikTok, через пробел или запятую</label>
+          <input name=uids placeholder="6812345678901234567">
+          <label>какой</label>
+          <select name=good>
+            <option value=1>✅ Рекомендуемый</option>
+            <option value=0>⛔ Не рекомендуемый</option>
+          </select>
+          <label>причина</label><input name=reason maxlength=300>
+          <p><button>Пометить</button></p>
+        </form>
+        <div class=card><table>
+          <tr><th>айди</th><th>пометка</th><th>причина</th><th>когда</th><th></th></tr>
+          %s
+        </table></div>
+
         <h2>Плагины</h2>
         <div class=card><table>
           <tr><th></th><th>плагин</th><th>автор</th><th>TikTok</th><th></th></tr>
@@ -336,6 +364,7 @@ def main_page(badges, plugins, gradients=(), said="", crashes=()):
         <p><a class='button quiet' href="/admin/out">Выйти</a></p>
         """ % ("".join(rows) or "<tr><td class=dim>пока пусто</td></tr>",
                "".join(painted) or "<tr><td class=dim>пока пусто</td></tr>",
+               "".join(marked) or "<tr><td class=dim>пока пусто</td></tr>",
                "".join(packs) or "<tr><td class=dim>пока пусто</td></tr>",
                "".join(fallen) or "<tr><td class=dim>пока пусто</td></tr>"), said)
 

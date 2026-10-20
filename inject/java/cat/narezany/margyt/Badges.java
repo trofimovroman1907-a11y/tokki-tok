@@ -118,6 +118,20 @@ public static final String KEY = "badges_on";
      */
     private static volatile Badge[] numbered = new Badge[0];
 
+    /** What the administration says about an account: good or not, and why. */
+    static final class Verdict {
+        final boolean good;
+        final String reason;
+        Verdict(boolean good, String reason) { this.good = good; this.reason = reason; }
+    }
+
+    private static volatile Map<String, Verdict> verdicts = new HashMap<String, Verdict>();
+
+    /** The mark the administration put on an account, or null. */
+    static Verdict verdict(String uid) {
+        return uid == null ? null : verdicts.get(uid);
+    }
+
     /**
      * Where the marks sit in the private-use area -- and it moves every start.
      *
@@ -400,8 +414,20 @@ public static final String KEY = "badges_on";
                 settled.put(entry.getKey(), entry.getValue().toArray(new Badge[0]));
             }
 
+            Map<String, Verdict> said = new HashMap<String, Verdict>();
+            JSONObject marks = root.optJSONObject("verdicts");
+            if (marks != null) {
+                java.util.Iterator<String> keys = marks.keys();
+                while (keys.hasNext()) {
+                    String uid = keys.next();
+                    JSONObject one = marks.optJSONObject(uid);
+                    if (one != null) said.put(uid, new Verdict(one.optBoolean("good", true), one.optString("reason", "")));
+                }
+            }
+
             numbered = order;
             known = settled;
+            verdicts = said;
             return true;
         } catch (Throwable error) {
             Diary.note("badges: unreadable, keeping the last ones -- " + error);

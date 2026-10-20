@@ -195,6 +195,12 @@ def prepare():
             ip      TEXT PRIMARY KEY,
             written INTEGER NOT NULL DEFAULT 0
         );
+        CREATE TABLE IF NOT EXISTS verdict (
+            uid    TEXT PRIMARY KEY,
+            good   INTEGER NOT NULL,
+            reason TEXT NOT NULL DEFAULT '',
+            at     INTEGER NOT NULL DEFAULT 0
+        );
         CREATE TABLE IF NOT EXISTS plugin (
             id      TEXT PRIMARY KEY,
             name    TEXT NOT NULL DEFAULT '',
@@ -353,10 +359,13 @@ def public():
     gradients = {uid: colours.split(",") for uid, colours
                  in db.execute("SELECT uid, colours FROM gradient")
                  if uid in paid and colours}
+    # what the administration says about an account, shown on its profile
+    verdicts = {uid: {"good": bool(good), "reason": reason}
+                for uid, good, reason in db.execute("SELECT uid, good, reason FROM verdict")}
     db.close()
 
     out = [badges[key] for key in sorted(badges)]
-    return {"badges": out, "gradients": gradients,
+    return {"badges": out, "gradients": gradients, "verdicts": verdicts,
             "free_until": FREE_UNTIL, "now": int(time.time())}
 
 
@@ -1167,9 +1176,12 @@ class Handler(BaseHTTPRequestHandler):
                        for r in db.execute(
                            "SELECT uid, colours, changed FROM gradient"
                            " ORDER BY changed DESC")]
+            verdicts = [{"uid": r[0], "good": bool(r[1]), "reason": r[2], "at": r[3]}
+                        for r in db.execute("SELECT uid, good, reason, at FROM verdict"
+                                            " ORDER BY at DESC")]
             db.close()
             self.html(panel.main_page(badges, plugins()["plugins"], colours,
-                                      query.get("said", [""])[0], crashes()))
+                                      query.get("said", [""])[0], crashes(), verdicts))
             return
 
         if path == "/admin/badge":
@@ -1341,6 +1353,34 @@ class Handler(BaseHTTPRequestHandler):
                 db.commit()
                 db.close()
             self.go("/admin?said=градиент снят")
+            return
+
+        if path == "/admin/verdict/set":
+            said = self.form()
+            uids = [uid for uid in (said.get("uids") or "").replace(",", " ").split() if sane(uid)]
+            reason = " ".join((said.get("reason") or "").split())[:300]
+            if not uids:
+                self.go("/admin?said=айди: только цифры")
+                return
+            good = 1 if said.get("good") == "1" else 0
+            db = connect()
+            now = int(time.time())
+            for uid in uids:
+                db.execute("INSERT INTO verdict (uid, good, reason, at) VALUES (?, ?, ?, ?)"
+                           " ON CONFLICT(uid) DO UPDATE SET good=excluded.good,"
+                           " reason=excluded.reason, at=excluded.at", (uid, good, reason, now))
+            db.commit()
+            db.close()
+            self.go("/admin?said=%s: %d" % ("рекомендуемые" if good else "не рекомендуемые", len(uids)))
+            return
+
+        if path == "/admin/verdict/drop":
+            said = self.form()
+            db = connect()
+            db.execute("DELETE FROM verdict WHERE uid = ?", (said.get("uid", ""),))
+            db.commit()
+            db.close()
+            self.go("/admin?said=пометка снята")
             return
 
         if path == "/admin/plugin/drop":

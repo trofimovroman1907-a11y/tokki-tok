@@ -772,6 +772,11 @@ final class Text {
     static final String CHIP_COLLAB = pick("КОЛЛАБ", "КОЛАБ", "COLLAB");
 
     static final String FUN = pick("Смешнявки", "Смішнявки", "Silly things");
+    static final String FUN_RUBBLE = pick("Рассыпать интерфейс", "Розсипати інтерфейс", "Shatter the interface");
+    static final String RUBBLE_NOTE = pick(
+            "Все кнопки и надписи TikTok падают и становятся настоящими предметами: наклоняй телефон, и они катятся, тряхни, и они подпрыгнут. Выключается только полным перезапуском TikTok.",
+            "Усі кнопки й написи TikTok падають і стають справжніми предметами: нахиляй телефон, і вони котяться, струсни, і вони підстрибнуть. Вимикається лише повним перезапуском TikTok.",
+            "Every TikTok button and label falls off and turns into a real object: tilt the phone and they roll, shake it and they jump. Only a full restart of TikTok puts them back.");
     static final String FUN_NOTE = pick("Деп калькулятор, скримеры и тилкайо",
             "Деп калькулятор, скримери й тілкайо", "Dep Calculator, screamers and tilcayo");
     static final String FUN_HELP = pick(
@@ -1343,6 +1348,22 @@ final class Text {
     static final String YOOMONEY_NOTE = pick(
             "Перевод напрямую", "Переказ напряму", "Straight to the transfer page");
 
+    // The administration's mark on a profile.
+    static final String VERDICT_GOOD = pick("✅ Рекомендуемый", "✅ Рекомендований", "✅ Recommended");
+    static final String VERDICT_BAD = pick("⛔ Не рекомендуемый", "⛔ Не рекомендований", "⛔ Not recommended");
+    static String verdictWhy(boolean good, String reason) {
+        String said = good
+                ? pick("Администрация MargyT отметила этот аккаунт как хороший.", "Адміністрація MargyT позначила цей акаунт як хороший.", "The MargyT team marked this account as a good one.")
+                : pick("Администрация MargyT отметила этот аккаунт как плохой.", "Адміністрація MargyT позначила цей акаунт як поганий.", "The MargyT team marked this account as a bad one.");
+        if (reason == null || reason.length() == 0) return said;
+        return said + " " + pick("Причина: «", "Причина: «", "Reason: \u201C") + reason + pick("»", "»", "\u201D");
+    }
+
+    static final String BOOSTY = pick("Boosty", "Boosty", "Boosty");
+
+    static final String BOOSTY_NOTE = pick(
+            "Подходит для любой страны", "Підходить для будь-якої країни", "Works from any country");
+
     static final String NO_BROWSER = pick(
             "Нечем открыть ссылку", "Нема чим відкрити посилання", "Nothing here opens links");
 
@@ -1411,6 +1432,12 @@ final class Text {
     static final String SHEET_POST_TITLE = pick("Скачать публикацию", "Завантажити публікацію", "Download post");
     static String allPhotos(int count) {
         return pick("Скачать все фото (" + count + ")", "Завантажити всі фото (" + count + ")", "Download all photos (" + count + ")");
+    }
+    static String pickedPhotos(int count) {
+        return pick("Скачать выбранные (" + count + ")", "Завантажити вибрані (" + count + ")", "Download selected (" + count + ")");
+    }
+    static String photosCount(int count) {
+        return pick("Фото: " + count, "Фото: " + count, "Photos: " + count);
     }
     static String photosSaved(int saved, int total) {
         return pick("Сохранено " + saved + " из " + total + " фото", "Збережено " + saved + " із " + total + " фото", "Saved " + saved + " of " + total + " photos");

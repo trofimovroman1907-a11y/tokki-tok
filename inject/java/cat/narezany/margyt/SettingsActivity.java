@@ -98,6 +98,7 @@ public class SettingsActivity extends Activity {
     private static final String DOCS_PLUGINS =
             "https://git.narez.xyz/narezany/MargyT/src/branch/main/docs/plugins.md";
     private static final String YOOMONEY = "https://yoomoney.ru/to/4100118196133693";
+    private static final String BOOSTY = "https://boosty.to/ega_link";
     private static final String CARD_NUMBER = "2204120143055305";
 
     private boolean countriesOpen;
@@ -490,7 +491,7 @@ public class SettingsActivity extends Activity {
         }));
         if (Dim.isConfigured()) {
             burn.addView(line());
-            burn.addView(slider("contrast", Text.DIM_HOW, Dim.strength(), 90, 0, "%", value -> Dim.setStrength(value)));
+            burn.addView(slider("contrast", Text.DIM_HOW, Dim.strength(), 100, 0, "%", value -> Dim.setStrength(value)));
             burn.addView(line());
             burn.addView(toggleRow("visibility_off", Text.KEEP_BAR, NavBar.isKept(), NavBar::setKept));
         }
@@ -663,6 +664,12 @@ public class SettingsActivity extends Activity {
         screamers.addView(line());
         screamers.addView(actionRow("play_arrow", Text.SCREAMER_NOW, null, () -> Screamer.now(this)));
         column.addView(wrap(screamers));
+
+        column.addView(section(Text.FUN_RUBBLE));
+        LinearLayout rubble = card();
+        rubble.addView(actionRow("open_with", Text.FUN_RUBBLE, null, () -> Rubble.arm(this)));
+        rubble.addView(quiet(Text.RUBBLE_NOTE));
+        column.addView(wrap(rubble));
 
         column.addView(section(Text.FUN_CAT));
         column.addView(fatCat());
@@ -1208,6 +1215,8 @@ public class SettingsActivity extends Activity {
         column.addView(section(Text.DONATE_STEP_PAY));
         LinearLayout pay = card();
         pay.addView(linkRow("star", Text.YOOMONEY, Text.YOOMONEY_NOTE, YOOMONEY));
+        pay.addView(line());
+        pay.addView(linkRow("public", Text.BOOSTY, Text.BOOSTY_NOTE, BOOSTY));
         pay.addView(line());
         pay.addView(cardRow());
         column.addView(wrap(pay));
@@ -2788,6 +2797,7 @@ public class SettingsActivity extends Activity {
         rows.addView(cardRow());
 
         rows.addView(linkRow("star", Text.YOOMONEY, Text.YOOMONEY_NOTE, YOOMONEY));
+        rows.addView(linkRow("public", Text.BOOSTY, Text.BOOSTY_NOTE, BOOSTY));
         return rows;
     }
 

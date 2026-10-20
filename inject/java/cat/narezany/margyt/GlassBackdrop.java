@@ -89,7 +89,7 @@ final class GlassBackdrop {
         private boolean queued,copying,disposed,needsVideo,layout=true,sceneDirty=true,animating,textureEvents,mediaPresent,readyLogged;
         private int bound,failures,nativeGeneration=-1;
         private String diagnostic="";
-        private long copied,vsync,lastTextureStamp=Long.MIN_VALUE;
+        private long copied,vsync,lastTextureStamp=Long.MIN_VALUE,shownVideo;
         private final Runnable refresh=()->{queued=false;update();};
         Session(View window,View source){
             host=new WeakReference<>(window);root=new WeakReference<>(source);
@@ -184,10 +184,17 @@ final class GlassBackdrop {
             else if(candidates.size()==1)selected=candidates.get(0);
             String state="sources="+candidates.size()+", selected="+(selected==null?"none":selected.getClass().getSimpleName())+", media="+mediaPresent;
             if(!state.equals(diagnostic)){diagnostic=state;android.util.Log.w("MargyTGlass","Feed capture "+state);}
+            // While the feed scrolls, or a cell is swapped for another, there are moments with two
+            // players, or none that counts as the one on screen. Those moments used to repaint the
+            // glass with the page's own colour, which showed through the blurred video as a flash
+            // of the theme. The glass now keeps the last video it had until another one is ready.
+            if(selected==null && holding()){recheck();return;}
             bind(selected);
-            // Media is a separate compositor layer. A flat software placeholder is not its backdrop.
-            frame.ready=!mediaPresent;
-            if(selected==null || pixels==null)base(frame);else publish(selected);
+            if(selected==null || pixels==null){
+                if(holding()){recheck();return;}
+                // Media is a separate compositor layer. A flat software placeholder is not its backdrop.
+                frame.ready=!mediaPresent;base(frame);
+            }else publish(selected);
         }
         private void base(Frame destination){
             if(destination.canvas==null || background==null)return;
@@ -197,7 +204,8 @@ final class GlassBackdrop {
         private void bind(View source){
             int generation=source!=null && GlassVideo.render(root.get())==source?GlassVideo.generation():-1;
             if(video.get()==source && nativeGeneration==generation)return;
-            nativeGeneration=generation;frame.ready=false;readyLogged=false;video=new WeakReference<>(source);bound++;pixels=spare=null;failures=0;lastTextureStamp=Long.MIN_VALUE;textureEvents=false;
+            // the previous video's pixels stay on the glass until the new one has a frame of its own
+            nativeGeneration=generation;if(!holding())frame.ready=false;readyLogged=false;video=new WeakReference<>(source);bound++;spare=null;if(source==null)pixels=null;failures=0;lastTextureStamp=Long.MIN_VALUE;textureEvents=false;
             needsVideo=source!=null;sceneDirty=true;animate();
         }
         void update(){
@@ -206,7 +214,7 @@ final class GlassBackdrop {
             if(layout){layout=false;capture();sceneDirty=true;invalidateOwners();}
             View source=video.get();
             if(source==null || !videoVisible()){needsVideo=false;return;}
-            if(!candidate(source)){layout=true;frame.ready=false;request(true,false);return;}
+            if(!candidate(source)){layout=true;if(!holding())frame.ready=false;request(true,false);return;}
             if(!needsVideo || copying)return;
             needsVideo=false;
             if(source==GlassVideo.render(root.get()) && !GlassVideo.frameReady(source))return;
@@ -246,8 +254,13 @@ final class GlassBackdrop {
             RectF box=new RectF((location[0]-frame.x)*frame.scale,(location[1]-frame.y)*frame.scale,
                     (location[0]-frame.x+source.getWidth())*frame.scale,(location[1]-frame.y+source.getHeight())*frame.scale);
             frame.canvas.drawBitmap(pixels,null,box,paint);frame.canvas.restoreToCount(save);
-            frame.ready=true;sceneDirty=true;invalidateOwners();
+            frame.ready=true;sceneDirty=true;shownVideo=SystemClock.uptimeMillis();invalidateOwners();
         }
+        /** Whether the glass showed a video a moment ago and should keep it rather than flash the page. */
+        /** Look again once the hold is over, so a screen without video does get the page in the end. */
+        private void recheck(){MAIN.removeCallbacks(again);MAIN.postDelayed(again,1250L);}
+        private final Runnable again=()->{layout=true;request(false,false);};
+        private boolean holding(){return frame.ready && shownVideo!=0 && SystemClock.uptimeMillis()-shownVideo<1200L;}
         Frame scene(){
             if(frame.bitmap==null)return frame;
             if(expanded.bitmap==null || expanded.bitmap.getWidth()!=frame.bitmap.getWidth() || expanded.bitmap.getHeight()!=frame.bitmap.getHeight()){
@@ -265,7 +278,7 @@ final class GlassBackdrop {
         }
         private void invalidateOwners(){for(View owner:new ArrayList<>(owners.keySet()))if(owner!=null && owner.isShown())owner.postInvalidateOnAnimation();}
         void dispose(){
-            disposed=true;MAIN.removeCallbacks(refresh);View window=host.get(),source=root.get();
+            disposed=true;MAIN.removeCallbacks(refresh);MAIN.removeCallbacks(again);View window=host.get(),source=root.get();
             Choreographer.getInstance().removeFrameCallback(this);animating=false;
             if(source!=null)observe(source,false);if(window!=null){if(window!=source)observe(window,false);window.removeOnAttachStateChangeListener(this);}
             owners.clear();pixels=spare=background=null;frame.bitmap=expanded.bitmap=null;frame.canvas=expanded.canvas=null;
