@@ -1271,6 +1271,38 @@ def rewrite_flag_reader(root: str, dex: Optional[bytes] = None) -> Dict[str, int
                 head, descriptor, returned, registers, body = match.groups()
                 answer = FLAG_ANSWERS.get(returned)
                 types = _parameters(descriptor)
+                # the reader of whole settings objects: (Class, default, key, ...) -> Object
+                if (returned == "Ljava/lang/Object;" and types[:1] == ["Ljava/lang/Class;"]
+                        and "Ljava/lang/String;" in types and " static " not in head):
+                    if FLAGS + "->forcedObject" in body:
+                        counts[FLAG_LABEL] = counts.get(FLAG_LABEL, 0) + 1
+                        return match.group(0)
+                    key = 1 + sum(2 if kind in ("J", "D") else 1 for kind in types[:types.index("Ljava/lang/String;")])
+                    taken = 1 + sum(2 if kind in ("J", "D") else 1 for kind in types)
+                    if int(registers) - taken < 2:
+                        return match.group(0)
+                    lines = ["    move-object/from16 v0, p1",
+                             "    move-object/from16 v1, p%d" % key,
+                             "    invoke-static {v0, v1}, %s->forcedObject(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Object;" % FLAGS,
+                             "    move-result-object v0",
+                             "    if-eqz v0, :margyt_flag",
+                             "    return-object v0",
+                             "    :margyt_flag"]
+                    counts[FLAG_LABEL] = counts.get(FLAG_LABEL, 0) + 1
+                    rows = body.split("\n")
+                    inside = False
+                    at = 0
+                    for at, row in enumerate(rows):
+                        word = row.strip()
+                        if inside:
+                            inside = not word.startswith(".end annotation")
+                        elif word.startswith(".annotation"):
+                            inside = True
+                        elif word and not word.startswith((".prologue", ".param", ".end param")):
+                            break
+                    rows[at:at] = ["\n\n".join(lines) + "\n"]
+                    return "%s(%s)%s\n    .registers %s\n%s" % (head, descriptor, returned, registers,
+                                                                 "\n".join(rows))
                 if answer is None or "Ljava/lang/String;" not in types or " static " in head:
                     return match.group(0)
                 if FLAGS + "->forced" in body:

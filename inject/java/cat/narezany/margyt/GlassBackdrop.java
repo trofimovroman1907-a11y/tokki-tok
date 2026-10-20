@@ -17,6 +17,9 @@ final class GlassBackdrop {
     private static final Handler MAIN=new Handler(Looper.getMainLooper());
     private static final int SCENE=0x4d674c38;
     static boolean capturing;
+    /** How wide the copy of the screen behind the glass is: it is blurred, so small is enough. */
+    private static final float WIDTH=240f;
+    private static final long VIDEO_FRAME_NS=80_000_000L,VIDEO_FRAME_MS=80L,CAPTURE_MS=140L;
     static final class Frame {Bitmap bitmap;float scale;int x,y;Canvas canvas;boolean ready;}
 
     static void changed(){for(Session session:new ArrayList<>(WINDOWS.values()))session.dispose();WINDOWS.clear();}
@@ -89,7 +92,7 @@ final class GlassBackdrop {
         private boolean queued,copying,disposed,needsVideo,layout=true,sceneDirty=true,animating,textureEvents,mediaPresent,readyLogged;
         private int bound,failures,nativeGeneration=-1;
         private String diagnostic="";
-        private long copied,vsync,lastTextureStamp=Long.MIN_VALUE,shownVideo;
+        private long copied,vsync,lastTextureStamp=Long.MIN_VALUE,shownVideo,captured;
         private final Runnable refresh=()->{queued=false;update();};
         Session(View window,View source){
             host=new WeakReference<>(window);root=new WeakReference<>(source);
@@ -136,7 +139,9 @@ final class GlassBackdrop {
         @Override public void doFrame(long time){
             animating=false;
             if(!videoVisible())return;
-            if(time-vsync>=32_000_000L && !copying){
+            // the video behind the glass is blurred past recognising: a dozen frames a second is
+            // all it shows, and every frame is a copy off the GPU that phones below the top pay for
+            if(time-vsync>=VIDEO_FRAME_NS && !copying){
                 vsync=time;View source=video.get();
                 if(source instanceof TextureView){
                     SurfaceTexture texture=((TextureView)source).getSurfaceTexture();if(texture!=null)textureFrame(texture);
@@ -149,13 +154,13 @@ final class GlassBackdrop {
             if(selection)layout=true;
             if(!queued && active()){
                 queued=true;
-                MAIN.postDelayed(refresh,newVideo?Math.max(0,32-(SystemClock.uptimeMillis()-copied)):0);
+                MAIN.postDelayed(refresh,newVideo?Math.max(0,VIDEO_FRAME_MS-(SystemClock.uptimeMillis()-copied)):0);
             }
             animate();
         }
         void prepare(){
             View view=root.get();if(view==null || view.getWidth()<1 || view.getHeight()<1)return;
-            float scale=Math.min(1f,360f/view.getWidth());
+            float scale=Math.min(1f,WIDTH/view.getWidth());
             int width=Math.max(1,Math.round(view.getWidth()*scale)),height=Math.max(1,Math.round(view.getHeight()*scale));
             if(frame.bitmap==null || frame.bitmap.getWidth()!=width || frame.bitmap.getHeight()!=height){
                 frame.bitmap=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);frame.canvas=new Canvas(frame.bitmap);frame.scale=scale;
@@ -211,7 +216,13 @@ final class GlassBackdrop {
         void update(){
             if(!active())return;
             prepare();if(frame.bitmap==null)return;
-            if(layout){layout=false;capture();sceneDirty=true;invalidateOwners();}
+            if(layout){
+                // The screen behind is drawn again in software for every layout, and while a list
+                // scrolls that was every frame. Once in a while is enough for something blurred.
+                long now=SystemClock.uptimeMillis(),left=CAPTURE_MS-(now-captured);
+                if(left>0){MAIN.removeCallbacks(refresh);queued=true;MAIN.postDelayed(refresh,left);}
+                else{layout=false;captured=now;capture();sceneDirty=true;invalidateOwners();}
+            }
             View source=video.get();
             if(source==null || !videoVisible()){needsVideo=false;return;}
             if(!candidate(source)){layout=true;if(!holding())frame.ready=false;request(true,false);return;}

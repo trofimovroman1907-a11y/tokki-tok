@@ -111,6 +111,78 @@ public class SettingsActivity extends Activity {
     private ScrollView page;
     private boolean thanksOpen;
     private int settingsGroup;
+    /** The page open inside a shelf, or null for the shelf's own list of pages. */
+    private String settingsPage;
+
+    /**
+     * A page of a shelf: one subject, with a name and a line that says what is in it.
+     * Its settings are the sections listed, in the order they are built.
+     */
+    private static final class Shelf {
+        final int group; final String id, icon, title, note; final String[] sections;
+        Shelf(int group, String id, String icon, String title, String note, String... sections) {
+            this.group = group; this.id = id; this.icon = icon; this.title = title; this.note = note; this.sections = sections;
+        }
+    }
+
+    private static Shelf[] shelves;
+
+    private Shelf[] shelves() {
+        if (shelves != null) return shelves;
+        shelves = new Shelf[] {
+            new Shelf(1, "style", "palette", Text.PAGE_STYLE, Text.PAGE_STYLE_NOTE, Text.APPEARANCE),
+            new Shelf(1, "accent", "format_color_fill", Text.ACCENT, Text.PAGE_ACCENT_NOTE, Text.ACCENT),
+            new Shelf(1, "md3", "view_compact", Text.MD3_TIKTOK, Text.PAGE_MD3_NOTE, Text.MD3_TIKTOK),
+            new Shelf(1, "theme", "contrast", Text.THEME, Text.PAGE_THEME_NOTE, Text.THEME),
+            new Shelf(1, "font", "text_fields", Text.FONT, Text.PAGE_FONT_NOTE, Text.FONT),
+            new Shelf(2, "badges", "verified", Text.BADGES, Text.PAGE_BADGES_NOTE, Text.BADGES),
+            new Shelf(2, "gradient", "palette", Text.GRADIENT, Text.PAGE_GRADIENT_NOTE, Text.GRADIENT),
+            new Shelf(2, "look", "account_circle", Text.PROFILE_VIEW, Text.PAGE_LOOK_NOTE, Text.PROFILE_VIEW),
+            new Shelf(2, "account", "fingerprint", Text.ACCOUNT, Text.PAGE_ACCOUNT_NOTE, Text.ACCOUNT),
+            new Shelf(3, "feed", "view_compact", Text.FEED, Text.PAGE_FEED_NOTE, Text.FEED, Text.DATE_FILTER, Text.TAGS),
+            new Shelf(3, "video", "play_circle", Text.VIDEO, Text.PAGE_VIDEO_NOTE, Text.RAIL, Text.VIDEO, Text.FPS),
+            new Shelf(3, "comments", "chat", Text.COMMENTS, Text.PAGE_COMMENTS_NOTE, Text.COMMENTS),
+            new Shelf(3, "burn", "eye_open", BURN, Text.PAGE_BURN_NOTE, BURN),
+            new Shelf(3, "region", "public", Text.REGION, Text.PAGE_REGION_NOTE, Text.REGION, Text.COUNTRY),
+            new Shelf(4, "downloads", "download", Text.DOWNLOADS, Text.PAGE_DOWNLOADS_NOTE, Text.DOWNLOADS),
+            new Shelf(4, "backup", "restore", Text.BACKUP, Text.PAGE_BACKUP_NOTE, Text.BACKUP),
+            new Shelf(4, "diagnostics", "bug_report", Text.DIAGNOSTICS, Text.PAGE_DIAGNOSTICS_NOTE, Text.DIAGNOSTICS),
+            new Shelf(4, "diary", "article", Text.DIARY, Text.PAGE_DIARY_NOTE, Text.DIARY),
+            new Shelf(5, "update", "update", Text.UPDATE, Text.PAGE_UPDATE_NOTE, Text.CHANNEL, Text.UPDATE),
+            new Shelf(5, "links", "link", Text.LINKS, Text.PAGE_LINKS_NOTE, Text.LINKS),
+            new Shelf(5, "thanks", "favorite_border", Text.THANKS, Text.PAGE_THANKS_NOTE, Text.THANKS),
+            new Shelf(6, "plugins", "extension", Text.PLUGINS, "", Text.PLUGINS),
+            new Shelf(7, "pinned", "people", Text.PINNED_FRIENDS, Text.PAGE_PINNED_NOTE, Text.PINNED_FRIENDS),
+            new Shelf(7, "streaks", "schedule", Text.STREAKS, Text.PAGE_STREAKS_NOTE, Text.STREAKS),
+            new Shelf(7, "notifications", "notifications", Text.NOTIFICATIONS, Text.PAGE_NOTIFICATIONS_NOTE, Text.NOTIFICATIONS),
+            new Shelf(8, "dep", "flare", Text.FUN_DEP, Text.PAGE_DEP_NOTE, Text.FUN_DEP),
+            new Shelf(8, "rubble", "open_with", Text.FUN_RUBBLE, Text.PAGE_RUBBLE_NOTE, Text.FUN_RUBBLE),
+            new Shelf(8, "screamers", "animation", Text.FUN_SCREAMERS, Text.PAGE_SCREAMERS_NOTE, Text.FUN_SCREAMERS),
+            new Shelf(8, "cat", "image", Text.FUN_CAT, Text.PAGE_CAT_NOTE, Text.FUN_CAT),
+        };
+        return shelves;
+    }
+
+    private java.util.List<Shelf> shelvesOf(int group) {
+        java.util.List<Shelf> out = new java.util.ArrayList<>();
+        for (Shelf one : shelves()) {
+            if (one.group != group) continue;
+            if (Version.LITE) { boolean any = false; for (String section : one.sections) any |= inLite(section); if (!any) continue; }
+            out.add(one);
+        }
+        return out;
+    }
+
+    private Shelf shelf(String id) {
+        if (id == null) return null;
+        for (Shelf one : shelves()) if (one.id.equals(id)) return one;
+        return null;
+    }
+
+    private Shelf shelfOfSection(String section) {
+        for (Shelf one : shelves()) for (String name : one.sections) if (name.equals(section)) return one;
+        return null;
+    }
     private boolean mineOpen;
     private java.util.List<Mine.Held> ordering;
     private boolean streakOpen;
@@ -234,9 +306,23 @@ public class SettingsActivity extends Activity {
             restoreScroll(previousScroll);
             return;
         }
-        column.addView(title(settingsGroup == 0 ? (Version.LITE ? "MargyT Lite" : "MargyT") : groupName(settingsGroup)));
+        // a shelf with one page opens on it straight away
+        if (settingsGroup != 0 && settingsPage == null && searchQuery.length() == 0) {
+            java.util.List<Shelf> pages = shelvesOf(settingsGroup);
+            if (pages.size() == 1) settingsPage = pages.get(0).id;
+        }
+        Shelf open = shelf(settingsPage);
+        if (open != null && open.group != settingsGroup) { settingsPage = null; open = null; }
+        column.addView(title(settingsGroup == 0 ? (Version.LITE ? "MargyT Lite" : "MargyT") : open != null ? open.title : groupName(settingsGroup)));
         if(settingsGroup==0 || searchQuery.length()>0)column.addView(searchBox());
-        if (settingsGroup != 0) column.addView(wrap(actionRow("info",Local.of("Подсказки"),null,this::showSectionHelp)));
+        if (settingsGroup != 0 && open == null && searchQuery.length() == 0) {
+            column.addView(shelfList(settingsGroup));
+            column.addView(wrap(actionRow("info",Local.of("Подсказки"),null,this::showSectionHelp)));
+            showRestartBar();
+            restoreScroll(0);
+            return;
+        }
+        if (open != null && open.note.length() > 0) { View lead = lead(open.note); lead.setTag(LEAD, Boolean.TRUE); column.addView(lead); }
         if (searchQuery.length() > 0) {
             searchResults();
             restoreScroll(previousScroll);
@@ -277,6 +363,7 @@ public class SettingsActivity extends Activity {
         }
         column.addView(wrap(accent));
 
+        column.addView(section(Text.MD3_TIKTOK));
         LinearLayout loading = card();
         loading.addView(liveToggleRow("palette", Design.frosted()?Text.LOADING_INDICATOR:Text.LOADING_SHAPES, Loading.isEnabled(),
                 Loading::setEnabled));
@@ -287,9 +374,7 @@ public class SettingsActivity extends Activity {
         loading.addView(line());
         loading.addView(actionRow("account_circle", Text.AVATAR_SHAPE,
                 AvatarShape.nameOf(AvatarShape.chosen()), this::chooseAvatarShape));
-        loading.addView(line());
-        loading.addView(toggleRow("view_compact", Text.NEW_PROFILE, Flags.isOn(Flags.KEY_NEW_PROFILE),
-                on -> Flags.set(Flags.KEY_NEW_PROFILE, on)));
+
         loading.addView(line());
         loading.addView(toggleRow("tune", Text.NAV_CAPSULE, NavBar.isEnabled(), NavBar::setEnabled));
         loading.addView(line());
@@ -306,6 +391,18 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.THEME));
         LinearLayout theme = card();
+        theme.addView(liveToggleRow("contrast", Text.AMOLED, Themes.amoledChosen() && Themes.isDark(), on -> {
+            if (on && !Themes.isDark()) {
+                Panel.with(this, skin, Text.AMOLED).text(Text.AMOLED_LIGHT).primary(Local.of("Понятно"), null).show();
+                rebuildAfterSwitchAnimation();
+                return;
+            }
+            Themes.setAmoled(on);
+            markChanged();
+            rebuildAfterSwitchAnimation();
+        }));
+        theme.addView(quiet(Themes.isDark() ? Text.AMOLED_NOTE : Text.AMOLED_LIGHT));
+        theme.addView(line());
         if (Themes.available()) {
             // on, and wearing the phone's own colours: one switch for both,
             // because the other way to be on is to pick a preset below
@@ -362,6 +459,13 @@ public class SettingsActivity extends Activity {
         account.addView(idRow(Text.ACCOUNT_SEC_ID, Account.secId()));
         column.addView(wrap(account));
 
+        column.addView(section(Text.PROFILE_VIEW));
+        LinearLayout look = card();
+        look.addView(toggleRow("view_compact", Text.NEW_PROFILE, Flags.isOn(Flags.KEY_NEW_PROFILE),
+                on -> Flags.set(Flags.KEY_NEW_PROFILE, on)));
+        look.addView(quiet(Text.NEW_PROFILE_NOTE));
+        column.addView(wrap(look));
+
         column.addView(section(Text.REGION));
         LinearLayout head = card();
         head.addView(switchRow());
@@ -398,35 +502,15 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.DATE_FILTER));
         LinearLayout dates = card();
-        dates.addView(actionRow("schedule", Text.DATE_FILTER, FeedDates.describe(), () -> {
-            int now = FeedDates.mode();
-            Panel.with(this, skin, Text.DATE_FILTER)
-                    .option(Text.DATE_FILTER_OFF, now == FeedDates.OFF, false, () -> { FeedDates.setMode(FeedDates.OFF); rebuild(); })
-                    .option(Text.DATE_FILTER_RECENT, now == FeedDates.RECENT, false, () -> { FeedDates.setMode(FeedDates.RECENT); rebuild(); })
-                    .option(Text.DATE_FILTER_BETWEEN, now == FeedDates.BETWEEN, false, () -> { FeedDates.setMode(FeedDates.BETWEEN); rebuild(); })
-                    .quiet(Text.CLOSE, null).show();
+        dates.addView(actionRow("schedule", Text.DATE_FILTER, FeedDates.describe(FeedDates.hours()), () -> {
+            int now = FeedDates.hours();
+            Panel panel = Panel.with(this, skin, Text.DATE_FILTER);
+            for (int one : FeedDates.HOURS) {
+                final int chosen = one;
+                panel.option(FeedDates.describe(one), one == now, false, () -> { FeedDates.setHours(chosen); rebuild(); });
+            }
+            panel.quiet(Text.CLOSE, null).show();
         }));
-        if (FeedDates.mode() == FeedDates.RECENT) {
-            dates.addView(line());
-            dates.addView(actionRow("timeline", Text.DATE_FILTER_AMOUNT, FeedDates.amount() + " " + Text.dateUnit(FeedDates.unit(), FeedDates.amount()),
-                    this::chooseRecent));
-        } else if (FeedDates.mode() == FeedDates.BETWEEN) {
-            dates.addView(line());
-            dates.addView(actionRow("schedule", Text.DATE_FILTER_FROM, FeedDates.date(FeedDates.from()), () -> pickDate(true)));
-            dates.addView(line());
-            dates.addView(actionRow("schedule", Text.DATE_FILTER_TO, FeedDates.date(FeedDates.to()), () -> pickDate(false)));
-            dates.addView(line());
-            dates.addView(actionRow("restore", Text.DATE_FILTER_YEAR, null, () -> {
-                java.util.Calendar today = java.util.Calendar.getInstance();
-                Popup.write(this, Text.DATE_FILTER_YEAR, String.valueOf(today.get(java.util.Calendar.YEAR) - 1), Text.SAVE, said -> {
-                    try {
-                        int year = Integer.parseInt(said.trim());
-                        if (year >= 2016 && year <= today.get(java.util.Calendar.YEAR)) FeedDates.setYear(year);
-                    } catch (Throwable ignored) {}
-                    rebuild();
-                });
-            }));
-        }
         dates.addView(caption(Text.DATE_FILTER_NOTE));
         column.addView(wrap(dates));
 
@@ -506,25 +590,6 @@ public class SettingsActivity extends Activity {
         comments.addView(liveToggleRow("article", Text.COMMENT_COPY_ON, Comments.isCopyEnabled(),
                 Comments::setCopyEnabled));
         column.addView(wrap(comments));
-
-        column.addView(section(Text.TIKTOK_FEATURES));
-        LinearLayout features = card();
-        features.addView(quiet(Text.TIKTOK_FEATURES_NOTE));
-        features.addView(toggleRow("repeat", Text.COMMENT_REPOST, Flags.isOn(Flags.KEY_COMMENT_REPOST),
-                on -> Flags.set(Flags.KEY_COMMENT_REPOST, on)));
-        features.addView(line());
-        features.addView(toggleRow("repeat", Text.SELF_REPOST, Flags.isOn(Flags.KEY_SELF_REPOST),
-                on -> Flags.set(Flags.KEY_SELF_REPOST, on)));
-        features.addView(line());
-        features.addView(toggleRow("image", Text.COMMENT_PHOTOS, Flags.isOn(Flags.KEY_COMMENT_PHOTOS),
-                on -> Flags.set(Flags.KEY_COMMENT_PHOTOS, on)));
-        features.addView(line());
-        features.addView(toggleRow("text_fields", Text.HASHTAGS_UNLIMITED, Flags.isOn(Flags.KEY_HASHTAGS),
-                on -> Flags.set(Flags.KEY_HASHTAGS, on)));
-        features.addView(line());
-        features.addView(toggleRow("language", Text.TRANSLATE_COMMENTS, Flags.isOn(Flags.KEY_TRANSLATE_COMMENTS),
-                on -> Flags.set(Flags.KEY_TRANSLATE_COMMENTS, on)));
-        column.addView(wrap(features));
 
         column.addView(section(BURN));
         LinearLayout burn = card();
@@ -1305,32 +1370,6 @@ public class SettingsActivity extends Activity {
                 () -> open(CHANNEL_WRITE)));
         write.addView(quiet(Text.DONATE_AFTER));
         column.addView(wrap(write));
-    }
-
-    /** How far back the feed may go: a number, then hours, days, weeks, months or years. */
-    private void chooseRecent() {
-        Popup.write(this, Text.DATE_FILTER_AMOUNT, String.valueOf(FeedDates.amount()), Text.SAVE, said -> {
-            int amount;
-            try { amount = Math.max(1, Math.min(999, Integer.parseInt(said.trim()))); } catch (Throwable ignored) { return; }
-            Panel panel = Panel.with(this, skin, Text.DATE_FILTER_AMOUNT);
-            int now = FeedDates.unit();
-            for (int unit = FeedDates.HOURS; unit <= FeedDates.YEARS; unit++) {
-                final int chosen = unit;
-                panel.option(amount + " " + Text.dateUnit(unit, amount), unit == now, false, () -> { FeedDates.setRecent(amount, chosen); rebuild(); });
-            }
-            panel.quiet(Text.CLOSE, null).show();
-        });
-    }
-
-    private void pickDate(boolean start) {
-        java.util.Calendar at = java.util.Calendar.getInstance();
-        at.setTimeInMillis((start ? FeedDates.from() : FeedDates.to()) * 1000L);
-        android.app.DatePickerDialog picker = new android.app.DatePickerDialog(this, (view, year, month, day) -> {
-            if (start) FeedDates.setFrom(year, month, day); else FeedDates.setTo(year, month, day);
-            rebuild();
-        }, at.get(java.util.Calendar.YEAR), at.get(java.util.Calendar.MONTH), at.get(java.util.Calendar.DAY_OF_MONTH));
-        picker.getDatePicker().setMaxDate(System.currentTimeMillis());
-        picker.show();
     }
 
     private void rebuildAfterSwitchAnimation() {
@@ -3608,22 +3647,18 @@ public class SettingsActivity extends Activity {
         found+=searchControl(results,Text.COMMENTS,Text.COMMENT_COPY_ON,Comments.isCopyEnabled());
         found+=searchControl(results,Text.VIDEO,Text.OWN_BRIGHTNESS,Brightness.isEnabled());
         found+=searchControl(results,Text.BADGES,Text.BADGES_ON,Badges.isEnabled());
-        found+=searchControl(results,Text.TIKTOK_FEATURES,Text.COMMENT_REPOST,Flags.isOn(Flags.KEY_COMMENT_REPOST));
-        found+=searchControl(results,Text.TIKTOK_FEATURES,Text.SELF_REPOST,Flags.isOn(Flags.KEY_SELF_REPOST));
-        found+=searchControl(results,Text.TIKTOK_FEATURES,Text.COMMENT_PHOTOS,Flags.isOn(Flags.KEY_COMMENT_PHOTOS));
-        found+=searchControl(results,Text.TIKTOK_FEATURES,Text.HASHTAGS_UNLIMITED,Flags.isOn(Flags.KEY_HASHTAGS));
-        found+=searchControl(results,Text.TIKTOK_FEATURES,Text.TRANSLATE_COMMENTS,Flags.isOn(Flags.KEY_TRANSLATE_COMMENTS));
-        found+=searchControl(results,Text.APPEARANCE,Text.NEW_PROFILE,Flags.isOn(Flags.KEY_NEW_PROFILE));
-        found+=searchControl(results,Text.APPEARANCE,Text.NAV_CAPSULE,NavBar.isEnabled());
-        found+=searchControl(results,Text.APPEARANCE,Text.MD3_FEED,Md3.isOn(Md3.KEY_FEED));
-        found+=searchControl(results,Text.APPEARANCE,Text.MD3_ICONS,Md3.isOn(Md3.KEY_ICONS));
-        found+=searchControl(results,Text.APPEARANCE,Text.MD3_PROFILE,Md3.isOn(Md3.KEY_PROFILE));
-        found+=searchControl(results,Text.APPEARANCE,Text.MD3_INBOX,Md3.isOn(Md3.KEY_INBOX));
-        found+=searchControl(results,Text.APPEARANCE,Text.DESIGN_COMMENTS,CommentStyle.enabled());
-        found+=searchHit(results,Text.APPEARANCE,Text.AVATAR_SHAPE,()->{});
+        found+=searchControl(results,Text.PROFILE_VIEW,Text.NEW_PROFILE,Flags.isOn(Flags.KEY_NEW_PROFILE));
+        found+=searchControl(results,Text.MD3_TIKTOK,Text.NAV_CAPSULE,NavBar.isEnabled());
+        found+=searchControl(results,Text.MD3_TIKTOK,Text.MD3_FEED,Md3.isOn(Md3.KEY_FEED));
+        found+=searchControl(results,Text.MD3_TIKTOK,Text.MD3_ICONS,Md3.isOn(Md3.KEY_ICONS));
+        found+=searchControl(results,Text.MD3_TIKTOK,Text.MD3_PROFILE,Md3.isOn(Md3.KEY_PROFILE));
+        found+=searchControl(results,Text.MD3_TIKTOK,Text.MD3_INBOX,Md3.isOn(Md3.KEY_INBOX));
+        found+=searchControl(results,Text.MD3_TIKTOK,Text.DESIGN_COMMENTS,CommentStyle.enabled());
+        found+=searchHit(results,Text.MD3_TIKTOK,Text.AVATAR_SHAPE,()->{});
         found+=searchHit(results,Text.FPS,Text.FPS,()->{});
         found+=searchHit(results,Text.TAGS,Text.TAGS+" "+Text.TAGS_ADD,()->{});
         found+=searchHit(results,Text.GRADIENT,Text.GRADIENT,()->{});
+        found+=searchControl(results,Text.THEME,Text.AMOLED,Themes.isAmoled());
         if(found==0){
         found += searchHit(results, Text.REGION, Text.SEARCH_REGION,
                 () -> { countriesOpen = true; });
@@ -3646,7 +3681,7 @@ public class SettingsActivity extends Activity {
 
     private int searchControl(LinearLayout into,String section,String title,boolean on){
         if(!matchesSearch(title))return 0;if(into.getChildCount()>0)into.addView(line());
-        into.addView(actionRow("search",title,on?Local.of("Включено"):Local.of("Выключено"),()->{searchQuery="";settingsGroup=groupOf(section);rebuild();page.post(()->{View target=settingTargets.get(title);if(target==null)return;int offset=0;View cursor=target;while(cursor!=column){offset+=cursor.getTop();if(!(cursor.getParent() instanceof View))break;cursor=(View)cursor.getParent();}page.smoothScrollTo(0,Math.max(0,offset-dp(16)));Motion.change(target);});}));return 1;
+        into.addView(actionRow("search",title,on?Local.of("Включено"):Local.of("Выключено"),()->{searchQuery="";settingsGroup=groupOf(section);Shelf to=shelfOfSection(section);settingsPage=to==null?null:to.id;rebuild();page.post(()->{View target=settingTargets.get(title);if(target==null)return;int offset=0;View cursor=target;while(cursor!=column){offset+=cursor.getTop();if(!(cursor.getParent() instanceof View))break;cursor=(View)cursor.getParent();}page.smoothScrollTo(0,Math.max(0,offset-dp(16)));Motion.change(target);});}));return 1;
     }
     private int searchHit(LinearLayout into, String title, String words, final Runnable open) {
         if (!matchesSearch(title + " " + words)) return 0;
@@ -3655,6 +3690,8 @@ public class SettingsActivity extends Activity {
             open.run();
             searchQuery = "";
             settingsGroup = groupOf(title);
+            Shelf to = shelfOfSection(title);
+            settingsPage = to == null ? null : to.id;
             page.scrollTo(0, 0);
             rebuild();
             final View target = sectionTargets.get(title);
@@ -3741,7 +3778,7 @@ public class SettingsActivity extends Activity {
             entry.setMinimumHeight(dp(80));Motion.touch(entry);
             entry.setOnClickListener(v -> {
                 if(navigating)return;navigating=true;
-                Motion.navigate(column,1f,()->{settingsGroup=chosen;page.scrollTo(0,0);rebuild();navigating=false;});
+                Motion.navigate(column,1f,()->{settingsGroup=chosen;settingsPage=null;page.scrollTo(0,0);rebuild();navigating=false;});
             });
             list.addView(entry);
         }
@@ -3754,38 +3791,65 @@ public class SettingsActivity extends Activity {
      * 8 the things that are for nothing.
      */
     private int groupOf(String section) {
-        if (section.equals(Text.FUN_DEP) || section.equals(Text.FUN_SCREAMERS) || section.equals(Text.FUN_RUBBLE)
-                || section.equals(Text.FUN_CAT)) return 8;
-        if (section.equals(Text.PLUGINS)) return 6;
-        if (section.equals(Text.GRADIENT) || section.equals(Text.BADGES) || section.equals(Text.ACCOUNT)) return 2;
-        if (section.equals(Text.APPEARANCE) || section.equals(Text.ACCENT)
-                || section.equals(Text.THEME) || section.equals(Text.FONT)) return 1;
-        if (section.equals(Text.REGION) || section.equals(Text.COUNTRY)
-                || section.equals(Text.FEED) || section.equals(Text.VIDEO)
-                || section.equals(Text.RAIL) || section.equals(Text.COMMENTS)
-                || section.equals(Text.TAGS) || section.equals(Text.FPS) || section.equals(Text.DATE_FILTER)
-                || section.equals(Text.TIKTOK_FEATURES)
-                || section.equals(BURN)) return 3;
-        if (section.equals(Text.PINNED_FRIENDS) || section.equals(Text.STREAKS)
-                || section.equals(Text.NOTIFICATIONS)) return 7;
-        if (section.equals(Text.THANKS) || section.equals(Text.UPDATE) || section.equals(Text.CHANNEL)
-                || section.equals(Text.LINKS)) return 5;
-        return 4; // downloads, backup, diagnostics, diary
+        Shelf one = shelfOfSection(section);
+        return one == null ? 4 : one.group;
+    }
+
+    /** The pages of a shelf, each with what it is for. */
+    private View shelfList(int group) {
+        LinearLayout list = card();
+        java.util.List<Shelf> pages = shelvesOf(group);
+        for (int n = 0; n < pages.size(); n++) {
+            final Shelf one = pages.get(n);
+            if (n > 0) list.addView(line());
+            LinearLayout entry = row();
+            entry.setPadding(dp(16), dp(12), dp(20), dp(12));
+            entry.addView(icon(one.icon, false, Design.fluent() ? 32 : 44));
+            LinearLayout words = new LinearLayout(this); words.setOrientation(LinearLayout.VERTICAL);
+            TextView head = label(one.title); head.setTextSize(Design.fluent() ? 15 : 17);
+            head.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            words.addView(head);
+            if (one.note.length() > 0) words.addView(detail(one.note));
+            entry.setContentDescription(one.title + ". " + one.note);
+            entry.addView(words, grow()); entry.addView(away());
+            entry.setMinimumHeight(dp(72)); Motion.touch(entry);
+            entry.setOnClickListener(v -> {
+                if (navigating) return; navigating = true;
+                Motion.navigate(column, 1f, () -> { settingsPage = one.id; page.scrollTo(0, 0); rebuild(); navigating = false; });
+            });
+            list.addView(entry);
+        }
+        return wrap(list);
+    }
+
+    /** A line under a page's title saying what the page is for. */
+    private View lead(String words) {
+        TextView view = new TextView(this);
+        view.setText(words);
+        view.setTextColor(skin.muted());
+        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+        view.setLineSpacing(0, 1.1f);
+        view.setPadding(dp(24), 0, dp(24), dp(10));
+        return view;
     }
 
     private void filterGroup() {
-        int current = 0;
-        boolean offered = true;
+        Shelf open = shelf(settingsPage);
+        boolean shown = false, offered = true;
         for (int i = 3; i < column.getChildCount(); i++) {
             View item = column.getChildAt(i);
             if (item instanceof TextView && sectionTargets.containsValue(item)) {
                 String section = ((TextView) item).getText().toString();
-                current = groupOf(section);
+                shown = false;
+                if (open != null) for (String name : open.sections) shown |= name.equals(section);
                 offered = !Version.LITE || inLite(section);
-            }
-            item.setVisibility(current == settingsGroup && offered ? View.VISIBLE : View.GONE);
+                // a page of one section already says its name in the title
+                if (shown && open.sections.length == 1) { item.setVisibility(View.GONE); continue; }
+            } else if (item.getTag(LEAD) != null) continue;
+            item.setVisibility(shown && offered ? View.VISIBLE : View.GONE);
         }
     }
+    private static final int LEAD = 0x7e0c0340;
 
     /**
      * The sections that do something in TikTok Lite. The rest hook classes
@@ -3806,10 +3870,13 @@ public class SettingsActivity extends Activity {
     private void goBack() {
         if(navigating)return;
         if (searchQuery.length() > 0) { searchQuery = ""; rebuild(); }
+        else if (settingsPage != null && shelvesOf(settingsGroup).size() > 1) {
+            navigating=true;Motion.navigate(column,-1f,()->{settingsPage=null;rebuild();navigating=false;});
+        }
         else if (settingsGroup != 0) {
             // the flags are reached from the tools, so that is where back leads
             final int to = settingsGroup == FLAGS_PAGE ? 4 : 0;
-            navigating=true;Motion.navigate(column,-1f,()->{settingsGroup=to;rebuild();navigating=false;});
+            navigating=true;Motion.navigate(column,-1f,()->{settingsGroup=to;settingsPage=to==4?"diary":null;rebuild();navigating=false;});
         }
         else finish();
     }

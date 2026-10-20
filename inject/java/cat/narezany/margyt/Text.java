@@ -1459,6 +1459,43 @@ final class Text {
         return pick(counted(n, "день", "дня", "дней"), counted(n, "день", "дні", "днів"),
                 n + (n == 1 ? " day" : " days"));
     }
+    // The pages of the settings, and what each is for.
+    static final String PAGE_STYLE = pick("Стиль и значок", "Стиль і значок", "Style and icon");
+    static final String PAGE_STYLE_NOTE = pick("Material 3, Liquid Glass или Fluent и значок на рабочем столе", "Material 3, Liquid Glass або Fluent і значок на робочому столі", "Material 3, Liquid Glass or Fluent, and the home screen icon");
+    static final String PAGE_ACCENT_NOTE = pick("Цвет кнопок, вкладок и переключателей", "Колір кнопок, вкладок і перемикачів", "The colour of buttons, tabs and switches");
+    static final String MD3_TIKTOK = pick("МД3 дизайн TikTok", "МД3 дизайн TikTok", "Material 3 look for TikTok");
+    static final String PAGE_MD3_NOTE = pick("Нижняя панель капсулой, лента, профиль, входящие, иконки и комментарии в стиле Material 3", "Нижня панель капсулою, стрічка, профіль, вхідні, іконки й коментарі в стилі Material 3", "The capsule tab bar, the feed, profile, inbox, icons and comments in Material 3");
+    static final String PAGE_THEME_NOTE = pick("Цвета фона и текста, цвета телефона и AMOLED", "Кольори фону й тексту, кольори телефона та AMOLED", "Background and text colours, the phone's palette and AMOLED");
+    static final String PAGE_FONT_NOTE = pick("Шрифт для всего TikTok", "Шрифт для всього TikTok", "A typeface for all of TikTok");
+    static final String PAGE_BADGES_NOTE = pick("Твои значки, их порядок и подтверждение аккаунта", "Твої значки, їх порядок і підтвердження акаунта", "Your badges, their order and proving the account");
+    static final String PAGE_GRADIENT_NOTE = pick("Цветной ник, который видят все с MargyT", "Кольоровий нік, який бачать усі з MargyT", "A coloured name everyone with MargyT sees");
+    static final String PROFILE_VIEW = pick("Вид профиля", "Вигляд профілю", "Profile layout");
+    static final String PAGE_LOOK_NOTE = pick("Новый или старый профиль TikTok", "Новий або старий профіль TikTok", "TikTok's new or old profile");
+    static final String NEW_PROFILE_NOTE = pick("Новый профиль TikTok с именем слева. Если выключить, будет старый.", "Новий профіль TikTok з іменем ліворуч. Якщо вимкнути, буде старий.", "TikTok's new profile with the name on the left. Off brings back the old one.");
+    static final String PAGE_ACCOUNT_NOTE = pick("Айди аккаунта, чтобы скопировать", "Айді акаунта, щоб скопіювати", "The account's ids, to copy");
+    static final String PAGE_FEED_NOTE = pick("Реклама, эфиры, фото, упрощённая лента, фильтр по дате и хештеги", "Реклама, ефіри, фото, спрощена стрічка, фільтр за датою і хештеги", "Ads, lives, photos, the simplified feed, the date filter and hashtags");
+    static final String PAGE_VIDEO_NOTE = pick("Кнопки справа, дата, скорость, яркость и частота кадров", "Кнопки праворуч, дата, швидкість, яскравість і частота кадрів", "The buttons on the right, the date, speed, brightness and frame rate");
+    static final String PAGE_COMMENTS_NOTE = pick("Копирование комментариев", "Копіювання коментарів", "Copying comments");
+    static final String PAGE_BURN_NOTE = pick("Глаз, который приглушает кнопки поверх видео, чтобы экран не выгорал", "Око, яке приглушує кнопки поверх відео, щоб екран не вигорав", "The eye that dims what sits over the video so the screen does not burn in");
+    static final String PAGE_REGION_NOTE = pick("Страна, для которой TikTok подбирает ленту", "Країна, для якої TikTok підбирає стрічку", "The country TikTok picks the feed for");
+    static final String PAGE_DOWNLOADS_NOTE = pick("Без водяного знака, качество, кадры", "Без водяного знака, якість, кадри", "No watermark, quality, frames");
+    static final String PAGE_BACKUP_NOTE = pick("Сохранить и вернуть настройки мода", "Зберегти й повернути налаштування мода", "Save and restore the mod's settings");
+    static final String PAGE_DIAGNOSTICS_NOTE = pick("Отчёты о сбоях и подвисаниях", "Звіти про збої та підвисання", "Crash and lag reports");
+    static final String PAGE_DIARY_NOTE = pick("Что мод делал, для разбора проблем", "Що мод робив, для розбору проблем", "What the mod did, for finding problems");
+    static final String PAGE_UPDATE_NOTE = pick("Версия, обновления и канал", "Версія, оновлення та канал", "Version, updates and the channel");
+    static final String PAGE_LINKS_NOTE = pick("Сайт, Telegram и исходники", "Сайт, Telegram і вихідний код", "Site, Telegram and the source");
+    static final String PAGE_THANKS_NOTE = pick("Кто помогал и как поддержать", "Хто допомагав і як підтримати", "Who helped, and how to support");
+    static final String PAGE_PINNED_NOTE = pick("Друзья, которые всегда наверху", "Друзі, які завжди нагорі", "Friends kept at the top");
+    static final String PAGE_STREAKS_NOTE = pick("Чтобы серии не сгорали", "Щоб серії не згоряли", "So streaks do not run out");
+    static final String PAGE_NOTIFICATIONS_NOTE = pick("Какие уведомления TikTok показывать", "Які сповіщення TikTok показувати", "Which TikTok notifications to show");
+    static final String PAGE_DEP_NOTE = pick("Казино понарошку и значок за победу", "Казино понарошку і значок за перемогу", "A pretend casino with a badge to win");
+    static final String PAGE_RUBBLE_NOTE = pick("Интерфейс TikTok падает и катается по экрану", "Інтерфейс TikTok падає й котиться екраном", "TikTok's buttons fall and roll about");
+    static final String PAGE_SCREAMERS_NOTE = pick("Внезапный кот поверх ленты", "Раптовий кіт поверх стрічки", "A sudden cat over the feed");
+    static final String PAGE_CAT_NOTE = pick("Толстый тилкайо", "Товстий тілкайо", "The fat tilcayo");
+    static final String AMOLED = pick("AMOLED", "AMOLED", "AMOLED");
+    static final String AMOLED_NOTE = pick("Чистый чёрный вместо тёмно-серого: и у TikTok, и у темы мода. Акцентный цвет остаётся.", "Чистий чорний замість темно-сірого: і в TikTok, і в темі мода. Акцентний колір лишається.", "Pure black instead of dark grey, over TikTok's theme and the mod's. The accent colour stays.");
+    static final String AMOLED_LIGHT = pick("AMOLED работает только с тёмной темой. Включи тёмную тему в TikTok, и переключатель заработает.", "AMOLED працює лише з темною темою. Увімкни темну тему в TikTok, і перемикач запрацює.", "AMOLED only works with the dark theme. Turn on TikTok's dark theme first.");
+
     static final String SIMPLE_FEED = pick("Упрощённая лента", "Спрощена стрічка", "Simplified feed");
     static final String SIMPLE_FEED_ABOUT = pick("Что это и откуда идея", "Що це і звідки ідея", "What it is and whose idea");
     static final String SIMPLE_FEED_NOTE = pick(
@@ -1467,16 +1504,10 @@ final class Text {
             "Less sits over the video: the Following and For You tabs at the top (search stays), the author's picture with its follow button, the sound's name and the spinning record at the bottom right are gone. The buttons on the right and the caption get smaller, and the caption stops at two lines.\n\nThe idea comes from the TikTok You mod, not from us.");
     static final String DATE_FILTER = pick("Фильтр по дате", "Фільтр за датою", "Filter by date");
     static final String DATE_FILTER_OFF = pick("Выключен", "Вимкнено", "Off");
-    static final String DATE_FILTER_RECENT = pick("Не старше…", "Не старші за…", "No older than…");
-    static final String DATE_FILTER_BETWEEN = pick("За период…", "За період…", "Between dates…");
-    static final String DATE_FILTER_FROM = pick("С", "З", "From");
-    static final String DATE_FILTER_TO = pick("По", "По", "To");
-    static final String DATE_FILTER_YEAR = pick("Весь год", "Весь рік", "A whole year");
-    static final String DATE_FILTER_AMOUNT = pick("Сколько", "Скільки", "How many");
     static final String DATE_FILTER_NOTE = pick(
-            "«Не старше» считается от текущего момента: «1 день» это всегда последние сутки. «За период» это даты в календаре: 2024 год останется 2024 годом. Свои видео и эфиры не скрываются. Если условие очень узкое, лента будет подгружаться дольше.",
-            "«Не старші за» рахується від поточного моменту: «1 день» це завжди остання доба. «За період» це дати в календарі: 2024 рік залишиться 2024 роком. Свої відео та ефіри не приховуються. Якщо умова дуже вузька, стрічка довше підвантажуватиметься.",
-            "\u201CNo older than\u201D counts back from now: one day is always the last 24 hours. \u201CBetween dates\u201D is the calendar: 2024 stays 2024. Your own videos and lives are never hidden. A very narrow rule makes the feed slower to fill.");
+            "Видео старше выбранного не показываются в ленте. Считается от текущего момента, от 6 часов до недели. Свои видео и эфиры не скрываются.",
+            "Відео, старші за вибране, не показуються в стрічці. Рахується від поточного моменту, від 6 годин до тижня. Свої відео та ефіри не приховуються.",
+            "Videos older than this are left out of the feed, counted back from now, six hours to a week. Your own videos and lives stay.");
     static String dateUnit(int unit, int n) {
         switch (unit) {
             case 0: return pick(word(n, "час", "часа", "часов"), word(n, "година", "години", "годин"), n == 1 ? "hour" : "hours");

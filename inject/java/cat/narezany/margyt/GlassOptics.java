@@ -92,6 +92,7 @@ final class GlassOptics {
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final float[] hsv=new float[3];
         private Bitmap bound;
+        private LinearGradient rim;private float rimW,rimH;
         private BitmapShader input;
         void paint(Canvas canvas, GlassBackdrop.Frame frame, Matrix matrix, float x,float y,
                    float w,float h,float top,float bottom,int colour,float press,float dp) {
@@ -110,6 +111,25 @@ final class GlassOptics {
             float blur=dp*(Design.fluent()?1.15f:1.45f);
             blurX.setInputShader("content",input);blurX.setFloatUniform("axis",blur,0);
             blurY.setInputShader("content",blurX);blurY.setFloatUniform("axis",0,blur);
+            if(!Design.fluent() && (w<dp*96 || h<dp*96)){
+                // Small glass (a button, an icon, a tab) is mostly rim: the full lens with its
+                // refraction and dispersion samples the backdrop dozens of times a pixel for an
+                // effect too small to see there. The blur, a light tint and the rim are kept.
+                float r=Math.min(top,Math.min(w,h)/2f);
+                paint.setStyle(Paint.Style.FILL);paint.setShader(blurY);
+                canvas.drawRoundRect(0,0,w,h,r,r,paint);
+                paint.setShader(null);
+                boolean dark=NavBar.bright(colour)<.5f;
+                paint.setColor(dark?0x1A101114:0x24F5F6FA);
+                canvas.drawRoundRect(0,0,w,h,r,r,paint);
+                if(press>0){paint.setColor((Math.round(press*40)<<24)|0xFFFFFF);canvas.drawRoundRect(0,0,w,h,r,r,paint);}
+                paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(Math.max(1,dp*.8f));
+                if(rim==null||rimW!=w||rimH!=h){rim=new LinearGradient(0,0,w,h,new int[]{0x90ffffff,0x10ffffff,0x60ffffff},null,Shader.TileMode.CLAMP);rimW=w;rimH=h;}
+                paint.setShader(rim);
+                float inset=dp*.4f;canvas.drawRoundRect(inset,inset,w-inset,h-inset,Math.max(0,r-inset),Math.max(0,r-inset),paint);
+                paint.setShader(null);paint.setStyle(Paint.Style.FILL);
+                return;
+            }
             if(Design.fluent()){
                 if(acrylic==null)acrylic=new RuntimeShader(FluentShader.ACRYLIC);
                 acrylic.setInputShader("content",blurY);

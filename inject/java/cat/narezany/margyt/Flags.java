@@ -130,7 +130,16 @@ public final class Flags {
         forget();
     }
 
+    /**
+     * Only the new profile is a choice. Every other experiment the mod answers is simply on:
+     * a switch for each of them was a page of settings nobody could make sense of.
+     */
+    private static boolean chosen(String key) {
+        return KEY_NEW_PROFILE.equals(key);
+    }
+
     private static boolean bool(String key) {
+        if (!chosen(key)) return true;
         try {
             SharedPreferences prefs = prefs();
             return prefs != null && prefs.getBoolean(key, ON_BY_DEFAULT.contains(key));
@@ -215,6 +224,13 @@ public final class Flags {
             // The five-hashtag limit on a caption is the app's own, switched on by
             // an experiment; with it off the counter is never consulted.
             if (on(prefs, KEY_HASHTAGS)) made.put("studio_publish_limit_hashtag_switch", none);
+            // The teleprompter in the camera: the script scrolls over the preview while recording.
+            made.put("camera_teleprompter_mode", one);
+            // The front "flash" that lights the face from the screen, with its colour and
+            // brightness to choose instead of plain white.
+            made.put("studio_selfie_fill_light_config", "{\"support_selfie_light_adjust\":true,\"selfie_fill_light_persist_memory\":true,"
+                    + "\"selfie_fill_light_tab_memory\":true,\"selfie_fill_light_shutter_ring_shadow_order_fix\":true,\"lazy_load_flash_front_scene\":true,"
+                    + "\"auto_adjust_full_brightness\":true}");
             // A button in the head of the comments that turns the translation
             // of all of them on and off, where TikTok otherwise translates one
             // at a time. TikTok has it as an experiment with several arms, and
@@ -257,6 +273,7 @@ public final class Flags {
     }
 
     private static boolean on(SharedPreferences prefs, String key) {
+        if (!chosen(key)) return true;
         return prefs.getBoolean(key, ON_BY_DEFAULT.contains(key));
     }
 
@@ -321,6 +338,28 @@ public final class Flags {
     public static String forcedString(String key) {
         Object value = forced(key);
         return value instanceof String ? (String) value : null;
+    }
+
+    private static final Map<String, Object> BUILT = new java.util.concurrent.ConcurrentHashMap<String, Object>();
+
+    /**
+     * A flag that is a whole settings object, read by TikTok's object reader: the mod keeps it
+     * as JSON and it is built here into the class asked for, once.
+     */
+    public static Object forcedObject(Class<?> type, String key) {
+        if (type == null || key == null) return null;
+        Object value = forced(key);
+        if (!(value instanceof String) || !((String) value).startsWith("{")) return null;
+        String cacheKey = type.getName() + "\n" + key;
+        Object made = BUILT.get(cacheKey);
+        if (made != null) return made;
+        try {
+            made = FlagObjects.build((String) value, type);
+            if (made != null && type.isInstance(made)) { BUILT.put(cacheKey, made); return made; }
+        } catch (Throwable error) {
+            Diary.note("flag object " + key + ": " + error);
+        }
+        return null;
     }
 
     // ------------------------------------------------- the developer's list
