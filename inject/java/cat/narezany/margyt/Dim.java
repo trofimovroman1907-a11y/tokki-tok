@@ -1000,6 +1000,14 @@ public final class Dim {
         }
     }
 
+    /** A view's alpha as TikTok has it, with this pass's dimming taken back out. */
+    static float undimmed(View view) {
+        if (view == null) return 0f;
+        float now = view.getAlpha();
+        Dimmed dimmed = android.os.Looper.myLooper() == android.os.Looper.getMainLooper() ? faded.get(view) : null;
+        return dimmed != null && Math.abs(now - dimmed.applied) < 0.001f ? dimmed.original : now;
+    }
+
     private static int childShape(View view){
         int hash=0;if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++){View child=group.getChildAt(i);hash=31*hash+child.getWidth()*17+child.getHeight();}}return hash;
     }

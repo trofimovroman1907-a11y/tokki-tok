@@ -59,6 +59,8 @@ public final class Flags {
     // Switched on here for whoever asks, left as TikTok decided otherwise.
     public static final String KEY_COMMENT_REPOST = "flag_comment_repost";
     public static final String KEY_SELF_REPOST = "flag_self_repost";
+    public static final String KEY_COMMENT_PHOTOS = "flag_comment_photos";
+    public static final String KEY_HASHTAGS = "flag_hashtags_unlimited";
     public static final String KEY_TRANSLATE_COMMENTS = "flag_translate_comments";
 
     // The new profile. On unless switched off, and off means the old one even
@@ -66,7 +68,8 @@ public final class Flags {
     public static final String KEY_NEW_PROFILE = "flag_new_profile";
 
     private static final Set<String> ON_BY_DEFAULT = new HashSet<String>(Arrays.asList(
-            KEY_VOICE, KEY_BANNER, KEY_SPEED_LOCK, KEY_NEW_PROFILE, KEY_TRANSLATE_COMMENTS));
+            KEY_VOICE, KEY_BANNER, KEY_SPEED_LOCK, KEY_NEW_PROFILE, KEY_TRANSLATE_COMMENTS, KEY_COMMENT_REPOST,
+            KEY_COMMENT_PHOTOS, KEY_HASHTAGS));
 
     /** Where the developer's own answers are kept, one entry a flag. */
     static final String OVERRIDES = Margy.PREFS + "_flags";
@@ -206,6 +209,12 @@ public final class Flags {
                 made.put("tt_audio_comment_repost", one);
             }
             if (on(prefs, KEY_SELF_REPOST)) made.put("enable_self_repost", one);
+            // Several photos in one comment: the comment's picture button opens the
+            // album that lets more than one be picked when this experiment says 2.
+            if (on(prefs, KEY_COMMENT_PHOTOS)) made.put("comment_multi_photo_group", Integer.valueOf(2));
+            // The five-hashtag limit on a caption is the app's own, switched on by
+            // an experiment; with it off the counter is never consulted.
+            if (on(prefs, KEY_HASHTAGS)) made.put("studio_publish_limit_hashtag_switch", none);
             // A button in the head of the comments that turns the translation
             // of all of them on and off, where TikTok otherwise translates one
             // at a time. TikTok has it as an experiment with several arms, and

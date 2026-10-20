@@ -48,7 +48,8 @@ class NativeFlagsTests(unittest.TestCase):
      check(Flags.forcedInt("unrelated")==null&&Flags.forcedBoolean("unrelated")==null,"a flag nobody named is TikTok's");
      check(Flags.forcedInt("long_press_speed_up_lock")==1,"the speed lock is answered both ways");
      Flags.set(Flags.KEY_SPEED_LOCK,false);check(Flags.forcedInt("long_press_speed_up_lock")==0,"off is an answer too");
-     check(Flags.forcedInt("tt_comment_repost")==null&&Flags.forcedInt("enable_self_repost")==null,"what is only offered is off to begin with");
+     check(Flags.forcedInt("tt_comment_repost")==1&&Flags.forcedInt("enable_self_repost")==null,"comment reposts are on to begin with, self reposts only offered");
+     check(Flags.forcedInt("comment_multi_photo_group")==2&&Flags.forcedBoolean("studio_publish_limit_hashtag_switch")==Boolean.FALSE,"several photos in a comment and no hashtag limit");
      Flags.set(Flags.KEY_COMMENT_REPOST,true);Flags.set(Flags.KEY_SELF_REPOST,true);
      check(Flags.forcedInt("tt_comment_repost")==1&&Flags.forcedInt("tt_comment_repost_interaction")==1&&Flags.forcedInt("tt_audio_comment_repost")==1&&Flags.forcedInt("enable_self_repost")==1,"and on when asked for");
      check(Flags.forcedInt("profile_left_align")==1,"the new profile is on for everybody");

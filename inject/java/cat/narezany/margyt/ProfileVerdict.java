@@ -34,9 +34,43 @@ final class ProfileVerdict {
     private static final Map<Class<?>, Method[]> roads = new java.util.HashMap<>();
 
     static void bind(Object component, View view) {
-        if (!(view instanceof LinearLayout) || ((LinearLayout) view).getOrientation() != LinearLayout.VERTICAL) return;
-        synchronized (owners) { owners.put(view, new WeakReference<>(component)); }
-        apply(view);
+        // The rows hang in the container's own column, which is not always the view the
+        // component was handed: that one can be a frame round it. The column is found by
+        // its type on the container class, then by looking inside the view.
+        View block = column(component, view);
+        android.util.Log.e("MargyTVerdict", "bind " + component.getClass().getSimpleName() + " view=" + view.getClass().getName()
+                + " column=" + (block == null ? "none" : block.getClass().getName()) + " uid=" + uid(component));
+        if (block == null) return;
+        synchronized (owners) { owners.put(block, new WeakReference<>(component)); }
+        if (block != view && !Boolean.TRUE.equals(block.getTag(WATCHED)))
+            { block.setTag(WATCHED, Boolean.TRUE); block.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> apply(v)); }
+        apply(block);
+    }
+
+    private static final int WATCHED = 0x7e0c0339;
+
+    private static boolean vertical(View view) {
+        return view instanceof LinearLayout && ((LinearLayout) view).getOrientation() == LinearLayout.VERTICAL;
+    }
+
+    private static View column(Object component, View view) {
+        for (Class<?> step = component.getClass(); step != null && step != Object.class; step = step.getSuperclass()) {
+            if (!step.getName().endsWith("HeaderBaseContainerComponent")) continue;
+            for (java.lang.reflect.Field field : step.getDeclaredFields()) {
+                if (field.getType() != ViewGroup.class) continue;
+                try {
+                    field.setAccessible(true);
+                    Object value = field.get(component);
+                    if (vertical((View) value)) return (View) value;
+                } catch (Throwable ignored) {}
+            }
+        }
+        if (vertical(view)) return view;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) if (vertical(group.getChildAt(i))) return group.getChildAt(i);
+        }
+        return null;
     }
 
     /** Whether a view is the plate, so nothing else rearranges it. */
@@ -49,7 +83,9 @@ final class ProfileVerdict {
             Object component = held == null ? null : held.get();
             if (component == null) return;
             LinearLayout block = (LinearLayout) view;
-            Badges.Verdict verdict = Badges.verdict(uid(component));
+            String uid = uid(component);
+            Badges.Verdict verdict = Badges.verdict(uid);
+            android.util.Log.e("MargyTVerdict", "apply uid=" + uid + " verdict=" + (verdict != null) + " children=" + block.getChildCount());
             View plate = find(block);
             if (verdict == null) {
                 if (plate != null) block.removeView(plate);

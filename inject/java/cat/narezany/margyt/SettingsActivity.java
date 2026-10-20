@@ -99,7 +99,6 @@ public class SettingsActivity extends Activity {
             "https://git.narez.xyz/narezany/MargyT/src/branch/main/docs/plugins.md";
     private static final String YOOMONEY = "https://yoomoney.ru/to/4100118196133693";
     private static final String BOOSTY = "https://boosty.to/ega_link";
-    private static final String CARD_NUMBER = "2204120143055305";
 
     private boolean countriesOpen;
     private boolean accentOpen;
@@ -393,6 +392,40 @@ public class SettingsActivity extends Activity {
         feed.addView(liveToggleRow("visibility_off",Text.HIDE_SUGGESTIONS,Feed.hides(Feed.KEY_SUGGESTIONS),on->Feed.setHides(Feed.KEY_SUGGESTIONS,on)));
         column.addView(wrap(feed));
 
+        column.addView(section(Text.DATE_FILTER));
+        LinearLayout dates = card();
+        dates.addView(actionRow("schedule", Text.DATE_FILTER, FeedDates.describe(), () -> {
+            int now = FeedDates.mode();
+            Panel.with(this, skin, Text.DATE_FILTER)
+                    .option(Text.DATE_FILTER_OFF, now == FeedDates.OFF, false, () -> { FeedDates.setMode(FeedDates.OFF); rebuild(); })
+                    .option(Text.DATE_FILTER_RECENT, now == FeedDates.RECENT, false, () -> { FeedDates.setMode(FeedDates.RECENT); rebuild(); })
+                    .option(Text.DATE_FILTER_BETWEEN, now == FeedDates.BETWEEN, false, () -> { FeedDates.setMode(FeedDates.BETWEEN); rebuild(); })
+                    .quiet(Text.CLOSE, null).show();
+        }));
+        if (FeedDates.mode() == FeedDates.RECENT) {
+            dates.addView(line());
+            dates.addView(actionRow("timeline", Text.DATE_FILTER_AMOUNT, FeedDates.amount() + " " + Text.dateUnit(FeedDates.unit(), FeedDates.amount()),
+                    this::chooseRecent));
+        } else if (FeedDates.mode() == FeedDates.BETWEEN) {
+            dates.addView(line());
+            dates.addView(actionRow("schedule", Text.DATE_FILTER_FROM, FeedDates.date(FeedDates.from()), () -> pickDate(true)));
+            dates.addView(line());
+            dates.addView(actionRow("schedule", Text.DATE_FILTER_TO, FeedDates.date(FeedDates.to()), () -> pickDate(false)));
+            dates.addView(line());
+            dates.addView(actionRow("restore", Text.DATE_FILTER_YEAR, null, () -> {
+                java.util.Calendar today = java.util.Calendar.getInstance();
+                Popup.write(this, Text.DATE_FILTER_YEAR, String.valueOf(today.get(java.util.Calendar.YEAR) - 1), Text.SAVE, said -> {
+                    try {
+                        int year = Integer.parseInt(said.trim());
+                        if (year >= 2016 && year <= today.get(java.util.Calendar.YEAR)) FeedDates.setYear(year);
+                    } catch (Throwable ignored) {}
+                    rebuild();
+                });
+            }));
+        }
+        dates.addView(caption(Text.DATE_FILTER_NOTE));
+        column.addView(wrap(dates));
+
         column.addView(section(Text.TAGS));
         LinearLayout tags = card();
         tags.addView(betaRow("tag", Text.TAGS, Tags.isEnabled(), Tags::setEnabled));
@@ -478,6 +511,12 @@ public class SettingsActivity extends Activity {
         features.addView(line());
         features.addView(toggleRow("repeat", Text.SELF_REPOST, Flags.isOn(Flags.KEY_SELF_REPOST),
                 on -> Flags.set(Flags.KEY_SELF_REPOST, on)));
+        features.addView(line());
+        features.addView(toggleRow("image", Text.COMMENT_PHOTOS, Flags.isOn(Flags.KEY_COMMENT_PHOTOS),
+                on -> Flags.set(Flags.KEY_COMMENT_PHOTOS, on)));
+        features.addView(line());
+        features.addView(toggleRow("text_fields", Text.HASHTAGS_UNLIMITED, Flags.isOn(Flags.KEY_HASHTAGS),
+                on -> Flags.set(Flags.KEY_HASHTAGS, on)));
         features.addView(line());
         features.addView(toggleRow("language", Text.TRANSLATE_COMMENTS, Flags.isOn(Flags.KEY_TRANSLATE_COMMENTS),
                 on -> Flags.set(Flags.KEY_TRANSLATE_COMMENTS, on)));
@@ -1217,8 +1256,6 @@ public class SettingsActivity extends Activity {
         pay.addView(linkRow("star", Text.YOOMONEY, Text.YOOMONEY_NOTE, YOOMONEY));
         pay.addView(line());
         pay.addView(linkRow("public", Text.BOOSTY, Text.BOOSTY_NOTE, BOOSTY));
-        pay.addView(line());
-        pay.addView(cardRow());
         column.addView(wrap(pay));
 
         column.addView(section(Text.DONATE_STEP_ID));
@@ -1235,15 +1272,30 @@ public class SettingsActivity extends Activity {
         column.addView(wrap(write));
     }
 
-    private View cardRow() {
-        LinearLayout card = row();
-        LinearLayout cardText = new LinearLayout(this);
-        cardText.setOrientation(LinearLayout.VERTICAL);
-        cardText.addView(label(spaced(CARD_NUMBER)));
-        cardText.addView(detail(Text.CARD + "  ·  " + Text.TAP_TO_COPY));
-        card.addView(cardText, grow());
-        card.setOnClickListener(v -> copy(Text.CARD, CARD_NUMBER));
-        return sized(card, 64);
+    /** How far back the feed may go: a number, then hours, days, weeks, months or years. */
+    private void chooseRecent() {
+        Popup.write(this, Text.DATE_FILTER_AMOUNT, String.valueOf(FeedDates.amount()), Text.SAVE, said -> {
+            int amount;
+            try { amount = Math.max(1, Math.min(999, Integer.parseInt(said.trim()))); } catch (Throwable ignored) { return; }
+            Panel panel = Panel.with(this, skin, Text.DATE_FILTER_AMOUNT);
+            int now = FeedDates.unit();
+            for (int unit = FeedDates.HOURS; unit <= FeedDates.YEARS; unit++) {
+                final int chosen = unit;
+                panel.option(amount + " " + Text.dateUnit(unit, amount), unit == now, false, () -> { FeedDates.setRecent(amount, chosen); rebuild(); });
+            }
+            panel.quiet(Text.CLOSE, null).show();
+        });
+    }
+
+    private void pickDate(boolean start) {
+        java.util.Calendar at = java.util.Calendar.getInstance();
+        at.setTimeInMillis((start ? FeedDates.from() : FeedDates.to()) * 1000L);
+        android.app.DatePickerDialog picker = new android.app.DatePickerDialog(this, (view, year, month, day) -> {
+            if (start) FeedDates.setFrom(year, month, day); else FeedDates.setTo(year, month, day);
+            rebuild();
+        }, at.get(java.util.Calendar.YEAR), at.get(java.util.Calendar.MONTH), at.get(java.util.Calendar.DAY_OF_MONTH));
+        picker.getDatePicker().setMaxDate(System.currentTimeMillis());
+        picker.show();
     }
 
     private void rebuildAfterSwitchAnimation() {
@@ -2794,8 +2846,6 @@ public class SettingsActivity extends Activity {
 
         rows.addView(quiet(Text.DONATE_NOTE));
 
-        rows.addView(cardRow());
-
         rows.addView(linkRow("star", Text.YOOMONEY, Text.YOOMONEY_NOTE, YOOMONEY));
         rows.addView(linkRow("public", Text.BOOSTY, Text.BOOSTY_NOTE, BOOSTY));
         return rows;
@@ -3524,6 +3574,8 @@ public class SettingsActivity extends Activity {
         found+=searchControl(results,Text.BADGES,Text.BADGES_ON,Badges.isEnabled());
         found+=searchControl(results,Text.TIKTOK_FEATURES,Text.COMMENT_REPOST,Flags.isOn(Flags.KEY_COMMENT_REPOST));
         found+=searchControl(results,Text.TIKTOK_FEATURES,Text.SELF_REPOST,Flags.isOn(Flags.KEY_SELF_REPOST));
+        found+=searchControl(results,Text.TIKTOK_FEATURES,Text.COMMENT_PHOTOS,Flags.isOn(Flags.KEY_COMMENT_PHOTOS));
+        found+=searchControl(results,Text.TIKTOK_FEATURES,Text.HASHTAGS_UNLIMITED,Flags.isOn(Flags.KEY_HASHTAGS));
         found+=searchControl(results,Text.TIKTOK_FEATURES,Text.TRANSLATE_COMMENTS,Flags.isOn(Flags.KEY_TRANSLATE_COMMENTS));
         found+=searchControl(results,Text.APPEARANCE,Text.NEW_PROFILE,Flags.isOn(Flags.KEY_NEW_PROFILE));
         found+=searchControl(results,Text.APPEARANCE,Text.NAV_CAPSULE,NavBar.isEnabled());
@@ -3666,7 +3718,7 @@ public class SettingsActivity extends Activity {
      * 8 the things that are for nothing.
      */
     private int groupOf(String section) {
-        if (section.equals(Text.FUN_DEP) || section.equals(Text.FUN_SCREAMERS)
+        if (section.equals(Text.FUN_DEP) || section.equals(Text.FUN_SCREAMERS) || section.equals(Text.FUN_RUBBLE)
                 || section.equals(Text.FUN_CAT)) return 8;
         if (section.equals(Text.PLUGINS)) return 6;
         if (section.equals(Text.GRADIENT) || section.equals(Text.BADGES) || section.equals(Text.ACCOUNT)) return 2;
@@ -3675,7 +3727,7 @@ public class SettingsActivity extends Activity {
         if (section.equals(Text.REGION) || section.equals(Text.COUNTRY)
                 || section.equals(Text.FEED) || section.equals(Text.VIDEO)
                 || section.equals(Text.RAIL) || section.equals(Text.COMMENTS)
-                || section.equals(Text.TAGS) || section.equals(Text.FPS)
+                || section.equals(Text.TAGS) || section.equals(Text.FPS) || section.equals(Text.DATE_FILTER)
                 || section.equals(Text.TIKTOK_FEATURES)
                 || section.equals(BURN)) return 3;
         if (section.equals(Text.PINNED_FRIENDS) || section.equals(Text.STREAKS)

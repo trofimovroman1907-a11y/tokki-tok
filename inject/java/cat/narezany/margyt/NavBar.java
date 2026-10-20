@@ -708,11 +708,15 @@ final class NavBar {
             if(!Design.frosted())canvas.drawRoundRect(box, round, round, line);
 
             float middle = body.centerY(), icon = 24f * unit, gap = 6f * unit;
+            // brought back by a touch, the bar comes back whole: at the strongest
+            // dimming the tabs themselves are see-through and it used to come back empty
+            boolean peeking = SystemClock.uptimeMillis() < peekUntil;
             for (Tab tab : tabs) {
                 int saved = -1;
-                if (tab.shown < 0.99f) {
+                float seen = peeking ? 1f : tab.shown;
+                if (seen < 0.99f) {
                     saved = canvas.saveLayerAlpha(tab.left, body.top, tab.right, body.bottom,
-                            Math.round(tab.shown * 255f));
+                            Math.round(seen * 255f));
                 }
                 float centre = (tab.left + tab.right) / 2f;
                 if (tab.kind == CREATE) {

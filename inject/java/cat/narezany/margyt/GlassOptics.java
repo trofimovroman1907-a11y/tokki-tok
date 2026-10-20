@@ -36,6 +36,7 @@ final class GlassOptics {
                     view.getLocationOnScreen(point);
                     float x=point[0]-frame.x+bounds.left, y=point[1]-frame.y+bounds.top;
                     lens.paint(canvas,frame,transform,x,y,local.width(),local.height(),top,bottom,colour,press,density);
+                    veil(canvas,view,top,bottom,density);
                     canvas.restoreToCount(save);
                     return;
                 }
@@ -54,7 +55,32 @@ final class GlassOptics {
                 ?new int[]{0x30ffffff,0x14ffffff}:new int[]{0x90ffffff,0x08ffffff,0x65ffffff},null,Shader.TileMode.CLAMP));
         local.inset(density*.4f,density*.4f);canvas.drawRoundRect(local,top,top,paint);
         paint.setShader(null);paint.setStyle(Paint.Style.FILL);
+        local.inset(-density*.4f,-density*.4f);veil(canvas,view,top,bottom,density);
         canvas.restoreToCount(save);
+    }
+
+    private final Path veilPath = new Path();
+    private final float[] veilRadii = new float[8];
+    /**
+     * A layer of the page's colour over the glass, under what the surface holds, so that
+     * words on it can be read. Fluent always has it: Microsoft's acrylic is a tinted
+     * material, not a clear one. Liquid glass keeps the small things clear (buttons,
+     * the tab bar) and lays it only under the big ones, the cards and sheets with text.
+     */
+    private void veil(Canvas canvas, View view, float top, float bottom, float density) {
+        float w = local.width(), h = local.height();
+        boolean big = h >= density * 120 && w >= view.getResources().getDisplayMetrics().widthPixels * .55f;
+        if (!Design.fluent() && !big) return;
+        int page = Design.pageColour(view.getContext());
+        float amount = Design.fluent() ? (big ? .62f : .5f) : .5f;
+        paint.setShader(null);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor((page & 0xffffff) | (Math.round(amount * 255f) << 24));
+        veilRadii[0] = veilRadii[1] = veilRadii[2] = veilRadii[3] = top;
+        veilRadii[4] = veilRadii[5] = veilRadii[6] = veilRadii[7] = bottom;
+        veilPath.reset();
+        veilPath.addRoundRect(local, veilRadii, Path.Direction.CW);
+        canvas.drawPath(veilPath, paint);
     }
 
     /** Kept in a separate class so Android 6–12 never loads RuntimeShader. */
@@ -62,7 +88,7 @@ final class GlassOptics {
         private static final String BLUR="uniform shader content;uniform float2 axis;half4 main(float2 p){return content.eval(p)*.4026+(content.eval(p+axis)+content.eval(p-axis))*.2442+(content.eval(p+axis*2.)+content.eval(p-axis*2.))*.0545;}";
         private RuntimeShader shader;
         private RuntimeShader acrylic;
-        private final RuntimeShader blurX=new RuntimeShader(BLUR),blurY=new RuntimeShader(BLUR);
+        private final RuntimeShader blurX=new RuntimeShader(BLUR),blurY=new RuntimeShader(BLUR),wideX=new RuntimeShader(BLUR),wideY=new RuntimeShader(BLUR);
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final float[] hsv=new float[3];
         private Bitmap bound;
@@ -77,12 +103,15 @@ final class GlassOptics {
             matrix.setScale(1/frame.scale,1/frame.scale);matrix.postTranslate(-x,-y);
             input.setLocalMatrix(matrix);
             // Fluent deliberately softens only slightly; Liquid Glass keeps its own optics.
-            float blur=dp*(Design.fluent()?.85f:1.1f);
+            // two passes, the second wider: more blur than one wide pass could give without banding
+            float blur=dp*(Design.fluent()?1.05f:1.3f);
             blurX.setInputShader("content",input);blurX.setFloatUniform("axis",blur,0);
             blurY.setInputShader("content",blurX);blurY.setFloatUniform("axis",0,blur);
+            wideX.setInputShader("content",blurY);wideX.setFloatUniform("axis",blur*1.9f,0);
+            wideY.setInputShader("content",wideX);wideY.setFloatUniform("axis",0,blur*1.9f);
             if(Design.fluent()){
                 if(acrylic==null)acrylic=new RuntimeShader(FluentShader.ACRYLIC);
-                acrylic.setInputShader("content",blurY);
+                acrylic.setInputShader("content",wideY);
                 acrylic.setFloatUniform("size",w,h);
                 acrylic.setFloatUniform("radii",Math.min(top,dp*8),Math.min(bottom,dp*8));
                 acrylic.setFloatUniform("tint",Color.red(colour)/255f,Color.green(colour)/255f,Color.blue(colour)/255f,.24f);
@@ -90,7 +119,7 @@ final class GlassOptics {
                 paint.setShader(acrylic);canvas.drawRect(0,0,w,h,paint);return;
             }
             if(shader==null)shader=new RuntimeShader(GlassShader.LENS);
-            shader.setInputShader("content",blurY);
+            shader.setInputShader("content",wideY);
             shader.setFloatUniform("margin",0);
             shader.setFloatUniform("viewSize",w,h);
             shader.setFloatUniform("shape1",w/2,h/2,w/2,h/2);

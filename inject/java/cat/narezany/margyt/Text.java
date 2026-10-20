@@ -665,6 +665,8 @@ final class Text {
                     + "Here you can switch them on for yourself. Some may not fully work.");
     static final String COMMENT_REPOST = pick("Репост комментариев", "Репост коментарів",
             "Repost comments");
+    static final String COMMENT_PHOTOS = pick("Несколько фото в комментарии", "Кілька фото в коментарі", "Several photos in a comment");
+    static final String HASHTAGS_UNLIMITED = pick("Хештеги в описании без лимита", "Хештеги в описі без ліміту", "No hashtag limit in captions");
     static final String SELF_REPOST = pick("Репост своих видео", "Репост своїх відео",
             "Repost your own videos");
     static final String TRANSLATE_COMMENTS = pick("Перевод всех комментариев сразу", "Переклад усіх коментарів одразу",
@@ -1432,6 +1434,52 @@ final class Text {
     static final String SHEET_POST_TITLE = pick("Скачать публикацию", "Завантажити публікацію", "Download post");
     static String allPhotos(int count) {
         return pick("Скачать все фото (" + count + ")", "Завантажити всі фото (" + count + ")", "Download all photos (" + count + ")");
+    }
+    /** 1 минута, 2 минуты, 5 минут: the Russian and Ukrainian forms of a count. */
+    private static String counted(int n, String one, String few, String many) {
+        int tens = n % 100, last = n % 10;
+        String word = tens >= 11 && tens <= 14 ? many : last == 1 ? one : last >= 2 && last <= 4 ? few : many;
+        return n + " " + word;
+    }
+    static String minutesAgo(int n) {
+        return pick(counted(n, "минута", "минуты", "минут"), counted(n, "хвилина", "хвилини", "хвилин"),
+                n + (n == 1 ? " minute" : " minutes"));
+    }
+    static String hoursAgo(int n) {
+        return pick(counted(n, "час", "часа", "часов"), counted(n, "годину", "години", "годин"),
+                n + (n == 1 ? " hour" : " hours"));
+    }
+    static String daysAgo(int n) {
+        return pick(counted(n, "день", "дня", "дней"), counted(n, "день", "дні", "днів"),
+                n + (n == 1 ? " day" : " days"));
+    }
+    static final String DATE_FILTER = pick("Фильтр по дате", "Фільтр за датою", "Filter by date");
+    static final String DATE_FILTER_OFF = pick("Выключен", "Вимкнено", "Off");
+    static final String DATE_FILTER_RECENT = pick("Не старше…", "Не старші за…", "No older than…");
+    static final String DATE_FILTER_BETWEEN = pick("За период…", "За період…", "Between dates…");
+    static final String DATE_FILTER_FROM = pick("С", "З", "From");
+    static final String DATE_FILTER_TO = pick("По", "По", "To");
+    static final String DATE_FILTER_YEAR = pick("Весь год", "Весь рік", "A whole year");
+    static final String DATE_FILTER_AMOUNT = pick("Сколько", "Скільки", "How many");
+    static final String DATE_FILTER_NOTE = pick(
+            "«Не старше» считается от текущего момента: «1 день» это всегда последние сутки. «За период» это даты в календаре: 2024 год останется 2024 годом. Свои видео и эфиры не скрываются. Если условие очень узкое, лента будет подгружаться дольше.",
+            "«Не старші за» рахується від поточного моменту: «1 день» це завжди остання доба. «За період» це дати в календарі: 2024 рік залишиться 2024 роком. Свої відео та ефіри не приховуються. Якщо умова дуже вузька, стрічка довше підвантажуватиметься.",
+            "\u201CNo older than\u201D counts back from now: one day is always the last 24 hours. \u201CBetween dates\u201D is the calendar: 2024 stays 2024. Your own videos and lives are never hidden. A very narrow rule makes the feed slower to fill.");
+    static String dateUnit(int unit, int n) {
+        switch (unit) {
+            case 0: return pick(word(n, "час", "часа", "часов"), word(n, "година", "години", "годин"), n == 1 ? "hour" : "hours");
+            case 2: return pick(word(n, "неделя", "недели", "недель"), word(n, "тиждень", "тижні", "тижнів"), n == 1 ? "week" : "weeks");
+            case 3: return pick(word(n, "месяц", "месяца", "месяцев"), word(n, "місяць", "місяці", "місяців"), n == 1 ? "month" : "months");
+            case 4: return pick(word(n, "год", "года", "лет"), word(n, "рік", "роки", "років"), n == 1 ? "year" : "years");
+            default: return pick(word(n, "день", "дня", "дней"), word(n, "день", "дні", "днів"), n == 1 ? "day" : "days");
+        }
+    }
+    private static String word(int n, String one, String few, String many) {
+        int tens = n % 100, last = n % 10;
+        return tens >= 11 && tens <= 14 ? many : last == 1 ? one : last >= 2 && last <= 4 ? few : many;
+    }
+    static String dateFilterRecent(int n, int unit) {
+        return pick("Не старше: ", "Не старші за: ", "No older than ") + n + " " + dateUnit(unit, n);
     }
     static String pickedPhotos(int count) {
         return pick("Скачать выбранные (" + count + ")", "Завантажити вибрані (" + count + ")", "Download selected (" + count + ")");
