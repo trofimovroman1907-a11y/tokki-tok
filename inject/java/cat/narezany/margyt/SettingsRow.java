@@ -58,6 +58,7 @@ public final class SettingsRow implements Application.ActivityLifecycleCallbacks
         Rubble.resumed(activity);
         SimpleFeed.attach(activity);
         WavySeek.attach(activity);
+        Avariyka.resumed(activity);
         Screen.at(activity);
         if(activity.getClass().getName().startsWith("cat.narezany.margyt.")){
             View owned=activity.findViewById(android.R.id.content);

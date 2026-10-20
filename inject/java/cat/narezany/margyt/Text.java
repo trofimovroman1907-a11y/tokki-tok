@@ -774,6 +774,12 @@ final class Text {
     static final String CHIP_COLLAB = pick("КОЛЛАБ", "КОЛАБ", "COLLAB");
 
     static final String FUN = pick("Смешнявки", "Смішнявки", "Silly things");
+    static final String FUN_AVARIYKA = pick("Мега супер дупер аварийки", "Мега супер дупер аварійки", "Mega super duper emergency popups");
+    static final String PAGE_AVARIYKA_NOTE = pick("Окна «срочно обновись в нашем телеграме», как в старых модах", "Вікна «терміново оновись у нашому телеграмі», як у старих модах", "\u201CUpdate now in our Telegram\u201D windows, like old mods had");
+    static final String AVARIYKA_NOTE = pick(
+            "Время от времени посреди экрана выскакивает «аварийное обновление», крестик оживает только через 5 секунд. Отсылка к старым модам TikTok, которые так лили людей в свои телеграм-каналы. Ничего никуда не ведёт.",
+            "Час від часу посеред екрана вискакує «аварійне оновлення», хрестик оживає лише через 5 секунд. Відсилання до старих модів TikTok, які так зганяли людей у свої телеграм-канали. Нічого нікуди не веде.",
+            "Every so often an \u201Cemergency update\u201D pops up mid-screen and its cross only works after five seconds. A nod to old TikTok mods that pushed people into their Telegram channels this way. Nothing in it goes anywhere.");
     static final String FUN_RUBBLE = pick("Рассыпать интерфейс", "Розсипати інтерфейс", "Shatter the interface");
     static final String RUBBLE_NOTE = pick(
             "Все кнопки и надписи TikTok падают и становятся настоящими предметами: наклоняй телефон, и они катятся, тряхни, и они подпрыгнут. Выключается только полным перезапуском TikTok.",
@@ -1217,6 +1223,14 @@ final class Text {
             "Вышла версия", "Вийшла версія", "There is a version");
 
     static final String UPDATE_GET = pick("Скачать", "Завантажити", "Get it");
+    static final String UPDATE_IN_STORE = pick(
+            "Обновления MargyT теперь выходят в Margy Store: там мод собирается прямо на телефоне, и твои данные остаются.",
+            "Оновлення MargyT тепер виходять у Margy Store: там мод збирається просто на телефоні, і твої дані лишаються.",
+            "MargyT updates now come through Margy Store, which builds the mod right on the phone and keeps your data.");
+    static final String UPDATE_GET_STORE = pick(
+            "Margy Store у тебя ещё нет, его можно скачать отсюда.", "Margy Store у тебе ще немає, його можна завантажити звідси.", "You don't have Margy Store yet; get it here.");
+    static final String UPDATE_OPEN_STORE = pick("Открыть Margy Store", "Відкрити Margy Store", "Open Margy Store");
+    static final String UPDATE_DOWNLOAD_STORE = pick("Скачать Margy Store", "Завантажити Margy Store", "Get Margy Store");
 
     static final String UPDATE_LATER = pick("Назад", "Назад", "Back");
 

@@ -192,16 +192,15 @@ final class ProfileVerdict {
 
     /** For the owner on somebody else's profile without a mark yet: a small button to give one. */
     private static View chip(Context c) {
-        Skin skin = Skin.remembered(c);
         TextView chip = new TextView(c);
         chip.setText(Text.VERDICT_MARK);
-        chip.setTextColor(skin.text);
+        chip.setTextColor(ink());
         chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         chip.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         chip.setPadding(dp(c, 14), dp(c, 8), dp(c, 14), dp(c, 8));
         GradientDrawable back = new GradientDrawable();
         back.setCornerRadius(dp(c, 16));
-        back.setStroke(Math.max(1, dp(c, 1)), (skin.text & 0xFFFFFF) | 0x44000000);
+        back.setStroke(Math.max(1, dp(c, 1)), (ink() & 0xFFFFFF) | 0x44000000);
         chip.setBackground(back);
         Fonts.applyTree(chip);
         return chip;
@@ -246,8 +245,12 @@ final class ProfileVerdict {
         });
     }
 
+    /** The words on TikTok's own page, light or dark as the page is, not the mod's settings. */
+    private static int ink() {
+        return Themes.isDark() ? 0xFFFFFFFF : 0xFF161823;
+    }
+
     private static View make(Context c, Badges.Verdict verdict) {
-        Skin skin = Skin.remembered(c);
         int tone = verdict.good ? 0xFF2EAD5B : 0xFFE5484D;
         LinearLayout plate = new LinearLayout(c);
         plate.setOrientation(LinearLayout.VERTICAL);
@@ -260,7 +263,7 @@ final class ProfileVerdict {
 
         TextView title = new TextView(c);
         title.setText(verdict.good ? Text.VERDICT_GOOD : Text.VERDICT_BAD);
-        title.setTextColor(skin.text);
+        title.setTextColor(ink());
         title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         title.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         plate.addView(title);
@@ -268,7 +271,7 @@ final class ProfileVerdict {
         TextView body = new TextView(c);
         String reason = verdict.reason == null ? "" : verdict.reason.trim();
         body.setText(Text.verdictWhy(verdict.good, reason));
-        body.setTextColor(skin.text);
+        body.setTextColor(ink());
         body.setAlpha(0.8f);
         body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         body.setLineSpacing(0, 1.1f);

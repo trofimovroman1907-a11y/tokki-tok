@@ -9,8 +9,8 @@ the cards are dealt here, and the phone is told how it came out.
 The reels are even and the table games a little worse than even. Coins arrive
 once a day and by borrowing, and what is borrowed has to be paid back before
 anything can be bought. The badge used to cost a million and in a week of
-everybody trying one person got there, so it costs 35 000 now: a few lucky
-days, not a lucky month.
+everybody trying one person got there; 35 000 was then too easy, so it costs
+75 000: about a week of luck, not a month.
 
 Only a proved account plays. The key is the one `/prove/check` hands out, so
 nobody can stake coins in somebody else's name.
@@ -28,7 +28,7 @@ LOAN = 1000
 MOST_OWED = 10000
 #: the badge, and what it costs with nothing owed
 BADGE = "calculator"
-PRICE = 35000
+PRICE = 75000
 #: the least time between two turns, so a script gains nothing over a thumb
 PAUSE = 0.3
 SYMBOLS = 6

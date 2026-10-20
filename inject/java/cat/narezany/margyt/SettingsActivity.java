@@ -158,6 +158,7 @@ public class SettingsActivity extends Activity {
             new Shelf(8, "dep", "flare", Text.FUN_DEP, Text.PAGE_DEP_NOTE, Text.FUN_DEP),
             new Shelf(8, "rubble", "open_with", Text.FUN_RUBBLE, Text.PAGE_RUBBLE_NOTE, Text.FUN_RUBBLE),
             new Shelf(8, "screamers", "animation", Text.FUN_SCREAMERS, Text.PAGE_SCREAMERS_NOTE, Text.FUN_SCREAMERS),
+            new Shelf(8, "avariyka", "notifications", Text.FUN_AVARIYKA, Text.PAGE_AVARIYKA_NOTE, Text.FUN_AVARIYKA),
             new Shelf(8, "cat", "image", Text.FUN_CAT, Text.PAGE_CAT_NOTE, Text.FUN_CAT),
         };
         return shelves;
@@ -703,6 +704,10 @@ public class SettingsActivity extends Activity {
                 Updater.newer() ? Text.UPDATE_THERE_IS + " " + Updater.latest() : null,
                 () -> Updater.check(this, true)));
         updates.addView(line());
+        final boolean haveStore = Updater.storeInstalled(this);
+        updates.addView(actionRow("extension", haveStore ? Text.UPDATE_OPEN_STORE : Text.UPDATE_DOWNLOAD_STORE, Text.UPDATE_IN_STORE,
+                () -> { if (haveStore) Updater.openStore(this); else Updater.downloadStore(this); }));
+        updates.addView(line());
         updates.addView(toggleRow("info", Text.UPDATE_REMIND, Updater.remind(this),
                 on -> Updater.setRemind(this, on)));
         if (Updater.waiting(this)) {
@@ -778,6 +783,12 @@ public class SettingsActivity extends Activity {
         rubble.addView(actionRow("open_with", Text.FUN_RUBBLE, null, () -> Rubble.arm(this)));
         rubble.addView(quiet(Text.RUBBLE_NOTE));
         column.addView(wrap(rubble));
+
+        column.addView(section(Text.FUN_AVARIYKA));
+        LinearLayout avariyka = card();
+        avariyka.addView(liveToggleRow("notifications", Text.FUN_AVARIYKA, Avariyka.isOn(this), on -> Avariyka.set(this, on)));
+        avariyka.addView(quiet(Text.AVARIYKA_NOTE));
+        column.addView(wrap(avariyka));
 
         column.addView(section(Text.FUN_CAT));
         column.addView(fatCat());

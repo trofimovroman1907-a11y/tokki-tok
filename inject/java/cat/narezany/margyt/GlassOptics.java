@@ -32,8 +32,13 @@ final class GlassOptics {
             try {
                 if (lens == null) lens = new Lens();
                 GlassBackdrop.Frame frame = GlassBackdrop.frame(view);
-                if (frame != null && frame.ready && frame.bitmap != null) {
-                    view.getLocationOnScreen(point);
+                // A lens is for something to bend: a video, covers in a grid, the blurred screen
+                // behind a window. Over a page of one colour (the inbox, the mod's own screens)
+                // it bent nothing and still cost dozens of reads a pixel on every frame, so there
+                // the pane below is drawn instead, which looks the same.
+                view.getLocationOnScreen(point);
+                if (frame != null && frame.ready && frame.bitmap != null
+                        && busy(frame, point[0] - frame.x + bounds.left, point[1] - frame.y + bounds.top, local.width(), local.height())) {
                     float x=point[0]-frame.x+bounds.left, y=point[1]-frame.y+bounds.top;
                     lens.paint(canvas,frame,transform,x,y,local.width(),local.height(),top,bottom,colour,press,density);
                     veil(canvas,view,top,bottom,density);
@@ -57,6 +62,38 @@ final class GlassOptics {
         paint.setShader(null);paint.setStyle(Paint.Style.FILL);
         local.inset(-density*.4f,-density*.4f);veil(canvas,view,top,bottom,density);
         canvas.restoreToCount(save);
+    }
+
+    private int busyVersion = Integer.MIN_VALUE;
+    private Bitmap busyBitmap;
+    private float busyX = Float.NaN, busyY = Float.NaN;
+    private boolean busyAnswer;
+
+    /**
+     * Whether what is behind this piece of glass has anything in it: a few points of the
+     * copy under it are compared, and if they are all one colour it is a plain page.
+     * Asked again only when the copy or the glass's place has changed.
+     */
+    private boolean busy(GlassBackdrop.Frame frame, float x, float y, float w, float h) {
+        if (frame.version == busyVersion && frame.bitmap == busyBitmap && Math.abs(x - busyX) < 2 && Math.abs(y - busyY) < 2) return busyAnswer;
+        busyVersion = frame.version; busyBitmap = frame.bitmap; busyX = x; busyY = y;
+        Bitmap bitmap = frame.bitmap;
+        int bw = bitmap.getWidth(), bh = bitmap.getHeight();
+        // a margin round the glass too: the lens bends in what is just beside it
+        float margin = 12f;
+        int left = Math.max(0, Math.round((x - margin) * frame.scale)), top = Math.max(0, Math.round((y - margin) * frame.scale));
+        int right = Math.min(bw - 1, Math.round((x + w + margin) * frame.scale)), bottom = Math.min(bh - 1, Math.round((y + h + margin) * frame.scale));
+        if (right <= left || bottom <= top) { busyAnswer = false; return false; }
+        int first = bitmap.getPixel(left, top), most = 0;
+        for (int i = 0; i <= 6; i++) for (int j = 0; j <= 4; j++) {
+            int px = left + (right - left) * i / 6, py = top + (bottom - top) * j / 4;
+            int c = bitmap.getPixel(px, py);
+            int d = Math.max(Math.abs(((c >> 16) & 255) - ((first >> 16) & 255)),
+                    Math.max(Math.abs(((c >> 8) & 255) - ((first >> 8) & 255)), Math.abs((c & 255) - (first & 255))));
+            if (d > most) most = d;
+        }
+        busyAnswer = most > 18;
+        return busyAnswer;
     }
 
     private final Path veilPath = new Path();
@@ -111,25 +148,6 @@ final class GlassOptics {
             float blur=dp*(Design.fluent()?1.15f:1.45f);
             blurX.setInputShader("content",input);blurX.setFloatUniform("axis",blur,0);
             blurY.setInputShader("content",blurX);blurY.setFloatUniform("axis",0,blur);
-            if(!Design.fluent() && (w<dp*96 || h<dp*96)){
-                // Small glass (a button, an icon, a tab) is mostly rim: the full lens with its
-                // refraction and dispersion samples the backdrop dozens of times a pixel for an
-                // effect too small to see there. The blur, a light tint and the rim are kept.
-                float r=Math.min(top,Math.min(w,h)/2f);
-                paint.setStyle(Paint.Style.FILL);paint.setShader(blurY);
-                canvas.drawRoundRect(0,0,w,h,r,r,paint);
-                paint.setShader(null);
-                boolean dark=NavBar.bright(colour)<.5f;
-                paint.setColor(dark?0x1A101114:0x24F5F6FA);
-                canvas.drawRoundRect(0,0,w,h,r,r,paint);
-                if(press>0){paint.setColor((Math.round(press*40)<<24)|0xFFFFFF);canvas.drawRoundRect(0,0,w,h,r,r,paint);}
-                paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(Math.max(1,dp*.8f));
-                if(rim==null||rimW!=w||rimH!=h){rim=new LinearGradient(0,0,w,h,new int[]{0x90ffffff,0x10ffffff,0x60ffffff},null,Shader.TileMode.CLAMP);rimW=w;rimH=h;}
-                paint.setShader(rim);
-                float inset=dp*.4f;canvas.drawRoundRect(inset,inset,w-inset,h-inset,Math.max(0,r-inset),Math.max(0,r-inset),paint);
-                paint.setShader(null);paint.setStyle(Paint.Style.FILL);
-                return;
-            }
             if(Design.fluent()){
                 if(acrylic==null)acrylic=new RuntimeShader(FluentShader.ACRYLIC);
                 acrylic.setInputShader("content",blurY);

@@ -20,7 +20,8 @@ final class GlassBackdrop {
     /** How wide the copy of the screen behind the glass is: it is blurred, so small is enough. */
     private static final float WIDTH=240f;
     private static final long VIDEO_FRAME_NS=80_000_000L,VIDEO_FRAME_MS=80L,CAPTURE_MS=140L;
-    static final class Frame {Bitmap bitmap;float scale;int x,y;Canvas canvas;boolean ready;}
+    /** `version` changes whenever the picture in `bitmap` does. */
+    static final class Frame {Bitmap bitmap;float scale;int x,y;Canvas canvas;boolean ready;int version;}
 
     static void changed(){for(Session session:new ArrayList<>(WINDOWS.values()))session.dispose();WINDOWS.clear();}
     static void videoChanged(boolean selection){
@@ -205,6 +206,7 @@ final class GlassBackdrop {
             if(destination.canvas==null || background==null)return;
             destination.canvas.drawColor(Color.TRANSPARENT,PorterDuff.Mode.CLEAR);
             destination.canvas.drawBitmap(background,0,0,paint);
+            destination.version++;
         }
         private void bind(View source){
             int generation=source!=null && GlassVideo.render(root.get())==source?GlassVideo.generation():-1;
@@ -265,7 +267,7 @@ final class GlassBackdrop {
             RectF box=new RectF((location[0]-frame.x)*frame.scale,(location[1]-frame.y)*frame.scale,
                     (location[0]-frame.x+source.getWidth())*frame.scale,(location[1]-frame.y+source.getHeight())*frame.scale);
             frame.canvas.drawBitmap(pixels,null,box,paint);frame.canvas.restoreToCount(save);
-            frame.ready=true;sceneDirty=true;shownVideo=SystemClock.uptimeMillis();invalidateOwners();
+            frame.ready=true;frame.version++;sceneDirty=true;shownVideo=SystemClock.uptimeMillis();invalidateOwners();
         }
         /** Whether the glass showed a video a moment ago and should keep it rather than flash the page. */
         /** Look again once the hold is over, so a screen without video does get the page in the end. */
@@ -282,7 +284,7 @@ final class GlassBackdrop {
             if(sceneDirty){
                 // Comments own a static theme background; never the underlying video.
                 Drawable background=page(Design.pageColour(root.get().getContext()));
-                background.setBounds(0,0,expanded.bitmap.getWidth(),expanded.bitmap.getHeight());background.draw(expanded.canvas);
+                background.setBounds(0,0,expanded.bitmap.getWidth(),expanded.bitmap.getHeight());background.draw(expanded.canvas);expanded.version++;
                 expanded.ready=true;sceneDirty=false;
             }
             return expanded;

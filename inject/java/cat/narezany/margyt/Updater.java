@@ -181,13 +181,18 @@ public final class Updater {
             public void run() {
                 android.app.Activity activity = Screen.now();
                 if (activity == null || activity.isFinishing()) return;
-                String message = Text.UPDATE_THERE_IS + " " + latest
+                // From 2.1.0 the mod no longer fetches and installs itself: new versions come as
+                // patches in Margy Store, which builds the mod on the phone. The window is the
+                // same; its button opens the store on MargyT's page, or fetches the store first.
+                final boolean store = storeInstalled(activity);
+                String message = Text.UPDATE_THERE_IS + " " + latest + ". " + Text.UPDATE_IN_STORE
+                        + (store ? "" : " " + Text.UPDATE_GET_STORE)
                         + (notes == null || notes.length() == 0 ? "" : "\n\n" + notes);
                 Popup.askUpdate(activity, Text.UPDATE, message,
-                        Text.UPDATE_GET, new Runnable() {
+                        store ? Text.UPDATE_OPEN_STORE : Text.UPDATE_DOWNLOAD_STORE, new Runnable() {
                             @Override
                             public void run() {
-                                fetch(context);
+                                if (store) openStore(activity); else downloadStore(activity);
                             }
                         },
                         Text.UPDATE_LATER, new Runnable() {
@@ -204,6 +209,50 @@ public final class Updater {
                         });
             }
         });
+    }
+
+    // ----------------------------------------------------------- Margy Store
+
+    static final String STORE_PACKAGE = "cat.narezany.patcher";
+    private static final String STORE_PAGE = "https://margy.narez.xyz/app/margyt";
+    private static final String STORE_APK = "https://margy.narez.xyz/get";
+
+    static boolean storeInstalled(Context context) {
+        try {
+            context.getPackageManager().getPackageInfo(STORE_PACKAGE, 0);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    /** The store, open on MargyT's own page, where the update is one button. */
+    static void openStore(Context context) {
+        try {
+            android.content.Intent page = new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(STORE_PAGE));
+            page.setPackage(STORE_PACKAGE);
+            page.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(page);
+            return;
+        } catch (Throwable ignored) {
+        }
+        try {
+            android.content.Intent launch = context.getPackageManager().getLaunchIntentForPackage(STORE_PACKAGE);
+            if (launch != null) { launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK); context.startActivity(launch); return; }
+        } catch (Throwable ignored) {
+        }
+        downloadStore(context);
+    }
+
+    /** The store's apk, in the browser. */
+    static void downloadStore(Context context) {
+        try {
+            android.content.Intent get = new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(STORE_APK));
+            get.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(get);
+        } catch (Throwable error) {
+            Screen.say(Text.NO_BROWSER);
+        }
     }
 
     // ------------------------------------------------------------- fetching
