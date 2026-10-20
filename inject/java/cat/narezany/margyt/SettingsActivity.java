@@ -390,6 +390,10 @@ public class SettingsActivity extends Activity {
         feed.addView(line());
         feed.addView(liveToggleRow("visibility_off",Text.HIDE_STORIES,Feed.hides(Feed.KEY_STORIES),on->Feed.setHides(Feed.KEY_STORIES,on)));
         feed.addView(liveToggleRow("visibility_off",Text.HIDE_SUGGESTIONS,Feed.hides(Feed.KEY_SUGGESTIONS),on->Feed.setHides(Feed.KEY_SUGGESTIONS,on)));
+        feed.addView(line());
+        feed.addView(liveToggleRow("view_compact", Text.SIMPLE_FEED, SimpleFeed.isOn(), on -> SimpleFeed.set(this, on)));
+        feed.addView(actionRow("info", Text.SIMPLE_FEED_ABOUT, null, () ->
+                Panel.with(this, skin, Text.SIMPLE_FEED).text(Text.SIMPLE_FEED_NOTE).primary(Local.of("Понятно"), null).show()));
         column.addView(wrap(feed));
 
         column.addView(section(Text.DATE_FILTER));
@@ -3557,6 +3561,7 @@ public class SettingsActivity extends Activity {
         found+=searchControl(results,Text.FEED,Text.HIDE_PHOTOS,Feed.hides(Feed.KEY_PHOTOS));
         found+=searchControl(results,Text.FEED,Text.HIDE_STORIES,Feed.hides(Feed.KEY_STORIES));
         found+=searchControl(results,Text.FEED,Text.HIDE_SUGGESTIONS,Feed.hides(Feed.KEY_SUGGESTIONS));
+        found+=searchControl(results,Text.FEED,Text.SIMPLE_FEED,SimpleFeed.isOn());
         found+=searchHit(results,Text.PINNED_FRIENDS,Text.PINNED_FRIENDS+" "+Text.MESSAGE_TIMES,()->{});
         found+=searchHit(results,Text.NOTIFICATIONS,Text.NOTIFY_MESSAGES+" "+Text.NOTIFY_PROMOS+" "+Text.NOTIFY_OTHER+" "+Text.NOTIFY_NO_PROMPTS+" "+Text.NOTIFY_SETTINGS,()->{});
         found+=searchHit(results,Text.VIDEO,Text.PLAYER_SPEED,()->{});
