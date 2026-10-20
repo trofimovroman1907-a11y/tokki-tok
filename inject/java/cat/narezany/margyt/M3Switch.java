@@ -61,6 +61,10 @@ public final class M3Switch extends View {
     private OnChanged listener;
     private ValueAnimator animator;
     private boolean interruptingAnimation;
+    private boolean dragging;
+    private float downX,downY,downPosition;
+    private final GlassOptics glassTrack=new GlassOptics(),glassThumb=new GlassOptics();
+    private final RectF glassBox=new RectF();
 
     public M3Switch(Context context) {
         super(context);
@@ -99,7 +103,7 @@ public final class M3Switch extends View {
             return;
         }
         animator = ValueAnimator.ofFloat(position, value ? 1f : 0f);
-        animator.setDuration(ANIMATION_DURATION_MS);
+        animator.setDuration(Design.fluent()?180L:ANIMATION_DURATION_MS);
         animator.setInterpolator(new android.view.animation.DecelerateInterpolator(1.4f));
         animator.addUpdateListener(a -> {
             position = (Float) a.getAnimatedValue();
@@ -131,15 +135,31 @@ public final class M3Switch extends View {
         if (!isEnabled()) return false;
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                downX=event.getX();downY=event.getY();downPosition=position;dragging=false;
                 setPressed(true);
+                return true;
+            case MotionEvent.ACTION_MOVE:
+                if(Design.frosted()){
+                    float delta=event.getX()-downX;
+                    if(!dragging && Math.abs(delta)>dp(4) && Math.abs(delta)>Math.abs(event.getY()-downY)){
+                        dragging=true;if(animator!=null){interruptingAnimation=true;animator.cancel();animator=null;interruptingAnimation=false;}
+                        if(getParent()!=null)getParent().requestDisallowInterceptTouchEvent(true);
+                    }
+                    if(dragging){position=Math.max(0,Math.min(1,downPosition+delta/dp(20)*(getLayoutDirection()==LAYOUT_DIRECTION_RTL?-1:1)));invalidate();}
+                }
                 return true;
             case MotionEvent.ACTION_CANCEL:
                 setPressed(false);
+                if(dragging){dragging=false;setChecked(checked,true);}
                 return true;
             case MotionEvent.ACTION_UP:
                 boolean inside = event.getX() >= 0 && event.getX() < getWidth()
                         && event.getY() >= 0 && event.getY() < getHeight();
                 setPressed(false);
+                if(dragging){
+                    dragging=false;boolean next=position>=.5f;boolean changed=next!=checked;
+                    setChecked(next,true);if(changed && listener!=null)listener.onChanged(next);super.performClick();return true;
+                }
                 if (inside) performClick();
                 return true;
             default:
@@ -165,14 +185,14 @@ public final class M3Switch extends View {
     @Override
     public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
         super.onInitializeAccessibilityNodeInfo(info);
-        info.setClassName("android.widget.CheckBox");
+        info.setClassName(Design.frosted()?"android.widget.Switch":"android.widget.CheckBox");
         info.setCheckable(true);
         info.setChecked(checked);
     }
 
     @Override
     protected void onMeasure(int widthSpec, int heightSpec) {
-        setMeasuredDimension(dp(28), dp(28));
+        setMeasuredDimension(dp(Design.fluent()?42:Design.glass()?52:28), dp(Design.fluent()?22:Design.glass()?32:28));
     }
 
     private final android.graphics.Path tick = new android.graphics.Path();
@@ -203,6 +223,8 @@ public final class M3Switch extends View {
     /** A round indicator: an empty ring when off, a turning accent cookie with a drawn check when on. */
     @Override
     protected void onDraw(Canvas canvas) {
+        if(Design.fluent()){drawFluent(canvas);return;}
+        if(Design.glass()){drawGlass(canvas);return;}
         float cx = getWidth() / 2f, cy = getHeight() / 2f, r = dp(12f);
         int accent = Accent.colour();
         int ink = (Color.red(accent) * 299 + Color.green(accent) * 587 + Color.blue(accent) * 114) / 1000 > 150 ? 0xFF111111 : 0xFFFFFFFF;
@@ -236,6 +258,36 @@ public final class M3Switch extends View {
 
     private static int withAlpha(int colour, int alpha) {
         return (colour & 0x00FFFFFF) | (Math.max(0, Math.min(255, alpha)) << 24);
+    }
+
+    private void drawFluent(Canvas canvas){
+        if(GlassBackdrop.capturing)return;
+        box.set(dp(1),dp(1),getWidth()-dp(1),getHeight()-dp(1));
+        paint.setStyle(Paint.Style.FILL);paint.setShader(null);
+        paint.setColor(blend(lightSurface?0xffe5e5e5:0xff383838,Accent.colour(),position));
+        canvas.drawRoundRect(box,dp(11),dp(11),paint);
+        paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(dp(1));
+        paint.setColor(lightSurface?0x70404040:0x70ffffff);canvas.drawRoundRect(box,dp(11),dp(11),paint);
+        paint.setStyle(Paint.Style.FILL);
+        float p=getLayoutDirection()==LAYOUT_DIRECTION_RTL?1-position:position;
+        float x=dp(11)+(getWidth()-dp(22))*p;
+        paint.setColor(blend(lightSurface?0xff555555:0xffdedede,0xffffffff,position));
+        canvas.drawCircle(x,getHeight()/2f,dp(isPressed()?7.4f:6.5f),paint);
+    }
+
+    private void drawGlass(Canvas canvas){
+        if(GlassBackdrop.capturing)return;
+        glassBox.set(dp(1),dp(1),getWidth()-dp(1),getHeight()-dp(1));
+        int off=lightSurface?0xffd4d8df:0xff343a43;
+        glassTrack.draw(canvas,this,glassBox,glassBox.height()/2f,glassBox.height()/2f,off,isPressed()?.6f:0);
+        paint.setShader(null);paint.setColor(withAlpha(Accent.colour(),Math.round(230*position)));
+        canvas.drawRoundRect(glassBox,glassBox.height()/2f,glassBox.height()/2f,paint);
+        float p=getLayoutDirection()==LAYOUT_DIRECTION_RTL?1-position:position;
+        float centre=dp(16)+(getWidth()-dp(32))*p;
+        float half=dp(isPressed()?14.2f:13f);
+        glassBox.set(centre-half,dp(3),centre+half,getHeight()-dp(3));
+        glassThumb.draw(canvas,this,glassBox,dp(13),dp(13),0xffffffff,isPressed()?1:0);
+        paint.setColor(0xafffffff);canvas.drawRoundRect(glassBox,dp(13),dp(13),paint);
     }
 
     private static int blend(int from, int to, float amount) {

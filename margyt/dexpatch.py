@@ -903,6 +903,17 @@ def rewrite_anchored(root: str) -> Dict[str, int]:
                 text = handle.read()
             before = text
             declaration=text.split("\n",1)[0]
+            if "onSurfaceTextureUpdated(Landroid/graphics/SurfaceTexture;)V" in text:
+                def glass_texture_frame(match):
+                    body=match.group(0)
+                    if "GlassVideo;->frameUpdated" in body:return body
+                    hook="    invoke-static/range {p1 .. p1}, Lcat/narezany/margyt/GlassVideo;->frameUpdated(Landroid/graphics/SurfaceTexture;)V\n"
+                    # At return, dex optimizers may have reused p1 for another type.
+                    # Observe the original argument before native code; the copy itself is queued.
+                    body,hits=re.subn(r"(?m)^([ \t]*\.(?:registers|locals) \d+\n)",lambda m:m.group(0)+hook,body,count=1)
+                    if hits:counts["native texture frame events"]=counts.get("native texture frame events",0)+hits
+                    return body
+                text=re.sub(r"(?ms)^\.method public (?:(?:final|synthetic|synchronized|bridge) )*onSurfaceTextureUpdated\(Landroid/graphics/SurfaceTexture;\)V.*?^\.end method",glass_texture_frame,text)
             if FEED_ITEM_LIST in declaration:
                 def native_ad_getter(match):
                     body=match.group(0)
@@ -1070,6 +1081,21 @@ def rewrite_anchored(root: str) -> Dict[str, int]:
                     return body
                 text=re.sub(r"(?ms)^\.method public final LIZ\(\)Z.*?^\.end method",push_guide,text)
             if PLAYER_CONTROLLER in declaration:
+                # Use playback events and the panel's current renderer. No background polling.
+                def glass_player(match):
+                    body=match.group(0)
+                    if "GlassVideo;->" in body:return body
+                    signature=body.split("\n",1)[0]
+                    if "onPlayProgressChange(" in signature:
+                        hook="    invoke-static/range {p0 .. p3}, Lcat/narezany/margyt/GlassVideo;->progress(Ljava/lang/Object;Ljava/lang/String;J)V\n"
+                    elif "onPausePlay(" in signature or "onPlayPause(" in signature or "onPlayStop(" in signature:
+                        hook="    invoke-static/range {p0 .. p1}, Lcat/narezany/margyt/GlassVideo;->paused(Ljava/lang/Object;Ljava/lang/String;)V\n"
+                    else:
+                        hook="    invoke-static/range {p0 .. p1}, Lcat/narezany/margyt/GlassVideo;->resumed(Ljava/lang/Object;Ljava/lang/String;)V\n"
+                    body,hits=re.subn(r"(?m)^([ \t]*\.(?:registers|locals) \d+\n)",lambda m:m.group(0)+hook,body,count=1)
+                    if hits:counts["native backdrop playback events"]=counts.get("native backdrop playback events",0)+hits
+                    return body
+                text=re.sub(r"(?ms)^\.method public (?:final )?(?:synthetic )?(?:onResumePlay\(Ljava/lang/String;\)|onPlaying\(Ljava/lang/String;\)|onRenderFirstFrameFromResume\(Ljava/lang/String;\)|onPausePlay\(Ljava/lang/String;(?:LX/[^;]+;)?\)|onPlayPause\(Ljava/lang/String;\)|onPlayStop\(Ljava/lang/String;(?:Z)?\)|onPlayProgressChange\(Ljava/lang/String;JJ\))V.*?^\.end method",glass_player,text)
                 def resumed_player(match):
                     body=match.group(0)
                     if "PlayerTools;->resumed" in body:return body
@@ -1621,6 +1647,7 @@ def rewrite_settings_row(root: str, dex: Optional[bytes] = None) -> Dict[str, in
 
 def carries_an_anchor(dex: bytes) -> bool:
     return (any(anchor.encode() in dex for anchor, *_rest in ANCHORED_SOURCES)
+            or b"onSurfaceTextureUpdated" in dex
             or FEED_ITEM_LIST.encode() in dex
             or b"Lcom/ss/android/ugc/aweme/comment/longpresspanel/ui/CommentLongPressFragment;" in dex
             or b"LX/0wiL;" in dex or b"Lkotlin/jvm/internal/AwS704S0100000_26;" in dex

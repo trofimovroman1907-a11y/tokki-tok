@@ -383,6 +383,7 @@ final class NavBar {
     // ----------------------------------------------------------- the capsule
 
     private static final class Capsule extends Drawable {
+        private WeakReference<View> glassHost=new WeakReference<View>(null);
         private final float unit;
         private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -428,6 +429,7 @@ final class NavBar {
         private static final long READ_EVERY = 250L;
 
         void settle(ViewGroup bar) {
+            glassHost=new WeakReference<View>(bar);
             long now = SystemClock.uptimeMillis();
             boolean changed = gather(bar);
             boolean moving = false;
@@ -686,6 +688,7 @@ final class NavBar {
 
         @Override
         public void draw(Canvas canvas) {
+            if(GlassBackdrop.capturing)return;
             if (tabs.length == 0 || body.isEmpty() || away >= 1f) return;
             int veil = away > 0f ? canvas.saveLayerAlpha(body.left - unit, body.top - 8f * unit, body.right + unit,
                     body.bottom + unit, Math.round(255f * (1f - away))) : -1;
@@ -695,14 +698,14 @@ final class NavBar {
             int lit = mix(accent | 0xFF000000, ink, 0.40f);
             int quiet = mix(shell, ink, 0.80f);
 
-            float round = body.height() / 2f;
+            float round = Design.fluent()?8f*unit:body.height()/2f;
             fill.setColor(shell);
-            canvas.drawRoundRect(body, round, round, fill);
+            if(!Design.draw(canvas,this,glassHost.get(),body,round,round,shell,0))canvas.drawRoundRect(body, round, round, fill);
             line.setStrokeWidth(unit);
             line.setColor(edge);
             box.set(body);
             box.inset(unit / 2f, unit / 2f);
-            canvas.drawRoundRect(box, round, round, line);
+            if(!Design.frosted())canvas.drawRoundRect(box, round, round, line);
 
             float middle = body.centerY(), icon = 24f * unit, gap = 6f * unit;
             for (Tab tab : tabs) {
@@ -720,7 +723,10 @@ final class NavBar {
                         box.set(centre - half, body.top + 4f * unit, centre + half, body.bottom - 4f * unit);
                         fill.setColor(pill);
                         fill.setAlpha(Math.round(255f * Math.min(1f, tab.open * 1.5f)));
-                        canvas.drawRoundRect(box, box.height() / 2f, box.height() / 2f, fill);
+                        if(Design.frosted()){
+                            fill.setColor((pill&0xffffff)|0x66000000);
+                            canvas.drawRoundRect(box,Design.fluent()?4f*unit:box.height()/2f,Design.fluent()?4f*unit:box.height()/2f,fill);
+                        }else canvas.drawRoundRect(box, box.height() / 2f, box.height() / 2f, fill);
                     }
                     // a name too long for its tab is set a little smaller before it is cut short
                     float badge = badge(tab);

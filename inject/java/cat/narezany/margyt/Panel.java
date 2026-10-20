@@ -459,6 +459,7 @@ final class Panel {
             dialog.setContentView(card);
             dialog.setCanceledOnTouchOutside(true);
             dialog.show();
+            Design.dialog(dialog,skin.card);
             Window window = dialog.getWindow();
             if (window != null) {
                 WindowManager.LayoutParams params = window.getAttributes();

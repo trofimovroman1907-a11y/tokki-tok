@@ -161,8 +161,11 @@ final class Md3 {
                         y = offY;
                     }
                 }
+                RectF glassBox=new RectF(x-radius,y-radius,x+radius,y+radius);
+                if(Design.draw(canvas,this,on!=null?on:Design.owner(this),glassBox,radius,radius,paint.getColor(),0))return;
                 canvas.drawCircle(x, y, radius, paint);
             } else if (kind == CARD && foot >= 0f && foot != radius) {
+                if(Design.draw(canvas,this,box,radius,foot,paint.getColor(),0))return;
                 corners[0] = corners[1] = corners[2] = corners[3] = radius;
                 corners[4] = corners[5] = corners[6] = corners[7] = foot;
                 edge.rewind();
@@ -170,6 +173,7 @@ final class Md3 {
                 canvas.drawPath(edge, paint);
             } else {
                 float round = kind == PILL ? box.height() / 2f : radius;
+                if(Design.draw(canvas,this,box,round,round,paint.getColor(),0))return;
                 canvas.drawRoundRect(box, round, round, paint);
             }
         }
@@ -377,37 +381,13 @@ final class Md3 {
 
     // ---------------------------------------------------- the feed's buttons
 
-    /**
-     * One of the four buttons beside a video, as TikTok hands it over, and
-     * which of the four it is. They are dressed as one column: a card behind
-     * each, close together, with large corners only where the column ends --
-     * so the first that is shown has them at its head and the last at its
-     * foot, whichever buttons the person has switched off.
-     */
+    /** Keep the optional icon set, with no cards behind the video's action rail. */
     static void rail(View slot, int which) {
         try {
             if (slot == null) return;
             forgetIcons(slot, 0);
             icons(slot, which);
-            if (!on(FEED)) {
-                strip(slot);
-                return;
-            }
-            boolean first = true, last = true;
-            for (int i = 0; i < which; i++) if (FeedRail.shown(i)) first = false;
-            for (int i = which + 1; i < FeedRail.KEYS.length; i++) if (FeedRail.shown(i)) last = false;
-            float unit = slot.getResources().getDisplayMetrics().density;
-            Shape card = wear(slot, CARD, true);
-            // What TikTok hands over is as wide as the place a touch counts,
-            // which for three of the four is wider than the first and wider
-            // still when the number under the icon is a long one. Their icons
-            // are all the same distance from the right, so that is what the
-            // card is measured from.
-            card.right = 6f * unit;
-            card.wide = 48f * unit;
-            card.top = card.bottom = unit;
-            card.ends(first ? 24f * unit : 6f * unit, last ? 24f * unit : 6f * unit);
-            card.dress(slot, OVER_VIDEO);
+            strip(slot);
         } catch (Throwable error) {
             Diary.detail("md3: rail: " + error);
         }

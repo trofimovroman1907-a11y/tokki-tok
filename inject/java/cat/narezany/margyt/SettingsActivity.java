@@ -165,6 +165,7 @@ public class SettingsActivity extends Activity {
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
         setContentView(root);
+        Design.page(this, root, skin.page);
         rebuild();
         maybeAskForSupport();
         if(getIntent().getBooleanExtra("margyt_tutorial",false))root.postDelayed(()->Tutorial.show(this),350L);
@@ -254,6 +255,7 @@ public class SettingsActivity extends Activity {
         }
 
         column.addView(section(Text.APPEARANCE));
+        column.addView(wrap(actionRow("palette", Text.DESIGN, Design.name(), this::chooseDesign)));
         LinearLayout icons = card();
         icons.addView(iconHead());
         if (iconOpen) {
@@ -276,9 +278,9 @@ public class SettingsActivity extends Activity {
         column.addView(wrap(accent));
 
         LinearLayout loading = card();
-        loading.addView(liveToggleRow("palette", Text.LOADING_SHAPES, Loading.isEnabled(),
+        loading.addView(liveToggleRow("palette", Design.frosted()?Text.LOADING_INDICATOR:Text.LOADING_SHAPES, Loading.isEnabled(),
                 Loading::setEnabled));
-        loading.addView(quiet(Text.LOADING_NOTE));
+        loading.addView(quiet(Design.frosted()?Text.LOADING_STYLE_NOTE:Text.LOADING_NOTE));
         loading.addView(line());
         loading.addView(toggleRow("image", Text.ROUND_CARDS, Corners.isEnabled(),
                 Corners::setEnabled));
@@ -291,13 +293,15 @@ public class SettingsActivity extends Activity {
         loading.addView(line());
         loading.addView(toggleRow("tune", Text.NAV_CAPSULE, NavBar.isEnabled(), NavBar::setEnabled));
         loading.addView(line());
-        loading.addView(toggleRow("tune", Text.MD3_FEED, Md3.isOn(Md3.KEY_FEED), on -> Md3.set(Md3.KEY_FEED, on)));
+        loading.addView(toggleRow("tune", Design.caption(Text.MD3_FEED), Md3.isOn(Md3.KEY_FEED), on -> Md3.set(Md3.KEY_FEED, on)));
         loading.addView(line());
-        loading.addView(toggleRow("tune", Text.MD3_ICONS, Md3.isOn(Md3.KEY_ICONS), on -> Md3.set(Md3.KEY_ICONS, on)));
+        loading.addView(toggleRow("tune", Design.caption(Text.MD3_ICONS), Md3.isOn(Md3.KEY_ICONS), on -> Md3.set(Md3.KEY_ICONS, on)));
         loading.addView(line());
-        loading.addView(toggleRow("tune", Text.MD3_PROFILE, Md3.isOn(Md3.KEY_PROFILE), on -> Md3.set(Md3.KEY_PROFILE, on)));
+        loading.addView(toggleRow("tune", Design.caption(Text.MD3_PROFILE), Md3.isOn(Md3.KEY_PROFILE), on -> Md3.set(Md3.KEY_PROFILE, on)));
         loading.addView(line());
-        loading.addView(toggleRow("tune", Text.MD3_INBOX, Md3.isOn(Md3.KEY_INBOX), on -> Md3.set(Md3.KEY_INBOX, on)));
+        loading.addView(toggleRow("tune", Design.caption(Text.MD3_INBOX), Md3.isOn(Md3.KEY_INBOX), on -> Md3.set(Md3.KEY_INBOX, on)));
+        loading.addView(line());
+        loading.addView(toggleRow("chat_bubble", Design.caption(Text.DESIGN_COMMENTS), CommentStyle.enabled(), CommentStyle::set));
         column.addView(wrap(loading));
 
         column.addView(section(Text.THEME));
@@ -1130,7 +1134,7 @@ public class SettingsActivity extends Activity {
         for (int i = 0; i < colours.length; i++) colours[i] = gradientColours.get(i);
         View bar = new View(this);
         android.graphics.drawable.GradientDrawable paint =
-                new android.graphics.drawable.GradientDrawable(
+                new Design.ColourSample(
                         android.graphics.drawable.GradientDrawable.Orientation.LEFT_RIGHT,
                         colours);
         paint.setCornerRadius(dp(10));
@@ -1809,7 +1813,7 @@ public class SettingsActivity extends Activity {
 
 
     private GradientDrawable colourPreview(int colour) {
-        GradientDrawable preview = new GradientDrawable();
+        GradientDrawable preview = new Design.ColourSample();
         preview.setColor(colour);
         preview.setCornerRadius(dp(12));
         preview.setStroke(dp(1), skin.muted());
@@ -3358,7 +3362,7 @@ public class SettingsActivity extends Activity {
         final TextView view = new TextView(this);
         view.setText(text);
         view.setTextColor(skin.text);
-        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, settingsGroup == 0 ? 44 : 34);
+        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, Design.fluent()?(settingsGroup==0?32:28):settingsGroup == 0 ? 44 : 34);
         view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         view.setPadding(dp(28), dp(8), dp(24), dp(16));
         // five taps in a row and a cat turns up; one by accident does nothing
@@ -3517,6 +3521,7 @@ public class SettingsActivity extends Activity {
         found+=searchControl(results,Text.APPEARANCE,Text.MD3_ICONS,Md3.isOn(Md3.KEY_ICONS));
         found+=searchControl(results,Text.APPEARANCE,Text.MD3_PROFILE,Md3.isOn(Md3.KEY_PROFILE));
         found+=searchControl(results,Text.APPEARANCE,Text.MD3_INBOX,Md3.isOn(Md3.KEY_INBOX));
+        found+=searchControl(results,Text.APPEARANCE,Text.DESIGN_COMMENTS,CommentStyle.enabled());
         found+=searchHit(results,Text.APPEARANCE,Text.AVATAR_SHAPE,()->{});
         found+=searchHit(results,Text.FPS,Text.FPS,()->{});
         found+=searchHit(results,Text.TAGS,Text.TAGS+" "+Text.TAGS_ADD,()->{});
@@ -3629,9 +3634,9 @@ public class SettingsActivity extends Activity {
             if (n > 0) list.addView(line());
             LinearLayout entry = row();
             entry.setPadding(dp(16),dp(14),dp(20),dp(14));
-            entry.addView(icon(icons[i-1],false,52));
+            entry.addView(icon(icons[i-1],false,Design.fluent()?32:52));
             LinearLayout words = new LinearLayout(this); words.setOrientation(LinearLayout.VERTICAL);
-            TextView head = label(groupName(i)); head.setTextSize(19);
+            TextView head = label(groupName(i)); head.setTextSize(Design.fluent()?16:19);
             head.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
             words.addView(head);words.addView(detail(notes[i-1]));entry.setContentDescription(groupName(i)+". "+notes[i-1]);
             entry.addView(words,grow()); entry.addView(away());
@@ -3737,6 +3742,23 @@ public class SettingsActivity extends Activity {
      * A segmented list in Material 3 Expressive: every row is a tile of its own,
      * with large outer corners, small inner ones and a thin gap between them.
      */
+    private void chooseDesign() {
+        Panel panel=Panel.with(this,skin,Text.DESIGN);
+        panel.text(Text.DESIGN_NOTE).section(null);
+        panel.option("Material 3","md3".equals(Design.mode()),true,()->applyDesign("md3"));
+        panel.option("Liquid Glass",Design.glass(),true,()->applyDesign("glass"));
+        panel.option("Fluent",Design.fluent(),true,()->applyDesign("fluent"));
+        panel.show();
+    }
+
+    private void applyDesign(String mode) {
+        Design.choose(this,mode);
+        dressTheWindow();
+        Design.page(this,root,skin.page);
+        rebuild();
+        root.post(()->Design.own(root));
+    }
+
     private LinearLayout card() {
         return new Expressive.Group(this, skin.card, (Accent.colour() & 0xFFFFFF) | 0x33000000);
     }

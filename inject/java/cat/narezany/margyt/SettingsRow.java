@@ -56,6 +56,11 @@ public final class SettingsRow implements Application.ActivityLifecycleCallbacks
         Plugins.onActivityResumed(activity);
         Plugins.screen(activity);
         Screen.at(activity);
+        if(activity.getClass().getName().startsWith("cat.narezany.margyt.")){
+            View owned=activity.findViewById(android.R.id.content);
+            if(owned instanceof ViewGroup && ((ViewGroup)owned).getChildCount()>0)
+                Design.page(activity,((ViewGroup)owned).getChildAt(0),Skin.remembered(activity).page);
+        }
         Themes.watch(activity);
         PinkButtons.watch(activity);
         if (!Version.LITE) {

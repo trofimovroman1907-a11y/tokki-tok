@@ -317,6 +317,12 @@ class Build:
         self.detail("the mod's classes go in as %s" % name)
 
         self.say("Writing the apk")
+        # TikTok's shipped ART profile describes the original dex checksums.
+        # After patching it is invalid; let ART profile the installed mod normally.
+        for profile in ("assets/dexopt/baseline.prof", "assets/dexopt/baseline.profm"):
+            if apk.has(profile):
+                apk.remove(profile)
+                self.detail("dropped stale %s" % profile)
         for gone in apk.drop_signature():
             self.detail("dropped %s" % gone)
         # deflated by the compressor the patcher app carries, so that the app
@@ -556,6 +562,8 @@ class Build:
         asset_root = os.path.join(self.root, "assets")
         entries = emoji_asset_entries(asset_root)
         entries.append(("assets/margyt/meow.ogg", os.path.join(asset_root, "meow.ogg")))
+        entries.append(("assets/margyt/licenses/liquid-glass-MIT.txt",
+                        os.path.join(self.root, "third_party", "liquid-glass", "LICENSE")))
         # the anti-burn eye: two small transparent PNGs, drawn as they are
         for eye in ("burn_eye_open.png", "burn_eye_closed.png"):
             entries.append(("assets/margyt/" + eye, os.path.join(asset_root, eye)))

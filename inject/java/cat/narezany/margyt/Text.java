@@ -103,6 +103,9 @@ final class Text {
             "Вхід через Google у MargyT Lite не працює. Увійди за поштою або номером телефону.",
             "Signing in with Google does not work in MargyT Lite. Use your e-mail or phone number.");
     static final String APPEARANCE = pick("Внешний вид", "Зовнішній вигляд", "Appearance");
+    static final String DESIGN = pick("Стиль интерфейса", "Стиль інтерфейсу", "Interface style");
+    static final String DESIGN_NOTE = pick("Меню, элементы управления и включённые экраны TikTok",
+            "Меню, елементи керування й увімкнені екрани TikTok", "Menus, controls and enabled TikTok screens");
     static final String PROFILE_PREVIEW = pick("Так значок будет выглядеть у ника",
             "Так значок виглядатиме біля імені", "Badge preview beside nickname");
     static final String PROFILE_PREVIEW_NICK = pick("@ваш_ник", "@ваше_ім’я", "@your_name");
@@ -276,6 +279,9 @@ final class Text {
 
     static final String LOADING_SHAPES = pick(
             "Загрузка фигурами", "Завантаження фігурами", "Shapes while loading");
+    static final String LOADING_INDICATOR = pick("Индикатор загрузки", "Індикатор завантаження", "Loading indicator");
+    static final String LOADING_STYLE_NOTE = pick("Индикатор в выбранном стиле интерфейса.",
+            "Індикатор у вибраному стилі інтерфейсу.", "Follows the selected interface style.");
 
     static final String LOADING_NOTE = pick(
             "Вместо двух кружков TikTok крутятся фигуры Material 3 в цвете акцента.",
@@ -679,6 +685,8 @@ final class Text {
             "Rounded icons on a video's buttons");
     static final String MD3_INBOX = pick("Входящие в стиле Material 3", "Вхідні у стилі Material 3",
             "Material 3 inbox");
+    static final String DESIGN_COMMENTS = pick("Комментарии в стиле Material 3", "Коментарі у стилі Material 3",
+            "Material 3 comments");
 
     static final String TAB_READ_ALL = pick("Прочитать все?", "Прочитати все?", "Mark all as read?");
     static final String TAB_READ_ALL_NOTE = pick(

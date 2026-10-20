@@ -27,6 +27,7 @@ final class SheetDialog extends Dialog {
         super.onStart();
         closing = false;
         if (getWindow() == null) return;
+        Design.dialog(this, Skin.remembered(owner).card);
         getWindow().setWindowAnimations(0);
         getWindow().clearFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
         dim = getWindow().getAttributes().dimAmount;
@@ -100,7 +101,7 @@ final class SheetDialog extends Dialog {
         if (getWindow() != null) getWindow().addFlags(WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE);
         shade(getWindow() == null ? dim : getWindow().getAttributes().dimAmount,0f,180L);
         surface.animate().withEndAction(null).cancel();
-        surface.animate().translationY(centered ? 0f : Math.max(surface.getHeight(), 1)).alpha(0f)
+        surface.animate().translationY(centered ? 0f : Design.fluent()?dp(8):Math.max(surface.getHeight(), 1)).alpha(0f)
                 .setDuration(180L)
                 .setInterpolator(new android.view.animation.PathInterpolator(0.4f,0f,1f,1f))
                 .withEndAction(() -> finishLeave(cancelled)).start();
