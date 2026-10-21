@@ -47,8 +47,8 @@ class NativeFlagsTests(unittest.TestCase):
      check(Flags.forcedInt("audio_comment_publish")==1,"voice comments are on until switched off");
      Flags.set(Flags.KEY_VOICE,false);check(Flags.forcedInt("audio_comment_publish")==1,"and stay on: only the new profile is a choice now");
      check(Flags.forcedInt("unrelated")==null&&Flags.forcedBoolean("unrelated")==null,"a flag nobody named is TikTok's");
-     check(Flags.forcedInt("long_press_speed_up_lock")==1,"the speed lock is answered both ways");
-     Flags.set(Flags.KEY_SPEED_LOCK,false);check(Flags.forcedInt("long_press_speed_up_lock")==1,"the speed lock is not a choice either");
+     check(Flags.forcedInt("long_press_speed_up_lock")==0,"the speed lock is off to begin with, and answered as off");
+     Flags.set(Flags.KEY_SPEED_LOCK,true);check(Flags.forcedInt("long_press_speed_up_lock")==1,"and on when chosen");
      check(Flags.forcedInt("tt_comment_repost")==1&&Flags.forcedInt("enable_self_repost")==1,"reposts are simply on");
      check(Flags.forcedInt("camera_teleprompter_mode")==1&&Flags.forcedString("studio_selfie_fill_light_config").contains("support_selfie_light_adjust"),"the teleprompter and the coloured front flash");
      check(Flags.forcedInt("comment_multi_photo_group")==2&&Flags.forcedBoolean("studio_publish_limit_hashtag_switch")==Boolean.FALSE,"several photos in a comment and no hashtag limit");

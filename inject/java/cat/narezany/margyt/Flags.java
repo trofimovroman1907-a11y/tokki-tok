@@ -68,7 +68,7 @@ public final class Flags {
     public static final String KEY_NEW_PROFILE = "flag_new_profile";
 
     private static final Set<String> ON_BY_DEFAULT = new HashSet<String>(Arrays.asList(
-            KEY_VOICE, KEY_BANNER, KEY_SPEED_LOCK, KEY_NEW_PROFILE, KEY_TRANSLATE_COMMENTS, KEY_COMMENT_REPOST,
+            KEY_VOICE, KEY_BANNER, KEY_NEW_PROFILE, KEY_TRANSLATE_COMMENTS, KEY_COMMENT_REPOST,
             KEY_COMMENT_PHOTOS, KEY_HASHTAGS));
 
     /** Where the developer's own answers are kept, one entry a flag. */
@@ -131,11 +131,13 @@ public final class Flags {
     }
 
     /**
-     * Only the new profile is a choice. Every other experiment the mod answers is simply on:
+     * Only the new profile and the speed lock are choices. Every other experiment the mod answers is simply on:
      * a switch for each of them was a page of settings nobody could make sense of.
      */
     private static boolean chosen(String key) {
-        return KEY_NEW_PROFILE.equals(key);
+        // the speed lock is a choice too, and off to begin with: holding the edge and
+        // swiping down by accident left some people stuck at double speed
+        return KEY_NEW_PROFILE.equals(key) || KEY_SPEED_LOCK.equals(key);
     }
 
     private static boolean bool(String key) {
