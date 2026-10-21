@@ -361,7 +361,8 @@ def main_page(badges, plugins, gradients=(), said="", crashes=(), verdicts=()):
           <p><button>Сменить</button></p>
         </form>
 
-        <p><a class='button quiet' href="/admin/out">Выйти</a></p>
+        <p><a class='button quiet' href="/admin/devices">Устройства админки</a>
+           <a class='button quiet' href="/admin/out">Выйти</a></p>
         """ % ("".join(rows) or "<tr><td class=dim>пока пусто</td></tr>",
                "".join(painted) or "<tr><td class=dim>пока пусто</td></tr>",
                "".join(marked) or "<tr><td class=dim>пока пусто</td></tr>",
@@ -405,3 +406,26 @@ def badge_page(badge, wearers, said=""):
                html.escape(badge["image"] or "note.png"), html.escape(badge["id"]),
                html.escape(badge["id"]),
                rows or "<tr><td class=dim>пока ни у кого</td></tr>"), said)
+
+
+def devices_page(devices, said=""):
+    """The phones that may use the admin inside TikTok, and a way to strike one off."""
+    rows = "".join(
+        "<tr><td><b>%s</b><br><span class=dim>%s</span></td><td class=dim>%s</td>"
+        "<td class=dim>%s</td><td class=dim>%s</td><td><form method=post "
+        "action='/admin/device/forget' style='display:inline'>"
+        "<input type=hidden name=id value='%s'>"
+        "<button class=quiet>Отключить</button></form></td></tr>"
+        % (html.escape(name), html.escape(which), html.escape(uid),
+           "подтверждено" if approved else "ждёт код", when(last) if last else "не заходило",
+           html.escape(which))
+        for which, uid, name, approved, made, last in devices)
+    return page("MargyT", """
+        <h1>Устройства админки</h1>
+        <p class=dim>Админка внутри TikTok работает только с этих телефонов. Новый
+        подтверждается кодом из Telegram.</p>
+        <div class=card><table>
+          <tr><th>устройство</th><th>аккаунт</th><th></th><th>последний раз</th><th></th></tr>%s
+        </table></div>
+        <p><a class='button quiet' href="/admin">Назад</a></p>
+        """ % (rows or "<tr><td class=dim>пока ни одного</td></tr>"), said)

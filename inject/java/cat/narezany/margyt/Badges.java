@@ -194,6 +194,11 @@ public static final String KEY = "badges_on";
         return null;
     }
 
+    /** Every badge the server knows, in its order: what the owner's admin offers to give. */
+    static Badge[] all() {
+        return numbered.clone();
+    }
+
     public static Badge[] of(String uid) {
         if (uid == null) return null;
         return known.get(uid);

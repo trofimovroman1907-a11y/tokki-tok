@@ -54,6 +54,7 @@ import guard
 import panel
 import patcher
 import mc
+import admin_mod
 import tiktok
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -239,6 +240,7 @@ def prepare():
         if column not in owner_columns:
             db.execute("ALTER TABLE owner ADD COLUMN %s %s" % (column, kind))
     dep.prepare(db)
+    admin_mod.prepare(db)
     db.commit()
     db.close()
     take_in_admin()
@@ -719,36 +721,13 @@ CRASHED = {}
 
 
 def verdict(body, ip):
-    """A mark on somebody's profile, set from inside TikTok by whoever wears the owner's badge.
+    """Where marks were set from inside TikTok with the owner's token alone.
 
-    The same thing the panel does, for the one account that runs the project, so
-    that marking somebody does not mean finding their id and opening the panel.
-    The account has to have proved itself, and the badge is looked up here.
+    Shut since 2.1.0: the admin inside TikTok asks for an approved phone as
+    well, and marks go through it (admin_mod). Kept as a name so an older mod
+    is told plainly rather than handed a 404.
     """
-    db = connect()
-    uid = vouched(db, body)
-    if not uid:
-        db.close()
-        return 403, {"error": "prove"}
-    if not db.execute("SELECT 1 FROM held WHERE uid = ? AND badge = 'owner'", (uid,)).fetchone():
-        db.close()
-        return 403, {"error": "owner only"}
-    target = body.get("target", "")
-    if not sane(target):
-        db.close()
-        return 400, {"error": "target"}
-    good = body.get("good")
-    if good is None:
-        db.execute("DELETE FROM verdict WHERE uid = ?", (target,))
-    else:
-        reason = " ".join(str(body.get("reason") or "").split())[:300]
-        db.execute("INSERT INTO verdict (uid, good, reason, at) VALUES (?, ?, ?, ?)"
-                   " ON CONFLICT(uid) DO UPDATE SET good=excluded.good,"
-                   " reason=excluded.reason, at=excluded.at",
-                   (target, 1 if good else 0, reason, int(time.time())))
-    db.commit()
-    db.close()
-    return 200, {"ok": True}
+    return 410, {"error": "device"}
 
 
 def crash(body, raw, ip):
@@ -1239,6 +1218,13 @@ class Handler(BaseHTTPRequestHandler):
                  "text": row[3]}, wearers))
             return
 
+        if path == "/admin/devices":
+            db = connect()
+            rows = admin_mod.devices_all(db)
+            db.close()
+            self.html(panel.devices_page(rows, query.get("said", [""])[0]))
+            return
+
         if path == "/admin/out":
             self.go("/admin", panel.cookie(""))
             return
@@ -1376,6 +1362,14 @@ class Handler(BaseHTTPRequestHandler):
             db.commit()
             db.close()
             self.go("/admin/badge?id=%s" % said.get("id", ""))
+            return
+
+        if path == "/admin/device/forget":
+            said = self.form()
+            db = connect()
+            admin_mod.forget(db, said.get("id", ""))
+            db.close()
+            self.go("/admin/devices?said=устройство отключено")
             return
 
         if path == "/admin/gradient/drop":
@@ -1569,6 +1563,10 @@ class Handler(BaseHTTPRequestHandler):
             code, out = dep_play(body, ip)
         elif path == "/verdict":
             code, out = verdict(body, ip)
+        elif path == "/mod/device":
+            code, out = admin_mod.device(body)
+        elif path == "/mod/admin":
+            code, out = admin_mod.act(body)
         elif path == "/gradient":
             code, out = gradient(body, ip)
         elif path == "/crash":
@@ -1588,6 +1586,8 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
+    admin_mod.use.update(connect=connect, vouched=vouched, sane=sane,
+                         telegram=patcher._telegram, owner_tg=guard.OWNER)
     prepare()
     server = ThreadingHTTPServer(("127.0.0.1", 8080), Handler)
     server.serve_forever()

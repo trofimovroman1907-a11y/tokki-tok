@@ -474,6 +474,11 @@ public class SettingsActivity extends Activity {
         badges.addView(line());
         badges.addView(mineHead());
         if (mineOpen) badges.addView(appear(mineRows()));
+        if (AdminPanel.owner()) {
+            // the owner's alone: which phones may use the admin inside TikTok
+            badges.addView(line());
+            badges.addView(actionRow("fingerprint", Text.ADMIN_DEVICES, null, () -> AdminPanel.devices(this)));
+        }
         column.addView(wrap(badges));
 
         column.addView(section(Text.ACCOUNT));

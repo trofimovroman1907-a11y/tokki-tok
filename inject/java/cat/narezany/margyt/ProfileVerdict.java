@@ -90,7 +90,7 @@ final class ProfileVerdict {
             ground = Md3.behind(block);
             View plate = find(block);
             if (plate != null) recolour(plate);
-            boolean marking = uid != null && owner() && !uid.equals(Account.id());
+            boolean marking = uid != null && AdminPanel.owner() && !uid.equals(Account.id());
             if (verdict == null && !marking) {
                 if (plate != null) drop(block, plate);
                 return;
@@ -102,8 +102,7 @@ final class ProfileVerdict {
             plate.setTag(PLATE, key);
             if (marking) {
                 final String target = uid;
-                final Badges.Verdict now = verdict;
-                plate.setOnClickListener(v -> mark(v.getContext(), target, now, block));
+                plate.setOnClickListener(v -> AdminPanel.open(v.getContext(), target, block));
             }
             LinearLayout.LayoutParams where = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
@@ -183,19 +182,10 @@ final class ProfileVerdict {
         return null;
     }
 
-    /** Whether the one looking wears the owner's badge, which is what the server asks for too. */
-    private static boolean owner() {
-        try {
-            Badges.Badge[] worn = Badges.of(Account.id());
-            if (worn != null) for (Badges.Badge one : worn) if (one != null && "owner".equals(one.id)) return true;
-        } catch (Throwable ignored) {}
-        return false;
-    }
-
-    /** For the owner on somebody else's profile without a mark yet: a small button to give one. */
+    /** For the owner on somebody else's profile without a mark yet: the way into the admin. */
     private static View chip(Context c) {
         TextView chip = new TextView(c);
-        chip.setText(Text.VERDICT_MARK);
+        chip.setText(Text.ADMIN);
         chip.setTextColor(ink());
         chip.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
         chip.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
@@ -206,45 +196,6 @@ final class ProfileVerdict {
         chip.setBackground(back);
         Fonts.applyTree(chip);
         return chip;
-    }
-
-    /** The owner's choice: recommended, not recommended or no mark, with a reason. */
-    private static void mark(Context c, String target, Badges.Verdict now, View block) {
-        Skin skin = Skin.remembered(c);
-        Panel panel = Panel.with(c, skin, Text.VERDICT_MARK);
-        final android.widget.EditText reason = panel.field(Text.VERDICT_REASON);
-        if (now != null && now.reason != null) reason.setText(now.reason);
-        panel.primary(Text.VERDICT_GOOD, () -> send(c, target, Boolean.TRUE, reason.getText().toString(), block));
-        panel.quiet(Text.VERDICT_BAD, () -> send(c, target, Boolean.FALSE, reason.getText().toString(), block));
-        if (now != null) panel.quiet(Text.VERDICT_DROP, () -> send(c, target, null, "", block));
-        panel.quiet(Text.CANCEL, null).show();
-    }
-
-    private static void send(Context c, String target, Boolean good, String reason, View block) {
-        final String uid = Account.id(), token = Mine.token();
-        if (uid == null || token.length() == 0) { Screen.say(Text.VERDICT_PROVE); return; }
-        Net.away("verdict", () -> {
-            boolean ok = false;
-            try {
-                org.json.JSONObject body = new org.json.JSONObject().put("uid", uid).put("token", token).put("target", target)
-                        .put("reason", reason == null ? "" : reason.trim());
-                if (good != null) body.put("good", good.booleanValue());
-                Net.Said said = Net.talk(Badges.SERVER + "/verdict", body.toString());
-                ok = said.ok();
-                if (!ok && Mine.asksForProof(said)) { Screen.say(Text.VERDICT_PROVE); ok = true; return; }
-                if (ok) Badges.refresh();
-            } catch (Throwable error) {
-                Diary.note("verdict: " + error);
-            }
-            final boolean done = ok;
-            block.post(() -> {
-                if (!done) { Screen.say(Text.VERDICT_FAILED); return; }
-                Screen.say(Text.VERDICT_SAVED);
-                // the badges are read again in the background; look once they are in
-                block.postDelayed(() -> apply(block), 1500);
-                block.postDelayed(() -> apply(block), 4000);
-            });
-        });
     }
 
     /** What the profile's own page is painted with, read off the screen like the counters do. */

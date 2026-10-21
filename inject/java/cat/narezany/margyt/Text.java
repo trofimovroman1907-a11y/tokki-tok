@@ -1280,6 +1280,28 @@ final class Text {
     static final String VERDICT_DROP = pick("Снять пометку", "Зняти позначку", "Remove the mark");
     static final String VERDICT_SAVED = pick("Пометка сохранена", "Позначку збережено", "Mark saved");
     static final String VERDICT_FAILED = pick("Не получилось сохранить пометку", "Не вдалося зберегти позначку", "Could not save the mark");
+
+    // the owner's admin inside TikTok
+    static final String ADMIN = pick("Админка", "Адмінка", "Admin");
+    static final String ADMIN_CODE = pick("Код из Telegram", "Код із Telegram", "Code from Telegram");
+    static final String ADMIN_CODE_NOTE = pick("Код ушёл в Telegram. Без него это устройство не станет админским.",
+            "Код надіслано в Telegram. Без нього цей пристрій не стане адмінським.",
+            "The code went to Telegram. Without it this phone cannot be an admin one.");
+    static final String ADMIN_CONFIRM = pick("Подтвердить", "Підтвердити", "Confirm");
+    static final String ADMIN_WRONG = pick("Код не подошёл", "Код не підійшов", "Wrong code");
+    static final String ADMIN_EXPIRED = pick("Код устарел, открой админку заново", "Код застарів, відкрий адмінку знову", "The code expired, open the admin again");
+    static final String ADMIN_FAILED = pick("Не получилось", "Не вийшло", "That did not work");
+    static final String ADMIN_BADGES = pick("Значки", "Значки", "Badges");
+    static final String ADMIN_MARK = pick("Пометка", "Позначка", "Mark");
+    static final String ADMIN_NO_MARK = pick("Нет", "Немає", "None");
+    static final String ADMIN_GRADIENT = pick("Снять градиент", "Зняти градієнт", "Remove the gradient");
+    static final String ADMIN_COPY_ID = pick("Скопировать ID", "Скопіювати ID", "Copy the ID");
+    static final String ADMIN_COPIED = pick("ID скопирован", "ID скопійовано", "ID copied");
+    static final String ADMIN_NOT_PROVED = pick("не подтверждён", "не підтверджений", "not verified");
+    static final String ADMIN_DEVICES = pick("Устройства админки", "Пристрої адмінки", "Admin devices");
+    static final String ADMIN_THIS = pick("Это устройство", "Цей пристрій", "This phone");
+    static final String ADMIN_WAITING = pick("Ждёт код", "Чекає код", "Waiting for its code");
+    static final String ADMIN_FORGET = pick("Отключить", "Вимкнути", "Remove");
     static String verdictWhy(boolean good, String reason) {
         String said = good
                 ? pick("Администрация MargyT отметила этот аккаунт как хороший.", "Адміністрація MargyT позначила цей акаунт як хороший.", "The MargyT team marked this account as a good one.")
