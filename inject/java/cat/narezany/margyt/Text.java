@@ -613,19 +613,18 @@ final class Text {
             "Значок за поддержку", "Значок за підтримку", "A badge for supporting");
 
     static final String DONATE_BANNER_TEXT = pick(
-            "От 250 ₽: значок рядом с ником, градиент на ник, закрытый чат и вход на Minecraft-сервер MargyCraft "
+            "От 250 ₽ или 300 ⭐: значок рядом с ником, градиент на ник, закрытый чат и вход на Minecraft-сервер MargyCraft "
                     + "(craft.narez.xyz). Значок и градиент видят все с MargyT.",
-            "Від 250 ₽: значок поруч із ніком, градієнт на нік, закритий чат і вхід на Minecraft-сервер MargyCraft "
+            "Від 250 ₽ або 300 ⭐: значок поруч із ніком, градієнт на нік, закритий чат і вхід на Minecraft-сервер MargyCraft "
                     + "(craft.narez.xyz). Значок і градієнт бачать усі з MargyT.",
-            "From 250 roubles: a badge beside your name, a gradient on the name, the private chat and "
+            "From 250 roubles or 300 ⭐: a badge beside your name, a gradient on the name, the private chat and "
                     + "access to MargyCraft, the Minecraft server (craft.narez.xyz). The badge and the "
                     + "gradient are seen by everyone on MargyT.");
 
     static final String DONATE_BANNER_HOW = pick(
-            "После перевода — в сообщения канала: чек и ваш ID аккаунта.",
-            "Після переказу — у повідомлення каналу: чек і ваш ID акаунта.",
-            "After paying, write to the channel with the receipt and your "
-                    + "account ID.");
+            "После оплаты напиши в сообщения канала: чек или скриншот подарка и ID своего аккаунта.",
+            "Після оплати напиши в повідомлення каналу: чек або скриншот подарунка та ID свого акаунта.",
+            "After paying, write to the channel with the receipt or a screenshot of the gift, and your account ID.");
 
     static final String DONATE_BANNER_BUTTON = pick(
             "Пожертвовать", "Пожертвувати", "Donate");
@@ -634,7 +633,7 @@ final class Text {
             "Сообщения каналу", "Повідомлення каналу", "Message the channel");
 
     static final String DONATE_STEP_PAY = pick(
-            "1. Переведите от 250 ₽", "1. Переказати від 250 ₽", "1. Send 250 ₽ or more");
+            "1. Переведите от 250 ₽ или 300 ⭐", "1. Переказати від 250 ₽ або 300 ⭐", "1. Send 250 ₽ or 300 ⭐ or more");
 
     static final String DONATE_STEP_ID = pick(
             "2. Скопируйте свой ID", "2. Скопіюйте свій ID", "2. Copy your ID");
@@ -1376,6 +1375,16 @@ final class Text {
     static final String BOOSTY_NOTE = pick(
             "Подходит для любой страны", "Підходить для будь-якої країни", "Works from any country");
 
+    static final String FUNPAY = pick("FunPay", "FunPay", "FunPay");
+    static final String FUNPAY_NOTE = pick("Покупка через FunPay", "Покупка через FunPay", "Buy it on FunPay");
+    static final String STARS = pick("Звёзды Telegram", "Зірки Telegram", "Telegram Stars");
+    static final String STARS_NOTE = pick("300 ⭐ подарками на аккаунт @narezany", "300 ⭐ подарунками на акаунт @narezany", "300 ⭐ as gifts to @narezany");
+    static final String BANNER_ALWAYS = pick("Показывать предложение поддержать", "Показувати пропозицію підтримати", "Show the offer to support");
+    static final String BANNER_ALWAYS_NOTE = pick(
+            "Плашка «Купи значок» на главной настроек будет видна, даже если значок поддержавшего у тебя уже есть.",
+            "Плашка «Купи значок» на головній налаштувань буде видна, навіть якщо значок підтримки в тебе вже є.",
+            "The offer at the top of the settings stays, even with the supporter's badge.");
+
     static final String NO_BROWSER = pick(
             "Нечем открыть ссылку", "Нема чим відкрити посилання", "Nothing here opens links");
 
@@ -1467,7 +1476,7 @@ final class Text {
     static final String PAGE_STYLE = pick("Стиль и значок", "Стиль і значок", "Style and icon");
     static final String PAGE_STYLE_NOTE = pick("Material 3, Liquid Glass или Fluent и значок на рабочем столе", "Material 3, Liquid Glass або Fluent і значок на робочому столі", "Material 3, Liquid Glass or Fluent, and the home screen icon");
     static final String PAGE_ACCENT_NOTE = pick("Цвет кнопок, вкладок и переключателей", "Колір кнопок, вкладок і перемикачів", "The colour of buttons, tabs and switches");
-    static final String MD3_TIKTOK = pick("МД3 дизайн TikTok", "МД3 дизайн TikTok", "Material 3 look for TikTok");
+    static final String MD3_TIKTOK = pick("TikTok в стиле Material 3", "TikTok у стилі Material 3", "TikTok in Material 3 style");
     static final String PAGE_MD3_NOTE = pick("Нижняя панель капсулой, лента, профиль, входящие, иконки и комментарии в стиле Material 3", "Нижня панель капсулою, стрічка, профіль, вхідні, іконки й коментарі в стилі Material 3", "The capsule tab bar, the feed, profile, inbox, icons and comments in Material 3");
     static final String PAGE_THEME_NOTE = pick("Цвета фона и текста, цвета телефона и AMOLED", "Кольори фону й тексту, кольори телефона та AMOLED", "Background and text colours, the phone's palette and AMOLED");
     static final String PAGE_FONT_NOTE = pick("Шрифт для всего TikTok", "Шрифт для всього TikTok", "A typeface for all of TikTok");

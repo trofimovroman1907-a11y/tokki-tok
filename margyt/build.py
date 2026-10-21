@@ -245,6 +245,8 @@ class Build:
             self.detail("%s declared, reached from TikTok's own settings" % SETTINGS_ACTIVITY)
         manifest_module.add_activity(manifest, STORE_ACTIVITY, SETTINGS_LABEL, theme)
         manifest_module.add_activity(manifest, PACKAGE + ".PluginEditorActivity", SETTINGS_LABEL, theme)
+        # a .mtp opened from a file manager comes to the mod (Theme.NoDisplay: it only hands the file on)
+        manifest_module.add_file_opener(manifest, PACKAGE + ".PluginOpenActivity", "Плагин MargyT", 0x01030055, "mtp", ["application/octet-stream", "application/zip", "application/x-zip-compressed"])
         self.detail("%s declared, the plugin store" % STORE_ACTIVITY)
 
         if not self.lite and not manifest_module.has_activity(manifest, TIKTOK_SETTINGS):

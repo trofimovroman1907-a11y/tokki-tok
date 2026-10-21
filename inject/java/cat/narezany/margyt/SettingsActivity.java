@@ -99,6 +99,9 @@ public class SettingsActivity extends Activity {
             "https://git.narez.xyz/narezany/MargyT/src/branch/main/docs/plugins.md";
     private static final String YOOMONEY = "https://yoomoney.ru/to/4100118196133693";
     private static final String BOOSTY = "https://boosty.to/ega_link";
+    private static final String FUNPAY = "https://funpay.com/lots/offer?id=80127335";
+    /** Stars go as gifts to this account; the link opens it in Telegram. */
+    private static final String STARS = "https://t.me/narezany";
 
     private boolean countriesOpen;
     private boolean accentOpen;
@@ -241,6 +244,27 @@ public class SettingsActivity extends Activity {
         rebuild();
         maybeAskForSupport();
         if(getIntent().getBooleanExtra("margyt_tutorial",false))root.postDelayed(()->Tutorial.show(this),350L);
+        openPluginFile(getIntent());
+    }
+
+    /** Set by PluginOpenActivity: a .mtp opened from a file manager, to review as if it were picked here. */
+    static final String OPEN_PLUGIN = "margyt_open_plugin";
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        openPluginFile(intent);
+    }
+
+    private void openPluginFile(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra(OPEN_PLUGIN, false) || intent.getData() == null) return;
+        final Uri file = intent.getData();
+        intent.removeExtra(OPEN_PLUGIN);
+        settingsGroup = 6;
+        settingsPage = "plugins";
+        rebuild();
+        root.post(() -> reviewPlugin(file));
     }
 
     void tutorialStep(int step) {
@@ -331,7 +355,7 @@ public class SettingsActivity extends Activity {
 
         if (settingsGroup == 0) {
             if (Badges.freeStillOpen() && !Mine.hasFree()) column.addView(freeBanner());
-            if (!donateClosed && !supporter()) column.addView(donateBanner());
+            if (!donateClosed && (!supporter() || bannerAlways())) column.addView(donateBanner());
             column.addView(groupNavigation());
             column.addView(wrap(actionRow("info",Local.of("Обучение"),null,() -> Tutorial.show(this))));
             column.addView(versions());
@@ -694,9 +718,12 @@ public class SettingsActivity extends Activity {
                 Updater.newer() ? Text.UPDATE_THERE_IS + " " + Updater.latest() : null,
                 () -> Updater.check(this, true)));
         updates.addView(line());
-        final boolean haveStore = Updater.storeInstalled(this);
-        updates.addView(actionRow("extension", haveStore ? Text.UPDATE_OPEN_STORE : Text.UPDATE_DOWNLOAD_STORE, Text.UPDATE_IN_STORE,
-                () -> { if (haveStore) Updater.openStore(this); else Updater.downloadStore(this); }));
+        if (Updater.storeInstalled(this)) {
+            updates.addView(actionRow("extension", Text.UPDATE_OPEN_STORE, Text.UPDATE_IN_STORE, () -> Updater.openStore(this)));
+            updates.addView(line());
+        }
+        updates.addView(actionRow("download", Text.UPDATE_DOWNLOAD_STORE,
+                Updater.storeInstalled(this) ? null : Text.UPDATE_IN_STORE, () -> Updater.downloadStore(this)));
         updates.addView(line());
         updates.addView(toggleRow("info", Text.UPDATE_REMIND, Updater.remind(this),
                 on -> Updater.setRemind(this, on)));
@@ -745,6 +772,11 @@ public class SettingsActivity extends Activity {
         }
         donateAnchor = wrap(support);
         column.addView(donateAnchor);
+        LinearLayout offer = card();
+        offer.addView(liveToggleRow("favorite_border", Text.BANNER_ALWAYS, bannerAlways(),
+                on -> AccountAppearance.prefs(this).edit().putBoolean(BANNER_ALWAYS, on).apply()));
+        offer.addView(quiet(Text.BANNER_ALWAYS_NOTE));
+        column.addView(wrap(offer));
 
         column.addView(section(Text.FUN_DEP));
         LinearLayout dep = card();
@@ -991,6 +1023,13 @@ public class SettingsActivity extends Activity {
      */
     /** Closed with its cross: gone until the settings are opened again. */
     private boolean donateClosed;
+
+    /** A supporter can still ask to see the offer, to show it to a friend or to give again. */
+    static final String BANNER_ALWAYS = "donate_banner_always";
+
+    private boolean bannerAlways() {
+        return AccountAppearance.prefs(this).getBoolean(BANNER_ALWAYS, false);
+    }
 
     /** Whether this account already wears the supporter's badge, hidden or shown. */
     private static boolean supporter() {
@@ -1357,6 +1396,10 @@ public class SettingsActivity extends Activity {
         pay.addView(linkRow("star", Text.YOOMONEY, Text.YOOMONEY_NOTE, YOOMONEY));
         pay.addView(line());
         pay.addView(linkRow("public", Text.BOOSTY, Text.BOOSTY_NOTE, BOOSTY));
+        pay.addView(line());
+        pay.addView(linkRow("public", Text.FUNPAY, Text.FUNPAY_NOTE, FUNPAY));
+        pay.addView(line());
+        pay.addView(linkRow("star", Text.STARS, Text.STARS_NOTE, STARS));
         column.addView(wrap(pay));
 
         column.addView(section(Text.DONATE_STEP_ID));
@@ -2923,6 +2966,8 @@ public class SettingsActivity extends Activity {
 
         rows.addView(linkRow("star", Text.YOOMONEY, Text.YOOMONEY_NOTE, YOOMONEY));
         rows.addView(linkRow("public", Text.BOOSTY, Text.BOOSTY_NOTE, BOOSTY));
+        rows.addView(linkRow("public", Text.FUNPAY, Text.FUNPAY_NOTE, FUNPAY));
+        rows.addView(linkRow("star", Text.STARS, Text.STARS_NOTE, STARS));
         return rows;
     }
 
