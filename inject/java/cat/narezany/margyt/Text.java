@@ -15,7 +15,6 @@ final class Text {
 
     private static final boolean RU = "ru".equals(language()) || "be".equals(language());
     private static final boolean UK = "uk".equals(language());
-    static final String PINNED_FRIENDS=pick("Закреплённые друзья","Закріплені друзі","Pinned friends");
     static final String FRIEND_CANDIDATES=pick("Друзья","Друзі","Friends");
     static final String MOVE_UP=pick("Выше","Вище","Move up");
     static final String MOVE_DOWN=pick("Ниже","Нижче","Move down");
@@ -1499,7 +1498,6 @@ final class Text {
     static final String PAGE_UPDATE_NOTE = pick("Версия, обновления и канал", "Версія, оновлення та канал", "Version, updates and the channel");
     static final String PAGE_LINKS_NOTE = pick("Сайт, Telegram и исходники", "Сайт, Telegram і вихідний код", "Site, Telegram and the source");
     static final String PAGE_THANKS_NOTE = pick("Кто помогал и как поддержать", "Хто допомагав і як підтримати", "Who helped, and how to support");
-    static final String PAGE_PINNED_NOTE = pick("Друзья, которые всегда наверху", "Друзі, які завжди нагорі", "Friends kept at the top");
     static final String PAGE_STREAKS_NOTE = pick("Чтобы серии не сгорали", "Щоб серії не згоряли", "So streaks do not run out");
     static final String PAGE_NOTIFICATIONS_NOTE = pick("Какие уведомления TikTok показывать", "Які сповіщення TikTok показувати", "Which TikTok notifications to show");
     static final String PAGE_DEP_NOTE = pick("Казино понарошку и значок за победу", "Казино понарошку і значок за перемогу", "A pretend casino with a badge to win");

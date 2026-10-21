@@ -700,9 +700,9 @@ final class Local {
         add("Плагины",
                 "Плагіни",
                 "Plugins");
-        add("Друзья и чаты",
-                "Друзі та чати",
-                "Friends and chats");
+        add("Серии и уведомления",
+                "Серії та сповіщення",
+                "Streaks and notifications");
         add("Акцент меняет цвет кнопок и вкладок. Готовые картинки могут сохранять свой цвет. Тема и шрифты настраиваются отдельно.",
                 "Акцент змінює колір кнопок і вкладок. Готові картинки можуть зберігати свій колір. Тема та шрифти налаштовуються окремо.",
                 "The accent changes the colour of buttons and tabs. Ready-made pictures may keep their own colour. The theme and fonts are set separately.");
@@ -721,9 +721,9 @@ final class Local {
         add("Магазин, установка и настройки плагинов. Плагины запускают дополнительный код; устанавливайте только те, которым доверяете.",
                 "Магазин, встановлення й налаштування плагінів. Плагіни запускають додатковий код; встановлюйте лише ті, яким довіряєте.",
                 "The store, installing and setting up plugins. Plugins run extra code; install only the ones you trust.");
-        add("Закреплённые друзья, автопродление серий и уведомления мода.",
-                "Закріплені друзі, автопродовження серій і сповіщення мода.",
-                "Pinned friends, keeping streaks alive and the mod's notifications.");
+        add("Автопродление серий и уведомления мода.",
+                "Автопродовження серій і сповіщення мода.",
+                "Streaks kept going on their own, and the mod's notifications.");
         add("Понятно",
                 "Зрозуміло",
                 "Got it");
@@ -745,9 +745,9 @@ final class Local {
         add("Магазин и установленные",
                 "Магазин і встановлені",
                 "The store and what is installed");
-        add("Друзья, серии и уведомления",
-                "Друзі, серії та сповіщення",
-                "Friends, streaks and notifications");
+        add("Серии и уведомления",
+                "Серії та сповіщення",
+                "Streaks and notifications");
         add("Защита экрана",
                 "Захист екрана",
                 "Screen protection");

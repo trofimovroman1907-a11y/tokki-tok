@@ -152,7 +152,6 @@ public class SettingsActivity extends Activity {
             new Shelf(5, "links", "link", Text.LINKS, Text.PAGE_LINKS_NOTE, Text.LINKS),
             new Shelf(5, "thanks", "favorite_border", Text.THANKS, Text.PAGE_THANKS_NOTE, Text.THANKS),
             new Shelf(6, "plugins", "extension", Text.PLUGINS, "", Text.PLUGINS),
-            new Shelf(7, "pinned", "people", Text.PINNED_FRIENDS, Text.PAGE_PINNED_NOTE, Text.PINNED_FRIENDS),
             new Shelf(7, "streaks", "schedule", Text.STREAKS, Text.PAGE_STREAKS_NOTE, Text.STREAKS),
             new Shelf(7, "notifications", "notifications", Text.NOTIFICATIONS, Text.PAGE_NOTIFICATIONS_NOTE, Text.NOTIFICATIONS),
             new Shelf(8, "dep", "flare", Text.FUN_DEP, Text.PAGE_DEP_NOTE, Text.FUN_DEP),
@@ -649,10 +648,6 @@ public class SettingsActivity extends Activity {
         }
         for(Plugins.Info info:installed)plugins.addView(pluginRow(info));
         column.addView(wrap(plugins));
-
-        column.addView(section(Text.PINNED_FRIENDS));
-        LinearLayout friends=card();friends.addView(actionRow("people",Text.PINNED_FRIENDS,null,()->PinnedFriends.show(this)));
-        column.addView(wrap(friends));
 
         column.addView(section(Text.STREAKS));
         LinearLayout streaks = card();
@@ -3643,7 +3638,6 @@ public class SettingsActivity extends Activity {
         found+=searchControl(results,Text.FEED,Text.HIDE_STORIES,Feed.hides(Feed.KEY_STORIES));
         found+=searchControl(results,Text.FEED,Text.HIDE_SUGGESTIONS,Feed.hides(Feed.KEY_SUGGESTIONS));
         found+=searchControl(results,Text.FEED,Text.SIMPLE_FEED,SimpleFeed.isOn());
-        found+=searchHit(results,Text.PINNED_FRIENDS,Text.PINNED_FRIENDS+" "+Text.MESSAGE_TIMES,()->{});
         found+=searchHit(results,Text.NOTIFICATIONS,Text.NOTIFY_MESSAGES+" "+Text.NOTIFY_PROMOS+" "+Text.NOTIFY_OTHER+" "+Text.NOTIFY_NO_PROMPTS+" "+Text.NOTIFY_SETTINGS,()->{});
         found+=searchHit(results,Text.VIDEO,Text.PLAYER_SPEED,()->{});
         found+=searchHit(results,Text.DOWNLOADS,Text.DL_QUALITY+" "+Text.FRAME_QUALITY,()->{});
@@ -3744,7 +3738,7 @@ public class SettingsActivity extends Activity {
             case 4: return Local.of("Инструменты");
             case 5: return Local.of("О проекте");
             case 6: return Local.of("Плагины");
-            case 7: return Local.of("Друзья и чаты");
+            case 7: return Local.of("Серии и уведомления");
             case 8: return Text.FUN;
             default: return "MargyT";
         }
@@ -3756,7 +3750,7 @@ public class SettingsActivity extends Activity {
                 Local.of("Глаз меняет прозрачность кнопок поверх видео; «Защита экрана» теперь здесь же. Удержание «Отправить» открывает скачивание и перемотку. Удерживайте край видео, чтобы ускорить, и потяните вниз, чтобы закрепить скорость."),
                 Local.of("Скачивание, резервные копии, диагностика и журнал. Сохраните копию перед экспериментами."),
                 Local.of("Здесь находятся версия мода, обновления, журнал и участники."), Local.of("Магазин, установка и настройки плагинов. Плагины запускают дополнительный код; устанавливайте только те, которым доверяете."),
-                Local.of("Закреплённые друзья, автопродление серий и уведомления мода."),
+                Local.of("Автопродление серий и уведомления мода."),
                 Text.FUN_HELP};
         Panel.with(this,skin,Local.of("Подсказки")).text(notes[Math.max(0,Math.min(notes.length-1,settingsGroup))])
                 .quiet(Local.of("Обучение"),() -> Tutorial.show(this)).primary(Local.of("Понятно"),null).show();
@@ -3770,7 +3764,7 @@ public class SettingsActivity extends Activity {
                 Local.of("Просмотр, кнопки, защита экрана и регион"),
                 Local.of("Скачивание, копии и диагностика"),
                 Local.of("Версия, обновления и участники"), Local.of("Магазин и установленные"),
-                Local.of("Друзья, серии и уведомления"), Text.FUN_NOTE};
+                Local.of("Серии и уведомления"), Text.FUN_NOTE};
         // Shelf order on screen: what people touch daily first, the project itself last.
         // Lite has the shelves that have something on them for it
         int[] shelf = Version.LITE ? new int[] {1, 3, 2, 4, 8, 5} : new int[] {1, 2, 3, 7, 4, 6, 8, 5};

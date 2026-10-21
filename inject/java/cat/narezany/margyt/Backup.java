@@ -172,7 +172,7 @@ public final class Backup {
             }
             global.apply();appearance.apply();AppearanceColors.reload();Design.reload();
             FeedRail.reloadSettings();AvatarShape.reloadSettings();
-            FeedBlacklist.reload();PlayerTools.accountChanged();PinnedFriends.reload();ProfileLayout.reload();MessageTimes.reload();ModNotifications.reload();Repost.reload();
+            FeedBlacklist.reload();PlayerTools.accountChanged();ProfileLayout.reload();MessageTimes.reload();ModNotifications.reload();Repost.reload();
             Themes.forget();
             Fonts.reload();
             LikeColors.reload();
@@ -221,7 +221,7 @@ public final class Backup {
         edit.apply();
         Design.reload();
         FeedRail.reloadSettings();AvatarShape.reloadSettings();
-        FeedBlacklist.reload();PlayerTools.accountChanged();PinnedFriends.reload();ProfileLayout.reload();MessageTimes.reload();ModNotifications.reload();Repost.reload();
+        FeedBlacklist.reload();PlayerTools.accountChanged();ProfileLayout.reload();MessageTimes.reload();ModNotifications.reload();Repost.reload();
         Themes.forget();
         Fonts.reload();
         LikeColors.reload();
