@@ -126,7 +126,7 @@ final class Md3 {
             role = as;
             dressed = true;
             synchronized (WORN) {
-                WORN.put(view, this);
+                WORN.put(view, new java.lang.ref.WeakReference<Shape>(this));
             }
             tint(colour(view, as));
         }
@@ -230,8 +230,19 @@ final class Md3 {
     // ------------------------------------------------------------ the colours
 
     private static final int SHELL = 0, CHOSEN = 1, OVER_VIDEO = 2, CHOSEN_OVER_VIDEO = 3;
-    /** Everything the mod has dressed, to be coloured again when what it lies on changes colour. */
-    private static final java.util.WeakHashMap<View, Shape> WORN = new java.util.WeakHashMap<View, Shape>();
+    /**
+     * Everything the mod has dressed, to be coloured again when what it lies on changes colour.
+     *
+     * The shape is held weakly. It is the view's own background, and a
+     * background keeps its view as its callback: held strongly here, every
+     * view ever dressed kept itself alive through this map, and with it its
+     * parents, its screen and everything on it. The feed, the profile and the
+     * inbox piled up that way until the heap was full and every frame waited
+     * on the collector. The view keeps the shape alive as long as it is
+     * worth keeping.
+     */
+    private static final java.util.WeakHashMap<View, java.lang.ref.WeakReference<Shape>> WORN =
+            new java.util.WeakHashMap<View, java.lang.ref.WeakReference<Shape>>();
 
     /**
      * The colour of the page a view lies on: the nearest thing behind it that
@@ -359,7 +370,10 @@ final class Md3 {
         synchronized (WORN) {
             views = WORN.keySet().toArray(new View[0]);
             shapes = new Shape[views.length];
-            for (int i = 0; i < views.length; i++) shapes[i] = WORN.get(views[i]);
+            for (int i = 0; i < views.length; i++) {
+                java.lang.ref.WeakReference<Shape> held = WORN.get(views[i]);
+                shapes[i] = held == null ? null : held.get();
+            }
         }
         for (int i = 0; i < views.length; i++) {
             View view = views[i];

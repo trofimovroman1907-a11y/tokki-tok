@@ -143,13 +143,24 @@ final class NavBar {
 
     /** Whether this is a bar the capsule is on, and so one whose background is not to be put back. */
     static boolean wears(View view) {
-        Capsule capsule = BARS.get(view);
+        Capsule capsule = capsuleOf(view);
         return capsule != null && capsule.worn;
     }
 
     // ----------------------------------------------------------- finding the bar
 
-    private static final WeakHashMap<View, Capsule> BARS = new WeakHashMap<View, Capsule>();
+    /**
+     * The bars the capsule is on. The capsule itself is on the bar, as a tag:
+     * it is a drawable, and a drawable keeps the view it is drawn on, so as a
+     * value here it kept every bar and its screen alive for good.
+     */
+    private static final WeakHashMap<View, Boolean> BARS = new WeakHashMap<View, Boolean>();
+    private static final int CAPSULE = 0x4D41634E;  // "MAcN"
+
+    private static Capsule capsuleOf(View bar) {
+        Object held = bar == null ? null : bar.getTag(CAPSULE);
+        return held instanceof Capsule ? (Capsule) held : null;
+    }
     private static WeakReference<ViewTreeObserver> watched = new WeakReference<ViewTreeObserver>(null);
     private static WeakReference<View> screen = new WeakReference<View>(null);
     private static long looked;
@@ -157,12 +168,12 @@ final class NavBar {
     private static final ViewTreeObserver.OnPreDrawListener EVERY_FRAME = () -> {
         try {
             boolean on = isEnabled(), any = false;
-            for (java.util.Map.Entry<View, Capsule> entry : BARS.entrySet()) {
-                View bar = entry.getKey();
-                if (bar == null || !bar.isAttachedToWindow()) continue;
+            for (View bar : BARS.keySet().toArray(new View[0])) {
+                Capsule capsule = capsuleOf(bar);
+                if (capsule == null || !bar.isAttachedToWindow()) continue;
                 any = true;
-                if (on) entry.getValue().settle((ViewGroup) bar);
-                else entry.getValue().leave((ViewGroup) bar);
+                if (on) capsule.settle((ViewGroup) bar);
+                else capsule.leave((ViewGroup) bar);
             }
             // TikTok builds the bar again now and then without the screen changing
             View root = screen.get();
@@ -190,8 +201,9 @@ final class NavBar {
         try {
             ViewGroup bar = find(root, root, 0);
             if (bar != null) {
-                if (!BARS.containsKey(bar)) {
-                    BARS.put(bar, new Capsule(bar.getResources().getDisplayMetrics().density));
+                if (capsuleOf(bar) == null) {
+                    bar.setTag(CAPSULE, new Capsule(bar.getResources().getDisplayMetrics().density));
+                    BARS.put(bar, Boolean.TRUE);
                     Diary.detail("nav bar: " + bar.getChildCount() + " tabs");
                 }
                 screen = new WeakReference<View>(root);
