@@ -831,7 +831,7 @@ class Build:
         feature_hits["native offline row"]=0
         feature_hits["native offline count accepted"]=0
         feature_hits["native offline comments response"]=0
-        for feature in ("native repost","native repost avatar","native profile layout","native message timestamps","native notification guide","native friends order","native notification filters","native author date slot"):feature_hits[feature]=0
+        for feature in ("native repost","native repost avatar","native profile layout","native message timestamps","native notification guide","native notification filters","native author date slot"):feature_hits[feature]=0
         total = 0
         patched_dex_count = 0
         # all of them at once, as many side by side as the machine has room
@@ -876,7 +876,6 @@ class Build:
             feature_hits["native offline comments response"] += counts.get("native offline comments response",0)
             for feature in ("native repost","native repost avatar","native profile layout","native message timestamps","native notification guide"):feature_hits[feature]+=counts.get(feature,0)
             feature_hits["native author date slot"]+=counts.get("native author date slot",0)
-            feature_hits["native friends order"]+=sum(v for key,v in counts.items() if "FriendsListResponse" in key and "getUserList" in key)
             feature_hits["native notification filters"]+=sum(v for key,v in counts.items() if "NotificationManager" in key and "notify" in key)
             feature_hits["visible publication date"] += counts.get("visible publication date",0)
             feature_hits["ads"] += sum(v for key,v in counts.items() if "FeedItemList" in key and "getItems" in key)
