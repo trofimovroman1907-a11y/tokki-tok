@@ -70,7 +70,9 @@ final class SettingsArt {
      * the left, the buttons down the right, the caption and the bottom bar.
      */
     static final class Phone extends View {
-        private static float lastUi = 1f, lastEye = 0f, lastBar = 1f, lastSimple = 0f;
+        private static float lastUi = 1f, lastEye = 0f, lastBar = 1f, lastSimple = 0f,
+                lastLiked = 0f, lastCapsule = 0f, lastSeek = 0f, lastDate = 0f;
+        private static final float[] lastRail = {1, 1, 1, 1};
 
         private final Skin skin;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -80,7 +82,56 @@ final class SettingsArt {
         private final Eased ui = new Eased(lastUi), eye = new Eased(lastEye), bar = new Eased(lastBar),
                 simple = new Eased(lastSimple);
         private float wantUi = 1f, wantEye = 0f, wantBar = 1f, wantSimple = 0f;
+        private final Eased liked = new Eased(lastLiked), capsule = new Eased(lastCapsule),
+                seek = new Eased(lastSeek), date = new Eased(lastDate);
+        private final Eased[] rails = {new Eased(lastRail[0]), new Eased(lastRail[1]), new Eased(lastRail[2]), new Eased(lastRail[3])};
+        private float wantLiked = lastLiked, wantCapsule = lastCapsule, wantSeek = lastSeek, wantDate = lastDate;
+        private final float[] wantRail = lastRail.clone();
         private Bitmap avatar;
+
+        /** Told which of the buttons down the right was tapped on the picture itself. */
+        interface RailTapped { void tapped(int kind); }
+        private RailTapped railTapped;
+        private final float[] railCentres = new float[8];
+
+        /** The heart filled with the accent: what a liked video looks like in it. */
+        Phone liked(boolean on) { wantLiked = on ? 1f : 0f; return this; }
+
+        /** The bottom bar as a floating capsule. */
+        Phone capsule(boolean on) { wantCapsule = on ? 1f : 0f; return this; }
+
+        /** A seek bar along the bottom of the video. */
+        Phone seekbar(boolean on) { wantSeek = on ? 1f : 0f; return this; }
+
+        /** When the video was posted, beside the author's name. */
+        Phone date(boolean on) { wantDate = on ? 1f : 0f; return this; }
+
+        /** One of the four buttons down the right: like, comments, favourites, share. */
+        Phone rail(int kind, boolean shown) { wantRail[kind] = shown ? 1f : 0f; return this; }
+
+        /** Lets the buttons on the picture be tapped to hide and show them. */
+        Phone onRail(RailTapped listener) {
+            railTapped = listener;
+            setClickable(listener != null);
+            return this;
+        }
+
+        @Override
+        public boolean onTouchEvent(android.view.MotionEvent event) {
+            if (railTapped == null) return super.onTouchEvent(event);
+            if (event.getActionMasked() == android.view.MotionEvent.ACTION_DOWN) return true;
+            if (event.getActionMasked() == android.view.MotionEvent.ACTION_UP) {
+                float reach = 12 * u;
+                for (int i = 0; i < 4; i++) {
+                    float dx = event.getX() - railCentres[i * 2], dy = event.getY() - railCentres[i * 2 + 1];
+                    if (dx * dx + dy * dy < reach * reach) {
+                        railTapped.tapped(i);
+                        return true;
+                    }
+                }
+            }
+            return true;
+        }
 
         Phone(Context context, Skin skin) {
             super(context);
@@ -110,6 +161,18 @@ final class SettingsArt {
             bar.to(this, wantBar, 320, EMPHASIZED);
             simple.to(this, wantSimple, 360, EMPHASIZED);
             eye.to(this, wantEye, 420, new OvershootInterpolator(2.2f));
+            liked.to(this, wantLiked, 360, new OvershootInterpolator(2f));
+            capsule.to(this, wantCapsule, 380, EMPHASIZED);
+            seek.to(this, wantSeek, 320, EMPHASIZED);
+            date.to(this, wantDate, 320, EMPHASIZED);
+            for (int i = 0; i < 4; i++) {
+                rails[i].to(this, wantRail[i], 300, EMPHASIZED);
+                lastRail[i] = wantRail[i];
+            }
+            lastLiked = wantLiked;
+            lastCapsule = wantCapsule;
+            lastSeek = wantSeek;
+            lastDate = wantDate;
             lastUi = wantUi;
             lastEye = wantEye;
             lastBar = wantBar;
@@ -128,6 +191,7 @@ final class SettingsArt {
         }
 
         private float u;   // a hundredth of the screen's width
+        private float sx, sy;   // where the screen starts, for taps on what is drawn in it
 
         @Override
         protected void onDraw(Canvas canvas) {
@@ -144,6 +208,8 @@ final class SettingsArt {
             box.inset(3 * d, 3 * d);
             float screenLeft = box.left, screenTop = box.top, w = box.width(), h = box.height();
             u = w / 100f;
+            sx = screenLeft;
+            sy = screenTop;
             canvas.save();
             path.reset();
             path.addRoundRect(box, width * 0.13f, width * 0.13f, Path.Direction.CW);
@@ -264,15 +330,33 @@ final class SettingsArt {
             String[] counts = {"12K", "345", "1K", "89"};
             for (int i = 0; i < 4; i++) {
                 float cy = y + i * step + (s * -step * 0.5f);
-                white(alpha);
-                float r = 3.6f * u * scale;
+                railCentres[i * 2] = sx + x;
+                railCentres[i * 2 + 1] = sy + cy;
+                float there = rails[i].value;
+                int a = Math.round(alpha * there);
+                if (railTapped != null && there < 0.99f) {
+                    // a tappable place keeps an outline, so a hidden button can be brought back
+                    paint.setStyle(Paint.Style.STROKE);
+                    paint.setStrokeWidth(0.6f * u);
+                    paint.setColor(Color.argb(Math.round(alpha * 0.45f * (1f - there)), 255, 255, 255));
+                    canvas.drawCircle(x, cy, 4.6f * u, paint);
+                    paint.setStyle(Paint.Style.FILL);
+                }
+                if (a <= 0) continue;
+                float r = 3.6f * u * scale * (0.6f + 0.4f * there);
+                white(a);
+                if (i == 0 && liked.value > 0.01f) {
+                    int like = Accent.colour();
+                    paint.setColor((Expressive.mix(0xFFFFFFFF, like, Math.min(1f, liked.value)) & 0xFFFFFF) | (a << 24));
+                    r *= 1f + 0.15f * (float) Math.sin(Math.min(1f, liked.value) * Math.PI);
+                }
                 switch (i) {
                     case 0: heart(canvas, x, cy, r); break;
                     case 1: bubble(canvas, x, cy, r); break;
                     case 2: bookmark(canvas, x, cy, r); break;
                     default: share(canvas, x, cy, r); break;
                 }
-                words(canvas, counts[i], x, cy + r + 4.6f * u * scale, 3.8f * u * scale, alpha, true, Paint.Align.CENTER);
+                words(canvas, counts[i], x, cy + r + 4.6f * u * scale, 3.8f * u * scale, a, true, Paint.Align.CENTER);
             }
             // the record that turns, gone in the simple feed
             int record = Math.round(alpha * (1f - s));
@@ -332,6 +416,21 @@ final class SettingsArt {
         private void caption(Canvas canvas, float w, float h, int alpha, float s) {
             float y = h * (0.74f + 0.03f * s);
             words(canvas, "@narezany", 5 * u, y, 5f * u, alpha, true, Paint.Align.LEFT);
+            if (date.value > 0.01f) {
+                text.setTextSize(5f * u);
+                float after = 5 * u + text.measureText("@narezany");
+                words(canvas, " · " + Local.of("3 дня назад"), after, y, 4.2f * u, Math.round(alpha * date.value * 0.8f), false, Paint.Align.LEFT);
+            }
+            if (seek.value > 0.01f) {
+                float line = h - 15.5f * u;
+                int sa = Math.round(alpha * seek.value);
+                paint.setStyle(Paint.Style.FILL);
+                paint.setColor(Color.argb(sa * 80 / 255, 255, 255, 255));
+                canvas.drawRect(0, line - 0.5f * u, w, line + 0.5f * u, paint);
+                paint.setColor(Color.argb(sa, 255, 255, 255));
+                canvas.drawRect(0, line - 0.5f * u, w * 0.38f, line + 0.5f * u, paint);
+                canvas.drawCircle(w * 0.38f, line, 1.6f * u, paint);
+            }
             white(alpha * 210 / 255);
             float line = 2.2f * u * (1f - 0.15f * s);
             box.set(5 * u, y + 3 * u, 62 * u, y + 3 * u + line);
@@ -350,10 +449,12 @@ final class SettingsArt {
 
         private void nav(Canvas canvas, float w, float h, int alpha) {
             if (alpha <= 0) return;
-            float top = h - 13 * u;
+            float c = capsule.value;
+            float top = h - 13 * u - 2.5f * u * c;
             paint.setStyle(Paint.Style.FILL);
-            paint.setColor(Color.argb(alpha, 0, 0, 0));
-            canvas.drawRect(0, top, w, h, paint);
+            paint.setColor(Color.argb(Math.round(alpha * (1f - 0.25f * c)), Math.round(28 * c), Math.round(28 * c), Math.round(32 * c)));
+            box.set(7 * u * c, top, w - 7 * u * c, h - 3 * u * c);
+            canvas.drawRoundRect(box, 6.5f * u * c, 6.5f * u * c, paint);
             float y = top + 6 * u;
             for (int i = 0; i < 5; i++) {
                 float x = w * (0.1f + 0.2f * i);

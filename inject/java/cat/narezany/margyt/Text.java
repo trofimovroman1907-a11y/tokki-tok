@@ -1282,6 +1282,9 @@ final class Text {
     static final String VERDICT_FAILED = pick("Не получилось сохранить пометку", "Не вдалося зберегти позначку", "Could not save the mark");
 
     static final String ICON_LEGACY = pick("Legacy", "Legacy", "Legacy");
+    static final String RAIL_TAP = pick("Кнопки на картинке тоже нажимаются: так их можно скрыть и вернуть.",
+            "Кнопки на картинці теж натискаються: так їх можна сховати й повернути.",
+            "The buttons on the picture can be tapped too, to hide them and bring them back.");
 
     // a picture of one's own on the home screen
     static final String CUSTOM_ICON = pick("Своя иконка", "Своя іконка", "Your own icon");

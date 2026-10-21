@@ -373,6 +373,7 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.ACCENT));
         LinearLayout accent = card();
+        accent.addView(phone().liked(true));
         accent.addView(accentHead());
         if (accentOpen) {
             if (Accent.fromWallpaper() != 0) {
@@ -391,14 +392,28 @@ public class SettingsActivity extends Activity {
         loading.addView(liveToggleRow("palette", Design.frosted()?Text.LOADING_INDICATOR:Text.LOADING_SHAPES, Loading.isEnabled(),
                 on -> { Loading.setEnabled(on); loader.set(on); }));
         loading.addView(quiet(Design.frosted()?Text.LOADING_STYLE_NOTE:Text.LOADING_NOTE));
-        loading.addView(line());
-        loading.addView(toggleRow("image", Text.ROUND_CARDS, Corners.isEnabled(),
-                Corners::setEnabled));
-        loading.addView(line());
-        loading.addView(avatarShapes());
+        column.addView(wrap(loading));
 
-        loading.addView(line());
-        loading.addView(toggleRow("tune", Text.NAV_CAPSULE, NavBar.isEnabled(), NavBar::setEnabled));
+        LinearLayout cards = card();
+        final SettingsPictures.Grid grid = new SettingsPictures.Grid(this, skin, Corners.isEnabled());
+        cards.addView(grid);
+        cards.addView(toggleRow("image", Text.ROUND_CARDS, Corners.isEnabled(), on -> {
+            Corners.setEnabled(on);
+            grid.set(on);
+        }));
+        column.addView(wrap(cards));
+
+        LinearLayout shapes = card();
+        shapes.addView(avatarShapes());
+        column.addView(wrap(shapes));
+
+        loading = card();
+        final SettingsArt.Phone md3Phone = phone();
+        loading.addView(md3Phone);
+        loading.addView(toggleRow("tune", Text.NAV_CAPSULE, NavBar.isEnabled(), on -> {
+            NavBar.setEnabled(on);
+            md3Phone.capsule(on).settle();
+        }));
         loading.addView(line());
         loading.addView(toggleRow("tune", Design.caption(Text.MD3_FEED), Md3.isOn(Md3.KEY_FEED), on -> Md3.set(Md3.KEY_FEED, on)));
         loading.addView(line());
@@ -413,7 +428,10 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.THEME));
         LinearLayout theme = card();
+        final SettingsPictures.Black black = new SettingsPictures.Black(this, skin, Themes.amoledChosen() && Themes.isDark());
+        theme.addView(black);
         theme.addView(liveToggleRow("contrast", Text.AMOLED, Themes.amoledChosen() && Themes.isDark(), on -> {
+            black.set(on && Themes.isDark());
             if (on && !Themes.isDark()) {
                 Panel.with(this, skin, Text.AMOLED).text(Text.AMOLED_LIGHT).primary(Local.of("Понятно"), null).show();
                 rebuildAfterSwitchAnimation();
@@ -455,11 +473,7 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.FONT));
         LinearLayout fonts = card();
-        fonts.addView(fontHead());
-        if (fontOpen) {
-            fonts.addView(line());
-            fonts.addView(appear(fontChoices()));
-        }
+        fonts.addView(fontCarousels());
         column.addView(wrap(fonts));
 
         column.addView(section(Text.GRADIENT));
@@ -467,8 +481,12 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.BADGES));
         LinearLayout badges = card();
-        badges.addView(toggleRow("favorite_border", Text.BADGES_ON, Badges.isEnabled(),
-                Badges::setEnabled));
+        final SettingsPictures.Badged badged = new SettingsPictures.Badged(this, skin, Badges.isEnabled());
+        badges.addView(badged);
+        badges.addView(toggleRow("favorite_border", Text.BADGES_ON, Badges.isEnabled(), on -> {
+            Badges.setEnabled(on);
+            badged.set(on);
+        }));
         badges.addView(line());
         badges.addView(mineHead());
         if (mineOpen) badges.addView(appear(mineRows()));
@@ -488,8 +506,12 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.PROFILE_VIEW));
         LinearLayout look = card();
-        look.addView(toggleRow("view_compact", Text.NEW_PROFILE, Flags.isOn(Flags.KEY_NEW_PROFILE),
-                on -> Flags.set(Flags.KEY_NEW_PROFILE, on)));
+        final SettingsPictures.Layout layout = new SettingsPictures.Layout(this, skin, Flags.isOn(Flags.KEY_NEW_PROFILE));
+        look.addView(layout);
+        look.addView(toggleRow("view_compact", Text.NEW_PROFILE, Flags.isOn(Flags.KEY_NEW_PROFILE), on -> {
+            Flags.set(Flags.KEY_NEW_PROFILE, on);
+            layout.set(on);
+        }));
         look.addView(quiet(Text.NEW_PROFILE_NOTE));
         column.addView(wrap(look));
 
@@ -511,16 +533,37 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.FEED));
         LinearLayout feed = card();
-        feed.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), Feed::setEnabled));
+        // the feed as a strip of cards: what is hidden folds out of it
+        final SettingsPictures.Feed strip = new SettingsPictures.Feed(this, skin)
+                .hide(SettingsPictures.Feed.AD, Feed.isEnabled())
+                .hide(SettingsPictures.Feed.LIVE, Feed.hides(Feed.KEY_LIVE))
+                .hide(SettingsPictures.Feed.PHOTO, Feed.hides(Feed.KEY_PHOTOS))
+                .hide(SettingsPictures.Feed.STORY, Feed.hides(Feed.KEY_STORIES))
+                .hide(SettingsPictures.Feed.SUGGEST, Feed.hides(Feed.KEY_SUGGESTIONS));
+        feed.addView(strip);
+        feed.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), on -> {
+            Feed.setEnabled(on);
+            strip.hide(SettingsPictures.Feed.AD, on).settle();
+        }));
         feed.addView(line());
-        feed.addView(toggleRow("visibility_off", Text.HIDE_LIVE, Feed.hides(Feed.KEY_LIVE),
-                on -> Feed.setHides(Feed.KEY_LIVE, on)));
+        feed.addView(toggleRow("visibility_off", Text.HIDE_LIVE, Feed.hides(Feed.KEY_LIVE), on -> {
+            Feed.setHides(Feed.KEY_LIVE, on);
+            strip.hide(SettingsPictures.Feed.LIVE, on).settle();
+        }));
         feed.addView(line());
-        feed.addView(toggleRow("image", Text.HIDE_PHOTOS, Feed.hides(Feed.KEY_PHOTOS),
-                on -> Feed.setHides(Feed.KEY_PHOTOS, on)));
+        feed.addView(toggleRow("image", Text.HIDE_PHOTOS, Feed.hides(Feed.KEY_PHOTOS), on -> {
+            Feed.setHides(Feed.KEY_PHOTOS, on);
+            strip.hide(SettingsPictures.Feed.PHOTO, on).settle();
+        }));
         feed.addView(line());
-        feed.addView(liveToggleRow("visibility_off",Text.HIDE_STORIES,Feed.hides(Feed.KEY_STORIES),on->Feed.setHides(Feed.KEY_STORIES,on)));
-        feed.addView(liveToggleRow("visibility_off",Text.HIDE_SUGGESTIONS,Feed.hides(Feed.KEY_SUGGESTIONS),on->Feed.setHides(Feed.KEY_SUGGESTIONS,on)));
+        feed.addView(liveToggleRow("visibility_off",Text.HIDE_STORIES,Feed.hides(Feed.KEY_STORIES),on->{
+            Feed.setHides(Feed.KEY_STORIES,on);
+            strip.hide(SettingsPictures.Feed.STORY, on).settle();
+        }));
+        feed.addView(liveToggleRow("visibility_off",Text.HIDE_SUGGESTIONS,Feed.hides(Feed.KEY_SUGGESTIONS),on->{
+            Feed.setHides(Feed.KEY_SUGGESTIONS,on);
+            strip.hide(SettingsPictures.Feed.SUGGEST, on).settle();
+        }));
         column.addView(wrap(feed));
 
         column.addView(section(Text.SIMPLE_FEED));
@@ -537,14 +580,25 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.DATE_FILTER));
         LinearLayout dates = card();
-        dates.addView(actionRow("schedule", Text.DATE_FILTER, FeedDates.describe(FeedDates.hours()), () -> {
-            int now = FeedDates.hours();
-            Panel panel = Panel.with(this, skin, Text.DATE_FILTER);
-            for (int one : FeedDates.HOURS) {
-                final int chosen = one;
-                panel.option(FeedDates.describe(one), one == now, false, () -> { FeedDates.setHours(chosen); rebuild(); });
-            }
-            panel.quiet(Text.CLOSE, null).show();
+        final SettingsPictures.Ages ages = new SettingsPictures.Ages(this, skin, FeedDates.hours());
+        dates.addView(ages);
+        LinearLayout datesHead = row();
+        datesHead.addView(icon("schedule"));
+        datesHead.addView(label(Text.DATE_FILTER), grow());
+        final TextView datesNow = detail(FeedDates.describe(FeedDates.hours()));
+        datesNow.setTextColor(skin.text);
+        datesHead.addView(datesNow);
+        dates.addView(sized(datesHead, 52));
+        String[] limits = new String[FeedDates.HOURS.length];
+        int limitAt = 0;
+        for (int i = 0; i < limits.length; i++) {
+            limits[i] = FeedDates.describe(FeedDates.HOURS[i]);
+            if (FeedDates.HOURS[i] == FeedDates.hours()) limitAt = i;
+        }
+        dates.addView(chips(limits, limitAt, index -> {
+            FeedDates.setHours(FeedDates.HOURS[index]);
+            datesNow.setText(FeedDates.describe(FeedDates.HOURS[index]));
+            ages.set(FeedDates.HOURS[index]);
         }));
         dates.addView(caption(Text.DATE_FILTER_NOTE));
         column.addView(wrap(dates));
@@ -577,53 +631,118 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.RAIL));
         LinearLayout rail=card();
+        // the buttons can be tapped on the picture itself, and the switches follow
+        final SettingsArt.Phone railArt = phone();
+        rail.addView(railArt);
         String[] railNames={Text.RAIL_LIKE,Text.RAIL_COMMENT,Text.RAIL_FAV,Text.RAIL_SHARE};
         String[] railIcons={"favorite_border","chat","star","share"};
+        final View[] railRows = new View[railNames.length];
         for(int i=0;i<railNames.length;i++){
             final int kind=i;
-            rail.addView(liveToggleRow(railIcons[i],railNames[i],FeedRail.shown(i),on->FeedRail.setShown(kind,on)));
+            railRows[i] = liveToggleRow(railIcons[i],railNames[i],FeedRail.shown(i),on->{
+                FeedRail.setShown(kind,on);
+                railArt.rail(kind,on).settle();
+            });
+            rail.addView(railRows[i]);
         }
+        railArt.onRail(kind -> {
+            boolean now = !FeedRail.shown(kind);
+            FeedRail.setShown(kind, now);
+            railArt.rail(kind, now).settle();
+            M3Switch moved = switchIn(railRows[kind]);
+            if (moved != null) moved.setChecked(now, true);
+        });
+        rail.addView(quiet(Text.RAIL_TAP));
         column.addView(wrap(rail));
 
         column.addView(section(Text.VIDEO));
         LinearLayout video = card();
-        video.addView(actionRow("speed",Text.PLAYER_SPEED,Float.toString(PlayerTools.speed())+"×",()->PlayerTools.choose(this,this::rebuild)));
-        video.addView(toggleRow("lock", Text.SPEED_LOCK, Flags.isOn(Flags.KEY_SPEED_LOCK),
-                on -> Flags.set(Flags.KEY_SPEED_LOCK, on)));
-        video.addView(toggleRow("volume_up", Text.SOUND, Sound.isEnabled(), Sound::setEnabled));
+        // a finger on the edge of a video: the speed while held, and swiped down to keep it
+        final SettingsPictures.Speed speedArt = new SettingsPictures.Speed(this, skin, PlayerTools.speed(),
+                Flags.isOn(Flags.KEY_SPEED_LOCK));
+        video.addView(speedArt);
+        LinearLayout speedHead = row();
+        speedHead.addView(icon("speed"));
+        speedHead.addView(label(Text.PLAYER_SPEED), grow());
+        final TextView speedNow = detail(PlayerTools.speed() + "\u00D7");
+        speedNow.setTextColor(skin.text);
+        speedHead.addView(speedNow);
+        video.addView(sized(speedHead, 52));
+        final float[] speeds = {1f, 1.5f, 2f, 3f};
+        int speedAt = 4;
+        for (int i = 0; i < speeds.length; i++) if (Math.abs(PlayerTools.speed() - speeds[i]) < 0.01f) speedAt = i;
+        video.addView(segmented(new String[] {"1\u00D7", "1.5\u00D7", "2\u00D7", "3\u00D7", "\u2026"}, speedAt, index -> {
+            if (index == 4) { PlayerTools.choose(this, this::rebuild); return; }
+            PlayerTools.setSpeed(speeds[index]);
+            speedNow.setText(speeds[index] + "\u00D7");
+            speedArt.set(speeds[index], Flags.isOn(Flags.KEY_SPEED_LOCK));
+        }));
+        video.addView(toggleRow("lock", Text.SPEED_LOCK, Flags.isOn(Flags.KEY_SPEED_LOCK), on -> {
+            Flags.set(Flags.KEY_SPEED_LOCK, on);
+            speedArt.set(PlayerTools.speed(), on);
+        }));
+
+        video.addView(liveToggleRow("timeline", Text.SEEKBAR, Seekbar.isEnabled(), on -> {
+            Seekbar.setEnabled(on);
+            railArt.seekbar(on).settle();
+        }));
         video.addView(line());
-        video.addView(liveToggleRow("timeline", Text.SEEKBAR, Seekbar.isEnabled(),
-                Seekbar::setEnabled));
+        video.addView(liveToggleRow("info", Text.ALWAYS_DATE, Dates.isEnabled(), on -> {
+            Dates.setEnabled(on);
+            railArt.date(on).settle();
+        }));
         video.addView(line());
-        video.addView(liveToggleRow("info", Text.ALWAYS_DATE, Dates.isEnabled(),
-                Dates::setEnabled));
-        video.addView(line());
-        video.addView(toggleRow("hdr_off", Text.OWN_BRIGHTNESS, Brightness.isEnabled(), on -> {
+        column.addView(wrap(video));
+
+        LinearLayout sound = card();
+        final SettingsPictures.Sound soundArt = new SettingsPictures.Sound(this, skin, Sound.isEnabled());
+        sound.addView(soundArt);
+        sound.addView(toggleRow("volume_up", Text.SOUND, Sound.isEnabled(), on -> {
+            Sound.setEnabled(on);
+            soundArt.set(on);
+        }));
+        column.addView(wrap(sound));
+
+        LinearLayout bright = card();
+        final SettingsPictures.Bright brightArt = new SettingsPictures.Bright(this, skin, Brightness.isEnabled());
+        bright.addView(brightArt);
+        bright.addView(toggleRow("hdr_off", Text.OWN_BRIGHTNESS, Brightness.isEnabled(), on -> {
             Brightness.setEnabled(on);
+            brightArt.set(on);
             markChanged();
         }));
-        video.addView(caption(Text.OWN_BRIGHTNESS_NOTE));
-        column.addView(wrap(video));
+        bright.addView(caption(Text.OWN_BRIGHTNESS_NOTE));
+        column.addView(wrap(bright));
 
         column.addView(section(Text.FPS));
         LinearLayout fps = card();
-        fps.addView(quiet(Text.FPS_ABOUT));
+        // a ball drawn as often as the chosen rate, beside TikTok's sixty, and the rates in one row
+        final SettingsPictures.Fps fpsArt = new SettingsPictures.Fps(this, skin, Rate.name());
+        fps.addView(fpsArt);
         String rate = Rate.name();
+        String[] rates = new String[Rate.CHOICES.length];
+        int rateAt = 0;
         for (int i = 0; i < Rate.CHOICES.length; i++) {
-            final String which = Rate.CHOICES[i];
-            if (i > 0) fps.addView(line());
-            fps.addView(pickRow(fpsName(which), which.equals(rate), null, () -> {
-                Rate.choose(which);
-                markChanged();
-            }));
+            rates[i] = Rate.CHOICES[i].length() == 0 ? Text.FPS_AUTO : Rate.CHOICES[i];
+            if (Rate.CHOICES[i].equals(rate)) rateAt = i;
         }
+        fps.addView(segmented(rates, rateAt, index -> {
+            Rate.choose(Rate.CHOICES[index]);
+            fpsArt.set(Rate.CHOICES[index]);
+            markChanged();
+        }));
+        fps.addView(quiet(Text.FPS_ABOUT));
         if (!Rate.reachable(this)) fps.addView(quiet(Text.FPS_UNSUPPORTED));
         column.addView(wrap(fps));
 
         column.addView(section(Text.COMMENTS));
         LinearLayout comments = card();
-        comments.addView(liveToggleRow("article", Text.COMMENT_COPY_ON, Comments.isCopyEnabled(),
-                Comments::setCopyEnabled));
+        final SettingsPictures.Copying copying = new SettingsPictures.Copying(this, skin, Comments.isCopyEnabled());
+        comments.addView(copying);
+        comments.addView(liveToggleRow("article", Text.COMMENT_COPY_ON, Comments.isCopyEnabled(), on -> {
+            Comments.setCopyEnabled(on);
+            copying.set(on);
+        }));
         comments.addView(quiet(Text.COMMENT_COPY_NOTE));
         column.addView(wrap(comments));
 
@@ -653,11 +772,20 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.DOWNLOADS));
         LinearLayout downloads = card();
-        downloads.addView(actionRow("image",Text.FRAME_QUALITY,Integer.toString(FrameCapture.quality()),()->{
-            new ModDialog.Builder(this).setItems(new String[]{"480","720","1080"},(dialog,index)->{AccountAppearance.prefs(this).edit().putInt(FrameCapture.KEY,new int[]{480,720,1080}[index]).apply();rebuild();}).show();
+        LinearLayout qualityHead = row();
+        qualityHead.addView(icon("image"));
+        qualityHead.addView(label(Text.FRAME_QUALITY), grow());
+        downloads.addView(sized(qualityHead, 52));
+        final int[] qualities = {480, 720, 1080};
+        int qualityAt = FrameCapture.quality() == 480 ? 0 : FrameCapture.quality() == 1080 ? 2 : 1;
+        downloads.addView(segmented(new String[] {"480p", "720p", "1080p"}, qualityAt, index ->
+                AccountAppearance.prefs(this).edit().putInt(FrameCapture.KEY, qualities[index]).apply()));
+        final SettingsPictures.Watermark mark = new SettingsPictures.Watermark(this, skin, Download.isEnabled());
+        downloads.addView(mark, 0);
+        downloads.addView(toggleRow("image", Text.NO_WATERMARK, Download.isEnabled(), on -> {
+            Download.setEnabled(on);
+            mark.set(on);
         }));
-        downloads.addView(toggleRow("image", Text.NO_WATERMARK, Download.isEnabled(),
-                Download::setEnabled));
         downloads.addView(line());
         downloads.addView(toggleRow("download", Text.DOWNLOAD_ALWAYS, Download.isAlways(),
                 Download::setAlways));
@@ -731,9 +859,13 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.NOTIFICATIONS));
         LinearLayout notifications=card();
-        notifications.addView(liveToggleRow("chat",Text.NOTIFY_MESSAGES,ModNotifications.option(0),on->{ModNotifications.set(ModNotifications.MESSAGES,on);rebuildAfterSwitchAnimation();}));
-        notifications.addView(liveToggleRow("notifications",Text.NOTIFY_PROMOS,ModNotifications.option(1),on->{ModNotifications.set(ModNotifications.PROMOS,on);rebuildAfterSwitchAnimation();}));
-        notifications.addView(liveToggleRow("notifications",Text.NOTIFY_OTHER,ModNotifications.option(2),on->{ModNotifications.set(ModNotifications.OTHER,on);rebuildAfterSwitchAnimation();}));
+        // three notifications as the phone shows them: the kinds turned off are struck out
+        final SettingsPictures.Notices notices = new SettingsPictures.Notices(this, skin)
+                .set(0, ModNotifications.option(0)).set(1, ModNotifications.option(1)).set(2, ModNotifications.option(2));
+        notifications.addView(notices);
+        notifications.addView(liveToggleRow("chat",Text.NOTIFY_MESSAGES,ModNotifications.option(0),on->{ModNotifications.set(ModNotifications.MESSAGES,on);notices.set(0,on).settle();if(!on)rebuildAfterSwitchAnimation();}));
+        notifications.addView(liveToggleRow("notifications",Text.NOTIFY_PROMOS,ModNotifications.option(1),on->{ModNotifications.set(ModNotifications.PROMOS,on);notices.set(1,on).settle();if(!on)rebuildAfterSwitchAnimation();}));
+        notifications.addView(liveToggleRow("notifications",Text.NOTIFY_OTHER,ModNotifications.option(2),on->{ModNotifications.set(ModNotifications.OTHER,on);notices.set(2,on).settle();if(!on)rebuildAfterSwitchAnimation();}));
         notifications.addView(liveToggleRow("notifications_off",Text.NOTIFY_NO_PROMPTS,ModNotifications.noPrompts(),on->{AccountAppearance.prefs(this).edit().putBoolean(ModNotifications.NO_PROMPTS,on).apply();ModNotifications.reload();}));
         notifications.addView(actionRow("settings",Text.NOTIFY_SETTINGS,null,()->ModNotifications.settings(this)));
         column.addView(wrap(notifications));
@@ -813,12 +945,17 @@ public class SettingsActivity extends Activity {
                 this::openDep));
         dep.addView(quiet(Text.DEP_NOTE));
         dep.addView(line());
-        dep.addView(liveToggleRow("open_with", Text.DEP_FLOAT, DepFloat.isOn(this),
-                on -> DepFloat.set(this, on)));
+        final SettingsPictures.DepWindow depArt = new SettingsPictures.DepWindow(this, skin, DepFloat.isOn(this));
+        dep.addView(depArt);
+        dep.addView(liveToggleRow("open_with", Text.DEP_FLOAT, DepFloat.isOn(this), on -> {
+            DepFloat.set(this, on);
+            depArt.set(on);
+        }));
         column.addView(wrap(dep));
 
         column.addView(section(Text.FUN_SCREAMERS));
         LinearLayout screamers = card();
+        screamers.addView(new SettingsPictures.Scream(this, skin));
         screamers.addView(liveToggleRow("animation", Text.FUN_SCREAMERS, Screamer.isOn(this),
                 on -> Screamer.set(this, on)));
         screamers.addView(quiet(Text.SCREAMERS_NOTE));
@@ -831,12 +968,14 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.FUN_RUBBLE));
         LinearLayout rubble = card();
+        rubble.addView(new SettingsPictures.Fall(this, skin));
         rubble.addView(actionRow("open_with", Text.FUN_RUBBLE, null, () -> Rubble.arm(this)));
         rubble.addView(quiet(Text.RUBBLE_NOTE));
         column.addView(wrap(rubble));
 
         column.addView(section(Text.FUN_AVARIYKA));
         LinearLayout avariyka = card();
+        avariyka.addView(new SettingsPictures.Emergency(this, skin));
         avariyka.addView(liveToggleRow("notifications", Text.FUN_AVARIYKA, Avariyka.isOn(this), on -> Avariyka.set(this, on)));
         avariyka.addView(quiet(Text.AVARIYKA_NOTE));
         column.addView(wrap(avariyka));
@@ -2104,6 +2243,102 @@ public class SettingsActivity extends Activity {
         return rows;
     }
 
+    /** The fonts and the emoji packs, each a tile written in itself. */
+    private View fontCarousels() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout head = row();
+        head.addView(icon("text_fields"));
+        head.addView(label(Text.FONT), grow());
+        TextView now = detail(fontName(Fonts.name()));
+        now.setTextColor(skin.text);
+        head.addView(now);
+        box.addView(sized(head, 52));
+        LinearLayout letters = new LinearLayout(this);
+        View chosen = null;
+        String font = Fonts.name();
+        for (final String which : Fonts.PRESETS) {
+            Typeface face = Fonts.SYSTEM.equals(which) ? Typeface.DEFAULT : Typeface.create(which, Typeface.NORMAL);
+            View tile = typeTile(face, "\u0410\u0430", fontName(which), which.equals(font), () -> {
+                Fonts.choose(which);
+                markChanged();
+                rebuild();
+            });
+            if (which.equals(font)) chosen = tile;
+            letters.addView(tile);
+        }
+        android.widget.HorizontalScrollView one = carousel(letters);
+        box.addView(one);
+        centre(one, chosen);
+        box.addView(actionRow("download", Text.FONT_PICK, Fonts.FILE.equals(font) ? Text.FONT_FILE : null, this::pickFont));
+        box.addView(line());
+
+        LinearLayout emojiHead = row();
+        emojiHead.addView(icon("star"));
+        emojiHead.addView(label(Text.EMOJI), grow());
+        box.addView(sized(emojiHead, 52));
+        LinearLayout faces = new LinearLayout(this);
+        View chosenPack = null;
+        String emoji = Fonts.emoji();
+        for (EmojiPackManager.Pack pack : EmojiPackManager.packs(this)) {
+            final String which = pack.id;
+            if (Fonts.EMOJI_FILE.equals(which)) continue;
+            View tile = typeTile(Fonts.preview(this, which), "\uD83D\uDE00\uD83D\uDC31", emojiName(pack), which.equals(emoji), () -> {
+                Fonts.chooseEmoji(this, which);
+                markChanged();
+                rebuild();
+            });
+            if (which.equals(emoji)) chosenPack = tile;
+            faces.addView(tile);
+        }
+        android.widget.HorizontalScrollView two = carousel(faces);
+        box.addView(two);
+        centre(two, chosenPack);
+        box.addView(actionRow("download", Text.EMOJI_FILE, Fonts.EMOJI_FILE.equals(emoji) ? Text.EMOJI_FILE : null, this::pickEmoji));
+        box.addView(quiet(Text.EMOJI_NOTE));
+        return box;
+    }
+
+    /**
+     * A sample written in its own font. Fonts passes over a view whose class
+     * is called an icon, as it does TikTok's icon fonts: otherwise the chosen
+     * font was put on every sample, and they all looked the same.
+     */
+    private static final class SampleIcon extends TextView {
+        SampleIcon(Context context) { super(context); }
+    }
+
+    private View typeTile(Typeface face, String sample, String name, boolean on, final Runnable action) {
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setGravity(Gravity.CENTER_HORIZONTAL);
+        tile.setPadding(dp(4), dp(2), dp(4), dp(2));
+        TextView big = new SampleIcon(this);
+        big.setText(sample);
+        big.setTextColor(skin.text);
+        big.setTextSize(TypedValue.COMPLEX_UNIT_SP, 26);
+        if (face != null) big.setTypeface(face);
+        big.setGravity(Gravity.CENTER);
+        GradientDrawable back = new GradientDrawable();
+        back.setCornerRadius(dp(20));
+        back.setColor(on ? accentTonal() : Expressive.mix(skin.card, skin.text, 0.06f));
+        if (on) back.setStroke(dp(2), Accent.colour());
+        big.setBackground(back);
+        tile.addView(big, new LinearLayout.LayoutParams(dp(76), dp(76)));
+        TextView label = new TextView(this);
+        label.setText(name);
+        M3Type.line(label, 12, 0.4f);
+        label.setTextColor(on ? skin.text : skin.muted());
+        label.setGravity(Gravity.CENTER);
+        label.setMaxLines(2);
+        label.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        label.setPadding(0, dp(6), 0, 0);
+        tile.addView(label, new LinearLayout.LayoutParams(dp(84), ViewGroup.LayoutParams.WRAP_CONTENT));
+        tile.setOnClickListener(v -> action.run());
+        Motion.press(tile);
+        return tile;
+    }
+
     private String emojiName(EmojiPackManager.Pack pack) {
         if (Fonts.SYSTEM.equals(pack.id)) return Text.EMOJI_SYSTEM;
         return pack.name;
@@ -2156,6 +2391,123 @@ public class SettingsActivity extends Activity {
     }
 
     // ---------------------------------------------------------- the icon
+
+    // ------------------------------------------------------------ choosing
+
+    /** Told which of several was picked. */
+    private interface Picked { void picked(int index); }
+
+    /**
+     * Material 3 segmented buttons: one outlined row, the chosen part filled
+     * and ticked. For a choice of a few, in place of a list or a window.
+     */
+    private View segmented(final String[] labels, int chosen, final Picked picked) {
+        LinearLayout box = new LinearLayout(this);
+        box.setPadding(edge(), dp(6), edge(), dp(14));
+        final LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        final TextView[] parts = new TextView[labels.length];
+        for (int i = 0; i < labels.length; i++) {
+            final int index = i;
+            TextView part = new TextView(this);
+            part.setGravity(Gravity.CENTER);
+            part.setSingleLine(true);
+            part.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            M3Type.line(part, 14, 0.1f);
+            part.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            part.setPadding(dp(6), 0, dp(6), 0);
+            parts[i] = part;
+            part.setOnClickListener(v -> {
+                paintSegments(parts, labels, index);
+                picked.picked(index);
+            });
+            LinearLayout.LayoutParams place = new LinearLayout.LayoutParams(0, dp(40), 1f);
+            if (i > 0) place.leftMargin = -dp(1);
+            row.addView(part, place);
+        }
+        paintSegments(parts, labels, chosen);
+        box.addView(row, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)));
+        return box;
+    }
+
+    private void paintSegments(TextView[] parts, String[] labels, int chosen) {
+        for (int i = 0; i < parts.length; i++) {
+            boolean on = i == chosen, first = i == 0, last = i == parts.length - 1;
+            GradientDrawable back = new GradientDrawable();
+            float r = dp(20);
+            back.setCornerRadii(new float[] {first ? r : 0, first ? r : 0, last ? r : 0, last ? r : 0,
+                    last ? r : 0, last ? r : 0, first ? r : 0, first ? r : 0});
+            back.setColor(on ? accentTonal() : 0);
+            back.setStroke(dp(1), skin.muted());
+            parts[i].setBackground(back);
+            parts[i].setTextColor(on ? skin.text : skin.muted());
+            parts[i].setText(on ? "\u2713 " + labels[i] : labels[i]);
+        }
+    }
+
+    /** Filter chips in a row that scrolls: for a choice of more than fit across. */
+    private View chips(final String[] labels, int chosen, final Picked picked) {
+        LinearLayout strip = new LinearLayout(this);
+        final java.util.List<TextView> all = new java.util.ArrayList<TextView>();
+        View chosenChip = null;
+        for (int i = 0; i < labels.length; i++) {
+            final int index = i;
+            TextView chip = new TextView(this);
+            chip.setText(labels[i]);
+            M3Type.line(chip, 14, 0.1f);
+            chip.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            chip.setGravity(Gravity.CENTER);
+            chip.setPadding(dp(16), 0, dp(16), 0);
+            all.add(chip);
+            if (i == chosen) chosenChip = chip;
+            chip.setOnClickListener(v -> {
+                paintChips(all, index);
+                picked.picked(index);
+            });
+            LinearLayout.LayoutParams place = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(32));
+            place.rightMargin = dp(8);
+            strip.addView(chip, place);
+        }
+        paintChips(all, chosen);
+        android.widget.HorizontalScrollView scroll = carousel(strip);
+        strip.setPadding(edge(), dp(4), edge(), dp(14));
+        centre(scroll, chosenChip);
+        return scroll;
+    }
+
+    private void paintChips(java.util.List<TextView> all, int chosen) {
+        for (int i = 0; i < all.size(); i++) {
+            boolean on = i == chosen;
+            GradientDrawable back = new GradientDrawable();
+            back.setCornerRadius(dp(8));
+            back.setColor(on ? accentTonal() : 0);
+            if (!on) back.setStroke(dp(1), skin.muted());
+            all.get(i).setBackground(back);
+            all.get(i).setTextColor(on ? skin.text : skin.muted());
+        }
+    }
+
+    /** TikTok's feed on a phone, as every setting that shows on it now is. */
+    private SettingsArt.Phone phone() {
+        SettingsArt.Phone art = new SettingsArt.Phone(this, skin)
+                .burn(Dim.isConfigured(), Dim.strength(), NavBar.isKept()).simple(SimpleFeed.isOn())
+                .capsule(NavBar.isEnabled()).seekbar(Seekbar.isEnabled()).date(Dates.isEnabled());
+        for (int i = 0; i < 4; i++) art.rail(i, FeedRail.shown(i));
+        return art;
+    }
+
+    /** The switch inside a row, to move it from somewhere else on the page. */
+    private static M3Switch switchIn(View row) {
+        if (row instanceof M3Switch) return (M3Switch) row;
+        if (row instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) row;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                M3Switch found = switchIn(group.getChildAt(i));
+                if (found != null) return found;
+            }
+        }
+        return null;
+    }
 
     // ------------------------------------------------------------ carousels
 
