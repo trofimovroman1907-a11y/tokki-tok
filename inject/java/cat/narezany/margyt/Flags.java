@@ -258,11 +258,11 @@ public final class Flags {
             // which is why some people had it and most did not. Nobody gets it.
             made.put("circle_search_block", none);
 
-            // the new profile, and a group with it: TikTok draws parts of the new
-            // profile only for groups 1 to 4, and an account it never put in the
-            // experiment is in group 0
+            // The new profile. Its group ("profile_left_align_ab_group") is left as
+            // TikTok has it: the group decides parts of the new profile, the banner
+            // on top among them, and putting everybody in group 1 took the banner
+            // away from those TikTok had put in another.
             made.put("profile_left_align", on(prefs, KEY_NEW_PROFILE) ? one : none);
-            if (on(prefs, KEY_NEW_PROFILE)) made.put("profile_left_align_ab_group", one);
 
             // last, so that a developer's answer beats a switch
             if (DevMode.isOn()) {
@@ -301,12 +301,10 @@ public final class Flags {
         }
     }
 
-    /** Before there is a context: the profile's two flags, from the settings file itself. */
+    /** Before there is a context: the profile's flag, from the settings file itself. */
     private static Object early(String key) {
-        if (!"profile_left_align".equals(key) && !"profile_left_align_ab_group".equals(key)) return null;
-        boolean on = newProfile();
-        if ("profile_left_align".equals(key)) return Integer.valueOf(on ? 1 : 0);
-        return on ? Integer.valueOf(1) : null;
+        if (!"profile_left_align".equals(key)) return null;
+        return Integer.valueOf(newProfile() ? 1 : 0);
     }
 
     private static volatile java.util.Map<String, Boolean> fileSwitches;

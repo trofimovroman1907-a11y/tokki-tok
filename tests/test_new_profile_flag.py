@@ -23,11 +23,12 @@ class NewProfileFlagTest(unittest.TestCase):
         self.assertNotIn("sget-boolean", out)
         self.assertIn("Lcat/narezany/margyt/Flags;->newProfile()Z", dexpatch.rewrite_targets())
 
-    def test_the_switch_answers_early_and_puts_the_account_in_a_group(self):
+    def test_the_switch_answers_early_and_leaves_tiktoks_group_alone(self):
         with open(os.path.join(ROOT, "inject/java/cat/narezany/margyt/Flags.java"), encoding="utf-8") as handle:
             java = handle.read()
         self.assertIn("public static boolean newProfile()", java)
-        self.assertIn('made.put("profile_left_align_ab_group", one)', java)
+        # the group decides the banner on top: forcing it took the banner away
+        self.assertNotIn('made.put("profile_left_align_ab_group"', java)
         # with no context yet the table is not built, and the profile is still answered
         self.assertIn("if (known == null) return early(key);", java)
         self.assertIn("shared_prefs/\" + Margy.PREFS + \".xml\"", java)
