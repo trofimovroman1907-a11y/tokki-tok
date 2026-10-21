@@ -242,10 +242,14 @@ final class Expressive {
             setOrientation(VERTICAL);
             this.fill = fill;
             this.ripple = ripple;
-            this.outer = dp(context, Design.fluent()?8:26);
-            this.inner = dp(context, 6);
+            // Material 3: ListTokens gives the list large corners (16), the
+            // segments extra small ones (4), 2 between them, and a held
+            // segment large corners all round
+            boolean m3 = !Design.frosted();
+            this.outer = dp(context, Design.fluent()?8:m3?16:26);
+            this.inner = dp(context, m3?4:6);
             this.gap = dp(context, 2);
-            this.pressed = dp(context, 28);
+            this.pressed = dp(context, m3?16:28);
             if (Design.glass()) {
                 GradientDrawable surface = new GradientDrawable();
                 surface.setColor(fill); surface.setCornerRadius(outer);

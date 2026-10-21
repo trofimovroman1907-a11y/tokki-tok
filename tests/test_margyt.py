@@ -1251,8 +1251,10 @@ class ProfileVerificationSourceTest(unittest.TestCase):
 
     def test_switches_follow_the_card_so_on_is_never_white_on_white(self):
         switch = self._read("M3Switch.java")
-        self.assertIn("luma > 0.55f", switch)
-        self.assertIn("trackOn = 0xFF111111", switch)
+        self.assertIn("luma(surface) > 0.55f", switch)
+        # an accent too close to the card gives way to black or white
+        self.assertIn("Math.abs(luma(accent) - luma(surface)) >= 0.2f", switch)
+        self.assertIn("lightSurface ? 0xFF111111 : 0xFFFFFFFF", switch)
         self.assertNotIn("TRACK_ON", switch)
 
 

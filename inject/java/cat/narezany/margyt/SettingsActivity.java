@@ -871,7 +871,7 @@ public class SettingsActivity extends Activity {
             });
         }
         LinearLayout box = new LinearLayout(this);
-        box.setPadding(dp(12), 0, dp(12), dp(6));
+        box.setPadding(edge(), 0, edge(), dp(6));
         box.addView(cat, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return box;
@@ -1618,7 +1618,7 @@ public class SettingsActivity extends Activity {
             if (i > 0) rows.addView(line());
 
             LinearLayout row = row();
-            row.setPadding(dp(12), 0, dp(12), 0);
+            row.setPadding(edge(), 0, edge(), 0);
 
             Badges.Badge badge = Badges.byId(one.id);
             row.addView(badgeDot(badge));
@@ -1672,18 +1672,27 @@ public class SettingsActivity extends Activity {
         TextView view = new TextView(this);
         view.setText(title);
         view.setTextColor(onAccent());
-        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
         view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         view.setGravity(Gravity.CENTER);
-        view.setPadding(0, dp(15), 0, dp(15));
-        // a full pill that squares off a little while it is held
-        view.setBackground(Expressive.tile(this, Accent.colour(), 0x33FFFFFF, dp(28), dp(28), dp(12)));
         view.setOnClickListener(v -> action.run());
-
         LinearLayout holder = new LinearLayout(this);
-        holder.setPadding(dp(16), dp(12), dp(16), dp(16));
-        holder.addView(view, new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        if (Design.frosted()) {
+            view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+            view.setPadding(0, dp(15), 0, dp(15));
+            // a full pill that squares off a little while it is held
+            view.setBackground(Expressive.tile(this, Accent.colour(), 0x33FFFFFF, dp(28), dp(28), dp(12)));
+            holder.setPadding(dp(16), dp(12), dp(16), dp(16));
+            holder.addView(view, new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            return holder;
+        }
+        // 40dp, fully round, label large; the margin around it still answers the finger
+        M3Type.line(view, 14, 0.1f);
+        view.setPadding(dp(16), 0, dp(16), 0);
+        view.setBackground(Expressive.tile(this, Accent.colour(), 0x33FFFFFF, dp(20), dp(20), dp(8)));
+        holder.setPadding(edge(), dp(12), edge(), dp(16));
+        holder.setOnClickListener(v -> action.run());
+        holder.addView(view, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(40)));
         return holder;
     }
 
@@ -2114,7 +2123,7 @@ public class SettingsActivity extends Activity {
      */
     private View pickRow(String title, boolean chosen, String preview, final Runnable action) {
         LinearLayout row = row();
-        row.setPadding(dp(12), 0, dp(12), 0);
+        row.setPadding(edge(), 0, edge(), 0);
 
         TextView name = label(title);
         if (preview != null) {
@@ -2172,7 +2181,7 @@ public class SettingsActivity extends Activity {
             final String which = all[i];
             if (i > 0) rows.addView(line());
             LinearLayout row = row();
-            row.setPadding(dp(12), 0, dp(12), 0);
+            row.setPadding(edge(), 0, edge(), 0);
             row.setGravity(Gravity.CENTER_VERTICAL);
 
             android.widget.ImageView shot = new android.widget.ImageView(this);
@@ -2221,7 +2230,7 @@ public class SettingsActivity extends Activity {
         final int selected = AppearanceColors.ACCENT.equals(role)
                 ? Accent.colour() : AppearanceColors.get(role);
         LinearLayout row = row();
-        row.setPadding(dp(12), 0, dp(12), 0);
+        row.setPadding(edge(), 0, edge(), 0);
         row.addView(label(AppearanceColors.label(role)), grow());
         row.addView(new Dot(this, selected == 0 ? skin.muted() : selected, false));
         TextView value = detail(selected == 0 ? "TikTok" : String.format(Locale.US,
@@ -2365,7 +2374,7 @@ public class SettingsActivity extends Activity {
                         Expressive.mix(skin.card, skin.text, 0.14f), accent, skin.muted(), onAccent())
                 : new Expressive.Badge(this, shapeFor(name), vector, sizeDp, tonal, tonal, ink, ink);
         LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(dp(sizeDp), dp(sizeDp));
-        size.rightMargin = dp(16);
+        size.rightMargin = dp(Design.frosted() ? 16 : 12);
         badge.setLayoutParams(size);
         return badge;
     }
@@ -2920,7 +2929,7 @@ public class SettingsActivity extends Activity {
         ChannelBanner banner = new ChannelBanner(this);
         banner.setOnClickListener(v -> open(ChannelBanner.URL));
         LinearLayout box = new LinearLayout(this);
-        box.setPadding(dp(12), dp(2), dp(12), dp(10));
+        box.setPadding(edge(), dp(2), edge(), dp(10));
         box.addView(banner, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return box;
@@ -3025,7 +3034,8 @@ public class SettingsActivity extends Activity {
         TextView view = new TextView(this);
         view.setText(message);
         view.setTextColor(skin.muted());
-        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        if (Design.frosted()) view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
+        else M3Type.bodySmall(view);
         view.setPadding(dp(16), dp(2), dp(16), dp(8));
         return view;
     }
@@ -3299,7 +3309,7 @@ public class SettingsActivity extends Activity {
         row.addView(go, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)));
         LinearLayout box = new LinearLayout(this);
-        box.setPadding(dp(12), dp(4), dp(12), dp(8));
+        box.setPadding(edge(), dp(4), edge(), dp(8));
         box.addView(sized(row, 56));
         return box;
     }
@@ -3520,11 +3530,25 @@ public class SettingsActivity extends Activity {
         LinearLayout bar = new LinearLayout(this);
         bar.setOrientation(LinearLayout.HORIZONTAL);
         bar.setGravity(Gravity.CENTER_VERTICAL);
-        bar.setPadding(dp(12), dp(8), dp(16), dp(4));
+        boolean m3 = !Design.frosted();
+        if (m3) {
+            bar.setPadding(dp(4), 0, dp(16), 0);
+            bar.setMinimumHeight(dp(64));
+        } else {
+            bar.setPadding(dp(12), dp(8), dp(16), dp(4));
+        }
         // a round tonal button that turns into a rounded square under the finger
         View button = Expressive.roundButton(this, SettingsGlyph.make("arrow_forward", skin.text),
-                skin.card, (Accent.colour() & 0xFFFFFF) | 0x33000000, skin.text, 48);
+                skin.card, (Accent.colour() & 0xFFFFFF) | 0x33000000, skin.text, m3 ? 40 : 48);
         ((ViewGroup) button).getChildAt(0).setScaleX(-1f);
+        if (m3) {
+            // the app bar's navigation icon: the words of where it goes are an iOS habit
+            ((LinearLayout.LayoutParams) button.getLayoutParams()).setMargins(dp(4), dp(4), dp(4), dp(4));
+            bar.addView(button);
+            bar.setContentDescription(settingsGroup == 0 ? "TikTok" : Local.of("Настройки"));
+            bar.setOnClickListener(v -> goBack());
+            return bar;
+        }
         bar.addView(button);
         TextView name = new TextView(this);
         name.setText(settingsGroup == 0 ? "TikTok" : Local.of("Настройки"));
@@ -3542,9 +3566,15 @@ public class SettingsActivity extends Activity {
         final TextView view = new TextView(this);
         view.setText(text);
         view.setTextColor(skin.text);
-        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, Design.fluent()?(settingsGroup==0?32:28):settingsGroup == 0 ? 44 : 34);
-        view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        view.setPadding(dp(28), dp(8), dp(24), dp(16));
+        if (Design.frosted()) {
+            view.setTextSize(TypedValue.COMPLEX_UNIT_SP, Design.fluent()?(settingsGroup==0?32:28):settingsGroup == 0 ? 44 : 34);
+            view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            view.setPadding(dp(28), dp(8), dp(24), dp(16));
+        } else {
+            if (settingsGroup == 0) M3Type.displaySmall(view);
+            else M3Type.headlineMedium(view);
+            view.setPadding(dp(32), dp(12), dp(24), dp(20));
+        }
         // five taps in a row and a cat turns up; one by accident does nothing
         view.setOnClickListener(v -> {
             Cats.tapped(view);
@@ -3562,7 +3592,7 @@ public class SettingsActivity extends Activity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(20), dp(4), dp(8), dp(4));
+        row.setPadding(dp(Design.frosted() ? 20 : 16), dp(4), dp(8), dp(4));
         GradientDrawable background = new GradientDrawable();
         background.setColor(skin.card);
         background.setCornerRadius(dp(28));
@@ -3571,7 +3601,7 @@ public class SettingsActivity extends Activity {
         ImageView glass = new ImageView(this);
         glass.setImageDrawable(new Expressive.Magnifier(skin.muted()));
         LinearLayout.LayoutParams glassSize = new LinearLayout.LayoutParams(dp(24), dp(24));
-        glassSize.rightMargin = dp(12);
+        glassSize.rightMargin = dp(Design.frosted() ? 12 : 16);
         row.addView(glass, glassSize);
 
         final EditText input = new EditText(this);
@@ -3581,7 +3611,8 @@ public class SettingsActivity extends Activity {
         input.setHint(Text.SEARCH_HINT);
         input.setHintTextColor(skin.muted());
         input.setTextColor(skin.text);
-        input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        if (Design.frosted()) input.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        else M3Type.line(input, 16, 0.5f);
         input.setBackgroundColor(android.graphics.Color.TRANSPARENT);
         input.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
         input.setOnEditorActionListener((view, action, event) -> {
@@ -3596,10 +3627,11 @@ public class SettingsActivity extends Activity {
         TextView go = label(searchQuery.length() == 0 ? Text.SEARCH : Text.SEARCH_CLEAR);
         go.setTextColor(accentInk());
         go.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        if (!Design.frosted()) M3Type.line(go, 14, 0.1f);
         go.setGravity(Gravity.CENTER);
         go.setPadding(dp(16), 0, dp(16), 0);
         go.setBackground(Expressive.tile(this, accentTonal(), (Accent.colour() & 0xFFFFFF) | 0x33000000,
-                dp(20), dp(20), dp(10)));
+                dp(20), dp(20), dp(Design.frosted() ? 10 : 8)));
         go.setOnClickListener(v -> {
             if (searchQuery.length() > 0) runSearch("");
             else runSearch(input.getText().toString());
@@ -3607,7 +3639,7 @@ public class SettingsActivity extends Activity {
         row.addView(go, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, dp(40)));
         LinearLayout box = new LinearLayout(this);
-        box.setPadding(dp(12), dp(4), dp(12), dp(8));
+        box.setPadding(edge(), dp(4), edge(), dp(8));
         box.addView(sized(row, 56));
         return box;
     }
@@ -3762,10 +3794,15 @@ public class SettingsActivity extends Activity {
         TextView view = new TextView(this);
         view.setText(text);
         view.setTextColor(accentInk());
-        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        view.setLetterSpacing(0.04f);
-        view.setPadding(dp(28), dp(24), dp(16), dp(8));
+        if (Design.frosted()) {
+            view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            view.setLetterSpacing(0.04f);
+            view.setPadding(dp(28), dp(24), dp(16), dp(8));
+        } else {
+            M3Type.titleSmall(view);
+            view.setPadding(dp(32), dp(20), dp(16), dp(8));
+        }
         sectionTargets.put(text, view);
         return view;
     }
@@ -3977,7 +4014,7 @@ public class SettingsActivity extends Activity {
     private View wrap(View card) {
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
-        box.setPadding(dp(12), 0, dp(12), dp(6));
+        box.setPadding(edge(), 0, edge(), dp(6));
         if (!(card instanceof Expressive.Group)) {
             LinearLayout single = card();
             single.addView(card);
@@ -3986,6 +4023,11 @@ public class SettingsActivity extends Activity {
         box.addView(card, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return box;
+    }
+
+    /** The side margin of the page: 16 in Material 3, as a compact window has it. */
+    private int edge() {
+        return dp(Design.frosted() ? 12 : 16);
     }
 
     /** The accent as text on the page: lighter on dark, darker on light. */
@@ -4008,7 +4050,8 @@ public class SettingsActivity extends Activity {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(16), dp(4), dp(20), dp(4));
+        if (Design.frosted()) row.setPadding(dp(16), dp(4), dp(20), dp(4));
+        else row.setPadding(dp(16), dp(10), dp(16), dp(10));
         row.setMinimumHeight(dp(56));
         Motion.press(row);
         return row;
@@ -4018,7 +4061,8 @@ public class SettingsActivity extends Activity {
         TextView view = new TextView(this);
         view.setText(text);
         view.setTextColor(skin.text);
-        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        if (Design.frosted()) view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        else M3Type.line(view, 16, 0.5f);
         view.setIncludeFontPadding(false);view.setPadding(0,0,dp(12),0);
         return view;
     }
@@ -4027,7 +4071,12 @@ public class SettingsActivity extends Activity {
         TextView view = new TextView(this);
         view.setText(text);
         view.setTextColor(skin.muted());
-        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        if (Design.frosted()) {
+            view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        } else {
+            M3Type.bodyMedium(view);
+            view.setPadding(0, dp(2), 0, 0);
+        }
         view.setIncludeFontPadding(false);
         return view;
     }
@@ -4037,6 +4086,7 @@ public class SettingsActivity extends Activity {
     }
 
     private View sized(View view, int height) {
+        if (height > 1 && !Design.frosted()) height = height <= 56 ? 56 : height <= 72 ? 72 : 88;
         if (height > 1) view.setMinimumHeight(dp(Math.max(56, height)));
         view.setLayoutParams(new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT,
