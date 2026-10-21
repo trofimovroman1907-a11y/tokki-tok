@@ -835,6 +835,7 @@ class Build:
         feature_hits["native card corners"]=0
         feature_hits["native right-area slots"]=0
         feature_hits["native player resume"]=0
+        feature_hits["native new profile"]=0
         feature_hits["native offline choices"]=0
         feature_hits["native offline row"]=0
         feature_hits["native offline count accepted"]=0
@@ -878,6 +879,7 @@ class Build:
             feature_hits["native card corners"] += counts.get("native card corners",0)
             feature_hits["native right-area slots"] += counts.get("native right-area slots",0)
             feature_hits["native player resume"] += counts.get("native player resume",0)
+            feature_hits["native new profile"] += counts.get("071Z.LIZ",0)
             feature_hits["native offline choices"] += counts.get("native offline choices",0)
             feature_hits["native offline row"] += counts.get("native offline row",0)
             feature_hits["native offline count accepted"] += counts.get("native offline count accepted",0)

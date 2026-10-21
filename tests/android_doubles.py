@@ -68,6 +68,9 @@ def with_mod(sources):
         # the words as they were written: the tests read the Russian
         sources.setdefault('cat/narezany/margyt/Local.java',
                            'package cat.narezany.margyt;final class Local{static String of(String russian){return russian;}}')
+    if 'android.os.Process.' in everything:
+        sources.setdefault('android/os/Process.java',
+                           'package android.os;public class Process{public static int myUid(){return 10000;}}')
     if 'Names.' in everything:
         sources.setdefault('cat/narezany/margyt/Names.java', doubles['cat/narezany/margyt/Names.java'])
         sources.setdefault('android/util/SparseArray.java', doubles['android/util/SparseArray.java'])

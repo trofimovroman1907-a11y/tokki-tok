@@ -496,6 +496,14 @@ FIELD_SOURCES: List[Tuple[str, str, str, str, str]] = [
     (PHOTO_IMAGE, "userWatermarkImage", URL_MODEL, "userWatermarkImage", DOWNLOAD),
 ]
 
+# A static TikTok works out once and keeps: whether the profile is the new one.
+# It is set the first time its class loads, which can be before the mod can read
+# its own settings, and then stays as the server said for the whole run. Every
+# read of it is answered by the switch instead.
+STATIC_FIELD_SOURCES: List[Tuple[str, str, str, str, str]] = [
+    ("LX/071Z;", "LIZ", "Z", "newProfile", "Lcat/narezany/margyt/Flags;"),
+]
+
 # The pink TikTok is built around. Most of the places it is drawn hold it as a
 # plain constant in the bytecode, so each of those becomes a call into the mod
 # and the colour turns into something a person can change. The build counts
@@ -823,6 +831,19 @@ def model_rules() -> List[Tuple[str, "re.Pattern[str]", str]]:
             r"\1invoke-static {\3}, %s->%s(%s)%s\n\n\1%s \2"
             % (target, name, owner, kind, took),
         ))
+    for owner, field, kind, name, target in STATIC_FIELD_SOURCES:
+        # sget-boolean vA, Owner->field:Z  ->  invoke-static {}, Ours->name()Z ; move-result vA
+        read = {"Z": "sget-boolean", "B": "sget-byte", "S": "sget-short", "C": "sget-char",
+                "I": "sget", "F": "sget", "J": "sget-wide", "D": "sget-wide"}.get(kind, "sget-object")
+        took = ("move-result-wide" if kind in ("J", "D")
+                else "move-result" if kind in ("Z", "B", "S", "C", "I", "F") else "move-result-object")
+        out.append((
+            "%s.%s" % (owner.rsplit("/", 1)[-1][:-1], field),
+            re.compile(r"^(\s*)%s ([vp]\d+), %s->%s:%s$"
+                       % (read, re.escape(owner), re.escape(field), re.escape(kind)),
+                       re.MULTILINE),
+            r"\1invoke-static {}, %s->%s()%s\n\n\1%s \2" % (target, name, kind, took),
+        ))
     return out
 
 
@@ -838,6 +859,7 @@ def rewrite_models(root: str) -> Dict[str, int]:
     owners = tuple(set([owner for owner, _n, _o, _r, _t in MODEL_SOURCES]
                        + [owner for owner, _n, _o, _r, _t in MODEL_STATICS]
                        + [owner for owner, _f, _k, _n, _t in FIELD_SOURCES]
+                       + [owner for owner, _f, _k, _n, _t in STATIC_FIELD_SOURCES]
                        # a rule with no owner of its own is recognised by the
                        # method it is looking for, or its file is never opened
                        + [name for name, _o, _r, _t in WILD_SOURCES]
@@ -2149,6 +2171,8 @@ def rewrite_targets() -> List[str]:
         out.append("%s->%s%s" % (target, ours, replacement))
     for owner, _field, kind, name, target in FIELD_SOURCES:
         out.append("%s->%s(%s)%s" % (target, name, owner, kind))
+    for _owner, _field, kind, name, target in STATIC_FIELD_SOURCES:
+        out.append("%s->%s()%s" % (target, name, kind))
     for _anchor, _owner, name, _original, replacement, target in ANCHORED_SOURCES:
         out.append("%s->%s%s" % (target, name, replacement))
     out.append("Lcat/narezany/margyt/VideoActions;->captureShare(Ljava/lang/Object;)V")

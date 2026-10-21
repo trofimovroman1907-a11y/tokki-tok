@@ -258,7 +258,11 @@ public final class Flags {
             // which is why some people had it and most did not. Nobody gets it.
             made.put("circle_search_block", none);
 
+            // the new profile, and a group with it: TikTok draws parts of the new
+            // profile only for groups 1 to 4, and an account it never put in the
+            // experiment is in group 0
             made.put("profile_left_align", on(prefs, KEY_NEW_PROFILE) ? one : none);
+            if (on(prefs, KEY_NEW_PROFILE)) made.put("profile_left_align_ab_group", one);
 
             // last, so that a developer's answer beats a switch
             if (DevMode.isOn()) {
@@ -274,6 +278,74 @@ public final class Flags {
         }
     }
 
+    // --------------------------------------------------- the new profile, always
+
+    /**
+     * What every read of TikTok's own "is this the new profile" goes to.
+     *
+     * TikTok decides it once, in a static, from "profile_left_align", and keeps
+     * the answer until the app is closed. Asked in the first moments of a start,
+     * before the mod has a context to read its settings with, the mod used to
+     * say nothing, TikTok kept the server's no, and the switch here did nothing
+     * for that whole run -- for some people every run. The build now sends the
+     * read of that static here, and the switch is read even that early.
+     */
+    public static boolean newProfile() {
+        try {
+            SharedPreferences prefs = prefs();
+            if (prefs != null) return prefs.getBoolean(KEY_NEW_PROFILE, ON_BY_DEFAULT.contains(KEY_NEW_PROFILE));
+            Boolean said = fromFile(KEY_NEW_PROFILE);
+            return said != null ? said : ON_BY_DEFAULT.contains(KEY_NEW_PROFILE);
+        } catch (Throwable ignored) {
+            return ON_BY_DEFAULT.contains(KEY_NEW_PROFILE);
+        }
+    }
+
+    /** Before there is a context: the profile's two flags, from the settings file itself. */
+    private static Object early(String key) {
+        if (!"profile_left_align".equals(key) && !"profile_left_align_ab_group".equals(key)) return null;
+        boolean on = newProfile();
+        if ("profile_left_align".equals(key)) return Integer.valueOf(on ? 1 : 0);
+        return on ? Integer.valueOf(1) : null;
+    }
+
+    private static volatile java.util.Map<String, Boolean> fileSwitches;
+
+    /** A switch read straight off the mod's settings file, which needs no context to find. */
+    private static Boolean fromFile(String key) {
+        java.util.Map<String, Boolean> known = fileSwitches;
+        if (known == null) {
+            known = new HashMap<String, Boolean>();
+            try {
+                String process = new String(whole(new java.io.File("/proc/self/cmdline")), "UTF-8");
+                int end = process.indexOf('\0');
+                if (end >= 0) process = process.substring(0, end);
+                int colon = process.indexOf(':');
+                if (colon >= 0) process = process.substring(0, colon);
+                java.io.File file = new java.io.File("/data/user/" + (android.os.Process.myUid() / 100000)
+                        + "/" + process + "/shared_prefs/" + Margy.PREFS + ".xml");
+                if (!file.canRead()) file = new java.io.File("/data/data/" + process + "/shared_prefs/" + Margy.PREFS + ".xml");
+                String xml = new String(whole(file), "UTF-8");
+                java.util.regex.Matcher m = java.util.regex.Pattern
+                        .compile("<boolean name=\"([^\"]+)\" value=\"(true|false)\"").matcher(xml);
+                while (m.find()) known.put(m.group(1), Boolean.valueOf("true".equals(m.group(2))));
+            } catch (Throwable ignored) {
+                // no file yet: the defaults stand
+            }
+            fileSwitches = known;
+        }
+        return known.get(key);
+    }
+
+    private static byte[] whole(java.io.File file) throws java.io.IOException {
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        try (java.io.FileInputStream in = new java.io.FileInputStream(file)) {
+            byte[] chunk = new byte[4096];
+            for (int n; (n = in.read(chunk)) > 0; ) out.write(chunk, 0, n);
+        }
+        return out.toByteArray();
+    }
+
     private static boolean on(SharedPreferences prefs, String key) {
         if (!chosen(key)) return true;
         return prefs.getBoolean(key, ON_BY_DEFAULT.contains(key));
@@ -284,7 +356,7 @@ public final class Flags {
             Map<String, Object> known = table;
             if (known == null) {
                 known = table();
-                if (known == null) return null;
+                if (known == null) return early(key);
             }
             Object value = known.get(key);
             if (value == null || asking == Thread.currentThread()) return null;
