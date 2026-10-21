@@ -372,6 +372,8 @@ public class SettingsActivity extends Activity {
             icons.addView(line());
             icons.addView(appear(iconChoices()));
         }
+        icons.addView(line());
+        icons.addView(actionRow("wallpaper", Text.CUSTOM_ICON, null, () -> CustomIcon.pick(this)));
         column.addView(wrap(icons));
 
         column.addView(section(Text.ACCENT));
@@ -2150,33 +2152,47 @@ public class SettingsActivity extends Activity {
         rows.setOrientation(LinearLayout.VERTICAL);
 
         String now = Launcher.chosen();
-        String[] all = Launcher.all();
+        String[] all = Launcher.shown();
         for (int i = 0; i < all.length; i++) {
-            final String which = all[i];
             if (i > 0) rows.addView(line());
-            LinearLayout row = row();
-            row.setPadding(edge(), 0, edge(), 0);
-            row.setGravity(Gravity.CENTER_VERTICAL);
-
-            android.widget.ImageView shot = new android.widget.ImageView(this);
-            android.graphics.Bitmap picture = Launcher.preview(which);
-            if (picture != null) shot.setImageBitmap(picture);
-            shot.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            LinearLayout.LayoutParams size =
-                    new LinearLayout.LayoutParams(dp(32), dp(32));
-            size.rightMargin = dp(14);
-            row.addView(shot, size);
-
-            row.addView(label(Launcher.nameOf(which)), grow());
-            if (which.equals(now)) row.addView(new Check(this, Accent.colour()));
-            row.setOnClickListener(v -> {
-                Launcher.choose(this, which);
-                rebuild();
-            });
-            rows.addView(sized(row, 56));
+            rows.addView(iconRow(all[i], now));
+        }
+        // the icons from before 2.1.0, only for whoever had the mod then
+        if (Launcher.legacyOffered()) {
+            TextView head = new TextView(this);
+            head.setText(Text.ICON_LEGACY);
+            head.setTextColor(accentInk());
+            if (Design.frosted()) head.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+            else M3Type.titleSmall(head);
+            head.setPadding(edge(), dp(16), edge(), dp(4));
+            rows.addView(head);
+            for (String which : Launcher.LEGACY) rows.addView(iconRow(which, now));
         }
         rows.addView(line());
         return rows;
+    }
+
+    private View iconRow(final String which, String now) {
+        LinearLayout row = row();
+        row.setPadding(edge(), 0, edge(), 0);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+
+        android.widget.ImageView shot = new android.widget.ImageView(this);
+        android.graphics.Bitmap picture = Launcher.preview(which);
+        if (picture != null) shot.setImageBitmap(picture);
+        shot.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        LinearLayout.LayoutParams size =
+                new LinearLayout.LayoutParams(dp(32), dp(32));
+        size.rightMargin = dp(14);
+        row.addView(shot, size);
+
+        row.addView(label(Launcher.nameOf(which)), grow());
+        if (which.equals(now)) row.addView(new Check(this, Accent.colour()));
+        row.setOnClickListener(v -> {
+            Launcher.choose(this, which);
+            rebuild();
+        });
+        return sized(row, 56);
     }
 
 
@@ -2843,6 +2859,10 @@ public class SettingsActivity extends Activity {
             if (Fonts.take(this, source, request == PICK_EMOJI)) markChanged();
             else Toast.makeText(this, Text.FONT_FAILED, Toast.LENGTH_LONG).show();
             rebuild();
+            return;
+        }
+        if (request == CustomIcon.PICK) {
+            CustomIcon.offer(this, source);
             return;
         }
         if (request != PICK_PLUGIN) return;

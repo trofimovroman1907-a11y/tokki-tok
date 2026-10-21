@@ -1281,6 +1281,20 @@ final class Text {
     static final String VERDICT_SAVED = pick("Пометка сохранена", "Позначку збережено", "Mark saved");
     static final String VERDICT_FAILED = pick("Не получилось сохранить пометку", "Не вдалося зберегти позначку", "Could not save the mark");
 
+    static final String ICON_LEGACY = pick("Legacy", "Legacy", "Legacy");
+
+    // a picture of one's own on the home screen
+    static final String CUSTOM_ICON = pick("Своя иконка", "Своя іконка", "Your own icon");
+    static final String CUSTOM_ICON_NOTE = pick("Ярлык с твоей картинкой на рабочем столе. Значок в списке приложений Android менять не даёт.",
+            "Ярлик із твоєю картинкою на робочому столі. Значок у списку застосунків Android змінювати не дає.",
+            "A shortcut with your picture on the home screen. Android does not let the app list icon change.");
+    static final String CUSTOM_ICON_FILL = pick("Заполнить", "Заповнити", "Fill");
+    static final String CUSTOM_ICON_WHOLE = pick("Целиком", "Повністю", "Whole");
+    static final String CUSTOM_ICON_NAME = pick("Название", "Назва", "Name");
+    static final String CUSTOM_ICON_PIN = pick("На рабочий стол", "На робочий стіл", "Add to home screen");
+    static final String CUSTOM_ICON_FAILED = pick("Не получилось открыть картинку", "Не вдалося відкрити картинку", "Could not open the picture");
+    static final String CUSTOM_ICON_UNSUPPORTED = pick("Этот рабочий стол не умеет добавлять ярлыки", "Цей робочий стіл не вміє додавати ярлики", "This home screen cannot add shortcuts");
+
     // the owner's admin inside TikTok
     static final String ADMIN = pick("Админка", "Адмінка", "Admin");
     static final String ADMIN_CODE = pick("Код из Telegram", "Код із Telegram", "Code from Telegram");

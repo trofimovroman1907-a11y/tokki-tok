@@ -637,6 +637,11 @@ class Build:
         ("govno", "че за говно"),
         ("glamour", "Гламурная"),
         ("tilcayo", "Толстый тилкайо"),
+        # redrawn in 2.1.0. New ones go at the end: a launcher entry is named
+        # by its place here, and a place that changed would change the icon of
+        # whoever had picked it. The old two stay as they were, under Legacy
+        ("margyrialyou", "Margyrial You"),
+        ("margyrial3", "Margyrial 3"),
     ]
 
     ICON_PACKAGE = 0x30
