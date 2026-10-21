@@ -4,11 +4,11 @@ The server lets anybody's launcher in, pirated ones too, so a name proves
 nothing there. This proves it instead, through the one account that is already
 trusted: Telegram, where being in the supporters' group is what a supporter is.
 
+    a name is tied once, in the bot      /mc <nick> from a phone, no link and no
+                                        second device; or the link the game shows
     a player joins                      the plugin asks   POST /mc/join
-    a name nobody has used yet          is given a link to the bot with a one-time
-                                        token; pressing Start there tells the bot who
-                                        this is, and the bot sends a code
-    a name that is already tied         has the code sent to that Telegram account
+    a name that is tied                 has a code sent to that Telegram account
+    a name nobody has tied              waits, and the plugin asks again until it is
     the player types the code           the plugin asks   POST /mc/check
 
 Once a name is tied to an account nobody else can use it, and an account can
@@ -46,7 +46,7 @@ SESSION = 12 * 3600
 NICKS_EACH = 2
 #: the least time between two codes for one name, and joins from one address in a minute
 RESEND = 30
-JOINS_MINUTE = 12
+JOINS_MINUTE = 30
 CHANNEL = "https://t.me/margytiktok"
 
 SCHEMA = """
@@ -147,14 +147,24 @@ def _link_for(token):
 
 
 def _start(nick, shown, ip):
-    """A one-time link to the bot for a name that has to be tied to an account."""
-    token = secrets.token_urlsafe(9)
+    """What a name nobody has tied has to do: tie it in the bot, or open a one-time link to it.
+
+    The plugin asks again every few seconds while it waits, and a link made a
+    moment ago is the same link: asking is not a reason to make another.
+    """
+    now = int(time.time())
     link = db()
-    link.execute("DELETE FROM mc_pending WHERE nick = ?", (nick,))
-    link.execute("INSERT INTO mc_pending (token, nick, shown, ip, made) VALUES (?,?,?,?,?)",
-                 (token, nick, shown, ip, int(time.time())))
-    link.commit()
-    return {"state": "start", "link": _link_for(token)}
+    row = link.execute("SELECT token FROM mc_pending WHERE nick = ? AND ip = ? AND made > ?",
+                       (nick, ip, now - PENDING_LIVES // 2)).fetchone()
+    if row is None:
+        token = secrets.token_urlsafe(9)
+        link.execute("DELETE FROM mc_pending WHERE nick = ?", (nick,))
+        link.execute("INSERT INTO mc_pending (token, nick, shown, ip, made) VALUES (?,?,?,?,?)",
+                     (token, nick, shown, ip, now))
+        link.commit()
+    else:
+        token = row[0]
+    return {"state": "register", "bot": bot_name(), "link": _link_for(token)}
 
 
 # ------------------------------------------------------------ what the plugin asks
@@ -327,6 +337,63 @@ def handle(path, body, header):
 
 
 # ------------------------------------------------------------ what the bot tells
+
+def _mine(who):
+    return [r[0] for r in db().execute("SELECT shown FROM mc_link WHERE tg = ? ORDER BY made", (int(who),))]
+
+
+def mine(who):
+    """The words for somebody who asked which names are theirs."""
+    names = _mine(who)
+    if not names:
+        return ("Ники MargyCraft ещё не привязаны. Пришли ник в Minecraft одним сообщением "
+                "(или командой <code>/mc ник</code>).")
+    return ("Твои ники: <b>%s</b>.\n\nПривязать ещё один: <code>/mc ник</code>. "
+            "Убрать: <code>/mcdel ник</code>." % html.escape(", ".join(names)))
+
+
+def bind(who, name, text):
+    """Somebody sent the Minecraft name they play under. The words to answer them with."""
+    who = int(who)
+    shown = _clean((text or "").strip())
+    if not shown:
+        return ("Ник в Minecraft это от 3 до 16 знаков: английские буквы, цифры и подчёркивание. "
+                "Пришли его ещё раз.")
+    nick = shown.lower()
+    if _banned(who) is not None:
+        return "Этот аккаунт заблокирован на MargyCraft."
+    if not supporter(who):
+        return ("MargyCraft только для поддержавших MargyT. Когда окажешься в группе поддержавших, "
+                "напиши мне ник ещё раз. Как поддержать: %s" % CHANNEL)
+    link = db()
+    owner = link.execute("SELECT tg FROM mc_link WHERE nick = ?", (nick,)).fetchone()
+    if owner is not None and owner[0] != who:
+        return "Ник <b>%s</b> уже занят другим аккаунтом." % html.escape(shown)
+    if owner is not None:
+        return "Ник <b>%s</b> уже привязан к тебе. Заходи на сервер, код придёт сюда." % html.escape(shown)
+    if len(_mine(who)) >= NICKS_EACH:
+        return ("К одному аккаунту можно привязать только %d ника. Убери лишний: <code>/mcdel ник</code>. "
+                "Сейчас привязаны: %s." % (NICKS_EACH, html.escape(", ".join(_mine(who)))))
+    now = int(time.time())
+    link.execute("INSERT INTO mc_link (nick, shown, tg, name, ip, verified, made) VALUES (?,?,?,?,'',0,?)",
+                 (nick, shown, who, (name or "")[:64], now))
+    link.execute("DELETE FROM mc_pending WHERE nick = ?", (nick,))
+    link.commit()
+    return ("Готово, ник <b>%s</b> привязан.\n\nЗаходи на <code>craft.narez.xyz</code>. Когда зайдёшь, "
+            "я пришлю сюда код, введи его в игре прямо в чат." % html.escape(shown))
+
+
+def unbind(who, text):
+    """Somebody wants one of their names off their account."""
+    shown = _clean((text or "").strip())
+    if not shown:
+        return "Напиши ник, который убрать: <code>/mcdel ник</code>."
+    link = db()
+    done = link.execute("DELETE FROM mc_link WHERE nick = ? AND tg = ?", (shown.lower(), int(who))).rowcount
+    link.execute("DELETE FROM mc_code WHERE nick = ? AND tg = ?", (shown.lower(), int(who)))
+    link.commit()
+    return ("Ник <b>%s</b> больше не привязан." % html.escape(shown)) if done else "Такого ника у тебя нет."
+
 
 def claim(token, who, name):
     """Somebody pressed Start with a MargyCraft token. The words to answer them with."""

@@ -50,7 +50,7 @@ class McTests(unittest.TestCase):
 
     def first_login(self, nick="Margy", who=101, ip="1.1.1.1"):
         code, out = self.ask("/mc/join", nick=nick, ip=ip)
-        self.assertEqual(out["state"], "start")
+        self.assertEqual(out["state"], "register")
         token = out["link"].split("start=m_")[1]
         said = mc.claim(token, who, "Маргарита")
         self.assertIn("Твой код", said)
@@ -131,7 +131,7 @@ class McTests(unittest.TestCase):
         self.ask("/mc/check", nick="Margy", ip="1.1.1.1", code=code)
         self.fake.deliver = False
         _, out = self.ask("/mc/join", nick="Margy", ip="8.8.8.8")
-        self.assertEqual(out["state"], "start")
+        self.assertEqual(out["state"], "register")
         self.fake.deliver = True
         said = mc.claim(out["link"].split("start=m_")[1], 101, "Маргарита")
         self.assertIn("Твой код", said)
@@ -141,6 +141,46 @@ class McTests(unittest.TestCase):
         for _ in range(mc.JOINS_MINUTE):
             self.ask("/mc/join", nick="Spam", ip="7.7.7.7")
         self.assertEqual(self.ask("/mc/join", nick="Spam", ip="7.7.7.7")[0], 429)
+
+    def test_a_name_tied_in_the_bot_gets_its_code_when_the_player_joins(self):
+        said = mc.bind(101, "Маргарита", "Phone_Player")
+        self.assertIn("привязан", said)
+        # nothing yet asked for a code, and the first join sends one
+        self.assertEqual(self.fake.sent, [])
+        _, out = self.ask("/mc/join", nick="phone_player", ip="4.4.4.4")
+        self.assertEqual(out, {"state": "code", "fresh": True})
+        self.assertEqual(self.fake.sent[-1][0], 101)
+        _, out = self.ask("/mc/check", nick="Phone_Player", ip="4.4.4.4", code=self.fake.code())
+        self.assertEqual(out["state"], "ok")
+
+    def test_a_waiting_player_is_not_given_a_new_link_each_time_but_a_tied_name_is_noticed(self):
+        _, one = self.ask("/mc/join", nick="Waiter", ip="5.5.5.5")
+        _, two = self.ask("/mc/join", nick="Waiter", ip="5.5.5.5")
+        self.assertEqual(one["state"], "register")
+        self.assertEqual(one["link"], two["link"])
+        self.assertEqual(one["bot"], "margybot")
+        self.assertEqual(mc.db().execute("SELECT COUNT(*) FROM mc_pending").fetchone()[0], 1)
+        mc.bind(101, "Маргарита", "Waiter")
+        _, three = self.ask("/mc/join", nick="Waiter", ip="5.5.5.5")
+        self.assertEqual(three["state"], "code")
+
+    def test_the_bot_refuses_what_it_should(self):
+        self.assertIn("от 3 до 16", mc.bind(101, "М", "a b"))
+        self.assertIn("только для поддержавших", mc.bind(999, "Чужой", "Stranger"))
+        mc.bind(101, "М", "Taken_Nick")
+        self.assertIn("уже занят", mc.bind(202, "Другой", "taken_nick"))
+        self.assertIn("уже привязан к тебе", mc.bind(101, "М", "Taken_Nick"))
+        mc.bind(101, "М", "Second")
+        self.assertIn("только 2", mc.bind(101, "М", "Third"))
+        self.assertIn("Taken_Nick", mc.mine(101))
+        mc.ban({"tg": 202})
+        self.assertIn("заблокирован", mc.bind(202, "Другой", "Banned_Nick"))
+
+    def test_a_name_can_be_taken_off_an_account_by_its_owner_only(self):
+        mc.bind(101, "М", "Mine_Nick")
+        self.assertIn("такого ника у тебя нет", mc.unbind(202, "Mine_Nick").lower())
+        self.assertIn("больше не привязан", mc.unbind(101, "mine_nick"))
+        self.assertEqual(self.ask("/mc/join", nick="Mine_Nick", ip="6.6.6.6")[1]["state"], "register")
 
     def test_an_old_link_is_no_good(self):
         _, out = self.ask("/mc/join", nick="Late", ip="1.1.1.1")
