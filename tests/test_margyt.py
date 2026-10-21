@@ -485,8 +485,9 @@ class AccentSourceTest(unittest.TestCase):
         self.assertIn("final int previousScroll = page == null ? 0 : page.getScrollY()", java)
         self.assertIn("addOnPreDrawListener(scrollRestoreListener)", java)
         self.assertIn("page.scrollTo(0, requestedScrollY)", java)
-        self.assertIn("row.setGravity(Gravity.CENTER_VERTICAL)", java)
-        self.assertIn("new LinearLayout.LayoutParams(dp(32), dp(32))", java)
+        # the icons are a carousel now, centred on the chosen one after a rebuild
+        self.assertIn("private View iconCarousel()", java)
+        self.assertIn("centre(scroll, chosen)", java)
 
     def test_theme_role_list_is_collapsed_and_sections_use_grouped_surfaces(self):
         source = os.path.join(ROOT, "inject", "java", "cat", "narezany", "margyt",

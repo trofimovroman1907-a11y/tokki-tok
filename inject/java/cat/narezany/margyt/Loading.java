@@ -106,6 +106,13 @@ public final class Loading {
         }
     }
 
+    /** The indicator as the settings picture shows it, whatever the switch says. */
+    static void preview(Canvas canvas, int width, int height) {
+        if (Design.fluent()) fluent(canvas, width, height);
+        else if (Design.glass()) glass(canvas, width, height);
+        else shape(canvas, width, height);
+    }
+
     private static final int PROBE = 24;
     private static Bitmap probe;
     private static Canvas probeCanvas;

@@ -110,7 +110,6 @@ public class SettingsActivity extends Activity {
     private boolean backgroundOpen;
     private boolean themeColoursOpen;
     private boolean fontOpen;
-    private boolean iconOpen;
     private ScrollView page;
     private boolean thanksOpen;
     private int settingsGroup;
@@ -365,13 +364,9 @@ public class SettingsActivity extends Activity {
         }
 
         column.addView(section(Text.APPEARANCE));
-        column.addView(wrap(actionRow("palette", Text.DESIGN, Design.name(), this::chooseDesign)));
+        column.addView(wrap(designPicker()));
         LinearLayout icons = card();
-        icons.addView(iconHead());
-        if (iconOpen) {
-            icons.addView(line());
-            icons.addView(appear(iconChoices()));
-        }
+        icons.addView(iconCarousel());
         icons.addView(line());
         icons.addView(actionRow("wallpaper", Text.CUSTOM_ICON, null, () -> CustomIcon.pick(this)));
         column.addView(wrap(icons));
@@ -391,15 +386,16 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.MD3_TIKTOK));
         LinearLayout loading = card();
+        final SettingsArt.Loader loader = new SettingsArt.Loader(this, skin, Loading.isEnabled());
+        loading.addView(loader);
         loading.addView(liveToggleRow("palette", Design.frosted()?Text.LOADING_INDICATOR:Text.LOADING_SHAPES, Loading.isEnabled(),
-                Loading::setEnabled));
+                on -> { Loading.setEnabled(on); loader.set(on); }));
         loading.addView(quiet(Design.frosted()?Text.LOADING_STYLE_NOTE:Text.LOADING_NOTE));
         loading.addView(line());
         loading.addView(toggleRow("image", Text.ROUND_CARDS, Corners.isEnabled(),
                 Corners::setEnabled));
         loading.addView(line());
-        loading.addView(actionRow("account_circle", Text.AVATAR_SHAPE,
-                AvatarShape.nameOf(AvatarShape.chosen()), this::chooseAvatarShape));
+        loading.addView(avatarShapes());
 
         loading.addView(line());
         loading.addView(toggleRow("tune", Text.NAV_CAPSULE, NavBar.isEnabled(), NavBar::setEnabled));
@@ -525,11 +521,19 @@ public class SettingsActivity extends Activity {
         feed.addView(line());
         feed.addView(liveToggleRow("visibility_off",Text.HIDE_STORIES,Feed.hides(Feed.KEY_STORIES),on->Feed.setHides(Feed.KEY_STORIES,on)));
         feed.addView(liveToggleRow("visibility_off",Text.HIDE_SUGGESTIONS,Feed.hides(Feed.KEY_SUGGESTIONS),on->Feed.setHides(Feed.KEY_SUGGESTIONS,on)));
-        feed.addView(line());
-        feed.addView(liveToggleRow("view_compact", Text.SIMPLE_FEED, SimpleFeed.isOn(), on -> SimpleFeed.set(this, on)));
-        feed.addView(actionRow("info", Text.SIMPLE_FEED_ABOUT, null, () ->
-                Panel.with(this, skin, Text.SIMPLE_FEED).text(Text.SIMPLE_FEED_NOTE).primary(Local.of("Понятно"), null).show()));
         column.addView(wrap(feed));
+
+        column.addView(section(Text.SIMPLE_FEED));
+        LinearLayout simpler = card();
+        final SettingsArt.Phone simpleArt = new SettingsArt.Phone(this, skin)
+                .burn(Dim.isConfigured(), Dim.strength(), NavBar.isKept()).simple(SimpleFeed.isOn());
+        simpler.addView(simpleArt);
+        simpler.addView(liveToggleRow("view_compact", Text.SIMPLE_FEED, SimpleFeed.isOn(), on -> {
+            SimpleFeed.set(this, on);
+            simpleArt.simple(on).settle();
+        }));
+        simpler.addView(quiet(Text.SIMPLE_FEED_NOTE));
+        column.addView(wrap(simpler));
 
         column.addView(section(Text.DATE_FILTER));
         LinearLayout dates = card();
@@ -625,15 +629,24 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(BURN));
         LinearLayout burn = card();
+        // the phone shows what the switch and the slider do, as they are moved
+        final SettingsArt.Phone burnArt = new SettingsArt.Phone(this, skin)
+                .burn(Dim.isConfigured(), Dim.strength(), NavBar.isKept()).simple(SimpleFeed.isOn());
+        burn.addView(burnArt);
         burn.addView(liveToggleRow("eye_open", Text.DIM, Dim.isConfigured(), on -> {
             Dim.setEnabled(on);
+            burnArt.burn(on, Dim.strength(), NavBar.isKept()).settle();
             rebuildAfterSwitchAnimation();
         }));
         if (Dim.isConfigured()) {
             burn.addView(line());
-            burn.addView(slider("contrast", Text.DIM_HOW, Dim.strength(), 100, 0, "%", value -> Dim.setStrength(value)));
+            burn.addView(slider("contrast", Text.DIM_HOW, Dim.strength(), 100, 0, "%", value -> Dim.setStrength(value), false,
+                    value -> burnArt.burn(true, value, NavBar.isKept()).settle()));
             burn.addView(line());
-            burn.addView(toggleRow("visibility_off", Text.KEEP_BAR, NavBar.isKept(), NavBar::setKept));
+            burn.addView(toggleRow("visibility_off", Text.KEEP_BAR, NavBar.isKept(), on -> {
+                NavBar.setKept(on);
+                burnArt.burn(true, Dim.strength(), on).settle();
+            }));
         }
         burn.addView(quiet(Local.of("Глаз в ленте включает и выключает приглушение на лету.")));
         column.addView(wrap(burn));
@@ -683,8 +696,17 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.STREAKS));
         LinearLayout streaks = card();
-        streaks.addView(betaRow("repeat", Text.STREAK_AUTO, Streaks.isEnabled(),
-                Streaks::setEnabled));
+        final SettingsArt.Chat chat = new SettingsArt.Chat(this, skin);
+        final String sent = Streaks.chosen();
+        chat.state(Streaks.isEnabled(), sent.length() == 0 ? null : Streaks.thumbnail(this, sent, () -> {
+            if (!chat.isAttachedToWindow()) return;
+            chat.state(Streaks.isEnabled(), Streaks.thumbnail(this, sent));
+        }));
+        streaks.addView(chat);
+        streaks.addView(betaRow("repeat", Text.STREAK_AUTO, Streaks.isEnabled(), on -> {
+            Streaks.setEnabled(on);
+            chat.state(on, sent.length() == 0 ? null : Streaks.thumbnail(this, sent)).settle();
+        }));
         streaks.addView(line());
         // What the schedule is standing on, said plainly: an inexact alarm, a
         // battery saver or a muted notification channel each stop the send, and
@@ -1921,6 +1943,12 @@ public class SettingsActivity extends Activity {
         return slider(picture,title,now,most,shift,unit,chosen,true);
     }
     private View slider(String picture, String title, int now, int most, final int shift, final String unit, final Chosen chosen, final boolean live) {
+        return slider(picture, title, now, most, shift, unit, chosen, live, null);
+    }
+
+    /** `moving` hears every position while the finger is on it: for a picture that follows. */
+    private View slider(String picture, String title, int now, int most, final int shift, final String unit,
+                        final Chosen chosen, final boolean live, final Chosen moving) {
         LinearLayout rows = new LinearLayout(this);
         rows.setOrientation(LinearLayout.VERTICAL);
         rows.setPadding(dp(16), dp(10), dp(20), dp(10));
@@ -1948,6 +1976,7 @@ public class SettingsActivity extends Activity {
             public void onProgressChanged(android.widget.SeekBar seek, int value, boolean human) {
                 number.setText((value + shift) + unit);
                 if(live && human)chosen.at(value);
+                if(moving != null && human)moving.at(value);
             }
 
             @Override
@@ -2128,71 +2157,196 @@ public class SettingsActivity extends Activity {
 
     // ---------------------------------------------------------- the icon
 
-    private View iconHead() {
-        LinearLayout row = row();
-        row.addView(icon("image"));
-        row.addView(label(Text.ICON), grow());
+    // ------------------------------------------------------------ carousels
 
-        TextView now = detail(Launcher.nameOf(Launcher.chosen()));
-        now.setTextColor(skin.text);
-        row.addView(now);
-
-        row.addView(disclosure(iconOpen,"iconOpen"));
-
-        row.setOnClickListener(v -> {
-            disclosureKey = "iconOpen";
-            iconOpen = !iconOpen;
-            rebuildAfterReveal(iconOpen);
-        });
-        return sized(row, 52);
+    /** A row that scrolls sideways, for choosing one of many by its picture. */
+    private android.widget.HorizontalScrollView carousel(LinearLayout strip) {
+        final android.widget.HorizontalScrollView scroll = new android.widget.HorizontalScrollView(this);
+        scroll.setHorizontalScrollBarEnabled(false);
+        scroll.setClipToPadding(false);
+        strip.setOrientation(LinearLayout.HORIZONTAL);
+        strip.setPadding(dp(10), dp(2), dp(10), dp(14));
+        scroll.addView(strip);
+        return scroll;
     }
 
-    private View iconChoices() {
-        LinearLayout rows = new LinearLayout(this);
-        rows.setOrientation(LinearLayout.VERTICAL);
+    /** Brought to the middle once laid out, so the chosen one is in sight. */
+    private void centre(final android.widget.HorizontalScrollView scroll, final View chosen) {
+        if (chosen == null) return;
+        scroll.post(() -> scroll.scrollTo(Math.max(0,
+                chosen.getLeft() - (scroll.getWidth() - chosen.getWidth()) / 2), 0));
+    }
 
-        String now = Launcher.chosen();
-        String[] all = Launcher.shown();
-        for (int i = 0; i < all.length; i++) {
-            if (i > 0) rows.addView(line());
-            rows.addView(iconRow(all[i], now));
+    /** The launcher icons as pictures to scroll through, the chosen one ringed. */
+    private View iconCarousel() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout head = row();
+        head.addView(icon("image"));
+        head.addView(label(Text.ICON), grow());
+        final TextView named = detail(Launcher.nameOf(Launcher.chosen()));
+        named.setTextColor(skin.text);
+        head.addView(named);
+        box.addView(sized(head, 52));
+
+        LinearLayout strip = new LinearLayout(this);
+        final java.util.List<View> frames = new java.util.ArrayList<View>();
+        View chosen = null;
+        for (String which : Launcher.shown()) {
+            View tile = iconTile(which, frames, named);
+            if (which.equals(Launcher.chosen())) chosen = tile;
+            strip.addView(tile);
         }
         // the icons from before 2.1.0, only for whoever had the mod then
         if (Launcher.legacyOffered()) {
-            TextView head = new TextView(this);
-            head.setText(Text.ICON_LEGACY);
-            head.setTextColor(accentInk());
-            if (Design.frosted()) head.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-            else M3Type.titleSmall(head);
-            head.setPadding(edge(), dp(16), edge(), dp(4));
-            rows.addView(head);
-            for (String which : Launcher.LEGACY) rows.addView(iconRow(which, now));
+            TextView legacy = new TextView(this);
+            legacy.setText(Text.ICON_LEGACY);
+            legacy.setTextColor(accentInk());
+            M3Type.titleSmall(legacy);
+            legacy.setGravity(Gravity.CENTER);
+            legacy.setPadding(dp(14), 0, dp(6), dp(22));
+            strip.addView(legacy, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            for (String which : Launcher.LEGACY) {
+                View tile = iconTile(which, frames, named);
+                if (which.equals(Launcher.chosen())) chosen = tile;
+                strip.addView(tile);
+            }
         }
-        rows.addView(line());
-        return rows;
+        android.widget.HorizontalScrollView scroll = carousel(strip);
+        box.addView(scroll);
+        centre(scroll, chosen);
+        return box;
     }
 
-    private View iconRow(final String which, String now) {
-        LinearLayout row = row();
-        row.setPadding(edge(), 0, edge(), 0);
-        row.setGravity(Gravity.CENTER_VERTICAL);
-
-        android.widget.ImageView shot = new android.widget.ImageView(this);
-        android.graphics.Bitmap picture = Launcher.preview(which);
-        if (picture != null) shot.setImageBitmap(picture);
-        shot.setScaleType(ImageView.ScaleType.FIT_CENTER);
-        LinearLayout.LayoutParams size =
-                new LinearLayout.LayoutParams(dp(32), dp(32));
-        size.rightMargin = dp(14);
-        row.addView(shot, size);
-
-        row.addView(label(Launcher.nameOf(which)), grow());
-        if (which.equals(now)) row.addView(new Check(this, Accent.colour()));
-        row.setOnClickListener(v -> {
-            Launcher.choose(this, which);
-            rebuild();
+    private View iconTile(final String which, final java.util.List<View> frames, final TextView named) {
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setGravity(Gravity.CENTER_HORIZONTAL);
+        tile.setPadding(dp(4), dp(2), dp(4), dp(2));
+        android.widget.FrameLayout frame = new android.widget.FrameLayout(this);
+        frame.setPadding(dp(4), dp(4), dp(4), dp(4));
+        frame.setTag(which);
+        ImageView picture = new ImageView(this);
+        Bitmap shot = Launcher.preview(which);
+        if (shot != null) picture.setImageBitmap(shot);
+        picture.setScaleType(ImageView.ScaleType.CENTER_CROP);
+        picture.setOutlineProvider(new android.view.ViewOutlineProvider() {
+            @Override
+            public void getOutline(View view, android.graphics.Outline outline) {
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(16));
+            }
         });
-        return sized(row, 56);
+        picture.setClipToOutline(true);
+        frame.addView(picture, new android.widget.FrameLayout.LayoutParams(dp(60), dp(60)));
+        tile.addView(frame);
+        frames.add(frame);
+        TextView name = new TextView(this);
+        name.setText(Launcher.nameOf(which));
+        M3Type.line(name, 12, 0.4f);
+        name.setGravity(Gravity.CENTER);
+        name.setMaxLines(2);
+        name.setEllipsize(android.text.TextUtils.TruncateAt.END);
+        name.setPadding(0, dp(4), 0, 0);
+        name.setTag("name");
+        tile.addView(name, new LinearLayout.LayoutParams(dp(80), ViewGroup.LayoutParams.WRAP_CONTENT));
+        ring(frames, Launcher.chosen());
+        tile.setOnClickListener(v -> {
+            Launcher.choose(this, which);
+            ring(frames, which);
+            named.setText(Launcher.nameOf(which));
+        });
+        Motion.press(tile);
+        return tile;
+    }
+
+    /** The chosen one ringed in the accent and named in full colour; the rest quiet. */
+    private void ring(java.util.List<View> frames, String chosen) {
+        for (View frame : frames) {
+            boolean on = chosen.equals(frame.getTag());
+            GradientDrawable ring = new GradientDrawable();
+            ring.setCornerRadius(dp(20));
+            ring.setColor(0);
+            if (on) ring.setStroke(dp(3), Accent.colour());
+            frame.setBackground(ring);
+            View tile = (View) frame.getParent();
+            if (tile instanceof ViewGroup) {
+                View name = ((ViewGroup) tile).findViewWithTag("name");
+                if (name instanceof TextView) ((TextView) name).setTextColor(on ? skin.text : skin.muted());
+            }
+        }
+    }
+
+    /** narezany's profile with the avatar in the chosen shape, and the shapes to choose from under it. */
+    private View avatarShapes() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        final SettingsArt.Profile art = new SettingsArt.Profile(this, skin);
+        box.addView(art);
+        LinearLayout head = row();
+        head.addView(icon("account_circle"));
+        head.addView(label(Text.AVATAR_SHAPE), grow());
+        final TextView named = detail(AvatarShape.nameOf(AvatarShape.chosen()));
+        named.setTextColor(skin.text);
+        head.addView(named);
+        box.addView(sized(head, 52));
+
+        LinearLayout strip = new LinearLayout(this);
+        final java.util.List<View> chips = new java.util.ArrayList<View>();
+        View chosen = null;
+        for (final String shape : AvatarShape.ALL) {
+            LinearLayout chip = new LinearLayout(this);
+            chip.setOrientation(LinearLayout.VERTICAL);
+            chip.setGravity(Gravity.CENTER_HORIZONTAL);
+            chip.setPadding(dp(10), dp(10), dp(10), dp(8));
+            chip.setTag(shape);
+            ImageView picture = new ImageView(this);
+            picture.setTag("picture");
+            chip.addView(picture, new LinearLayout.LayoutParams(dp(36), dp(36)));
+            TextView name = new TextView(this);
+            name.setText(AvatarShape.nameOf(shape));
+            M3Type.line(name, 12, 0.4f);
+            name.setGravity(Gravity.CENTER);
+            name.setSingleLine(true);
+            name.setTag("name");
+            name.setPadding(0, dp(6), 0, 0);
+            chip.addView(name);
+            chips.add(chip);
+            if (shape.equals(AvatarShape.chosen())) chosen = chip;
+            chip.setOnClickListener(v -> {
+                if (shape.equals(AvatarShape.chosen())) return;
+                AvatarShape.choose(this, shape);
+                art.shape(shape);
+                named.setText(AvatarShape.nameOf(shape));
+                shapeChips(chips);
+                // a picture already cut keeps its shape until it is cut again
+                markChanged();
+            });
+            Motion.press(chip);
+            LinearLayout.LayoutParams place = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            place.rightMargin = dp(4);
+            strip.addView(chip, place);
+        }
+        shapeChips(chips);
+        android.widget.HorizontalScrollView scroll = carousel(strip);
+        box.addView(scroll);
+        centre(scroll, chosen);
+        return box;
+    }
+
+    private void shapeChips(java.util.List<View> chips) {
+        String now = AvatarShape.chosen();
+        for (View chip : chips) {
+            boolean on = now.equals(chip.getTag());
+            GradientDrawable back = new GradientDrawable();
+            back.setCornerRadius(dp(18));
+            back.setColor(on ? accentTonal() : 0);
+            chip.setBackground(back);
+            View picture = chip.findViewWithTag("picture");
+            if (picture instanceof ImageView) ((ImageView) picture).setImageBitmap(
+                    AvatarShape.picture((String) chip.getTag(), dp(36), on ? Accent.colour() : skin.muted()));
+            View name = chip.findViewWithTag("name");
+            if (name instanceof TextView) ((TextView) name).setTextColor(on ? skin.text : skin.muted());
+        }
     }
 
 
@@ -3983,6 +4137,41 @@ public class SettingsActivity extends Activity {
      * A segmented list in Material 3 Expressive: every row is a tile of its own,
      * with large outer corners, small inner ones and a thin gap between them.
      */
+    /** The three styles side by side, each a small settings card drawn in it. */
+    private View designPicker() {
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        LinearLayout head = row();
+        head.addView(icon("palette"));
+        head.addView(label(Text.DESIGN), grow());
+        box.addView(sized(head, 52));
+        LinearLayout three = new LinearLayout(this);
+        three.setPadding(dp(12), 0, dp(12), dp(14));
+        String[][] modes = {{"md3", "Material 3"}, {"glass", "Liquid Glass"}, {"fluent", "Fluent"}};
+        for (final String[] mode : modes) {
+            LinearLayout tile = new LinearLayout(this);
+            tile.setOrientation(LinearLayout.VERTICAL);
+            tile.setGravity(Gravity.CENTER_HORIZONTAL);
+            boolean on = mode[0].equals(Design.mode());
+            tile.addView(new SettingsArt.Style(this, skin, mode[0], on));
+            TextView name = new TextView(this);
+            name.setText(mode[1]);
+            M3Type.line(name, 12, 0.4f);
+            name.setTextColor(on ? skin.text : skin.muted());
+            name.setTypeface(Typeface.create(on ? "sans-serif-medium" : "sans-serif", Typeface.NORMAL));
+            name.setGravity(Gravity.CENTER);
+            name.setPadding(0, dp(6), 0, 0);
+            tile.addView(name);
+            tile.setPadding(dp(3), 0, dp(3), 0);
+            tile.setOnClickListener(v -> { if (!mode[0].equals(Design.mode())) applyDesign(mode[0]); });
+            Motion.press(tile);
+            three.addView(tile, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        }
+        box.addView(three);
+        box.addView(quiet(Text.DESIGN_NOTE));
+        return box;
+    }
+
     private void chooseDesign() {
         Panel panel=Panel.with(this,skin,Text.DESIGN);
         panel.text(Text.DESIGN_NOTE).section(null);
