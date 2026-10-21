@@ -628,7 +628,7 @@ public class SettingsActivity extends Activity {
             burn.addView(line());
             burn.addView(toggleRow("visibility_off", Text.KEEP_BAR, NavBar.isKept(), NavBar::setKept));
         }
-        burn.addView(quiet(Local.of("Глаз в ленте и на видео включает и выключает затемнение на лету. Поле ввода комментария не затемняется. Нижняя панель при затемнении прячется и возвращается на несколько секунд, если нажать на её место.")));
+        burn.addView(quiet(Local.of("Глаз в ленте включает и выключает приглушение на лету.")));
         column.addView(wrap(burn));
 
         column.addView(section(Text.DOWNLOADS));
@@ -744,7 +744,7 @@ public class SettingsActivity extends Activity {
         column.addView(section(Text.DIAGNOSTICS));
         LinearLayout diagnostics = card();
         diagnostics.addView(liveToggleRow("bug_report", Local.of("Отчёты о сбоях"),CrashReports.enabled(this),on->CrashReports.set(this,on)));
-        diagnostics.addView(quiet(Local.of("Отправлять разработчику технический стек сбоя. Без сообщений, аккаунта и текста ошибки.")));
+        diagnostics.addView(quiet(Local.of("Технический стек сбоя, без сообщений и аккаунта.")));
         diagnostics.addView(quiet(Diagnostics.report()));
         diagnostics.addView(line());
         diagnostics.addView(actionRow("article", Text.COPY_DIAGNOSTICS, null,
@@ -3822,11 +3822,11 @@ public class SettingsActivity extends Activity {
     }
 
     private void showSectionHelp() {
-        String[] notes = {"", Local.of("Акцент меняет цвет кнопок и вкладок. Готовые картинки могут сохранять свой цвет. Тема и шрифты настраиваются отдельно."),
-                Local.of("Значки, их порядок и градиент на ник. Чтобы что-то менять, аккаунт надо один раз подтвердить."),
-                Local.of("Глаз меняет прозрачность кнопок поверх видео; «Защита экрана» теперь здесь же. Удержание «Отправить» открывает скачивание и перемотку. Удерживайте край видео, чтобы ускорить, и потяните вниз, чтобы закрепить скорость."),
-                Local.of("Скачивание, резервные копии, диагностика и журнал. Сохраните копию перед экспериментами."),
-                Local.of("Здесь находятся версия мода, обновления, журнал и участники."), Local.of("Магазин, установка и настройки плагинов. Плагины запускают дополнительный код; устанавливайте только те, которым доверяете."),
+        String[] notes = {"", Local.of("Акцент меняет цвет кнопок и вкладок. Тема и шрифты отдельно."),
+                Local.of("Значки и градиент на ник. Сначала надо один раз подтвердить аккаунт."),
+                Local.of("Удержание «Отправить» открывает скачивание и перемотку, удержание края видео ускоряет его."),
+                Local.of("Скачивание, копии настроек, диагностика и журнал."),
+                Local.of("Здесь находятся версия мода, обновления, журнал и участники."), Local.of("Магазин и настройки плагинов. Ставь только те, которым доверяешь."),
                 Local.of("Автопродление серий и уведомления мода."),
                 Text.FUN_HELP};
         Panel.with(this,skin,Local.of("Подсказки")).text(notes[Math.max(0,Math.min(notes.length-1,settingsGroup))])
