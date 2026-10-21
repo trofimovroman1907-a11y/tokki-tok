@@ -1042,12 +1042,13 @@ public class SettingsActivity extends Activity {
     }
 
     private View donateBanner() {
+        // a filled card: a title, one line of what it gives, one button; how to
+        // pay and where to write are on the page the button opens
         LinearLayout card = new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(18), dp(16), dp(18), dp(16));
-
+        card.setPadding(dp(16), dp(8), dp(8), dp(16));
         GradientDrawable background = new GradientDrawable();
-        background.setCornerRadius(Math.max(skin.radius, dp(18)));
+        background.setCornerRadius(dp(Design.frosted() ? 18 : 12));
         background.setColor(skin.card);
         card.setBackground(background);
 
@@ -1057,15 +1058,15 @@ public class SettingsActivity extends Activity {
         TextView head = new TextView(this);
         head.setText(Text.DONATE_BANNER);
         head.setTextColor(skin.text);
-        head.setTextSize(TypedValue.COMPLEX_UNIT_SP, 17);
-        head.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        M3Type.line(head, 16, 0.15f);
+        head.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         top.addView(head, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-        TextView close = new TextView(this);
-        close.setText("✕");
-        close.setTextColor(skin.muted());
-        close.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
-        close.setGravity(Gravity.CENTER);
+        ImageView close = new ImageView(this);
+        close.setImageDrawable(SettingsGlyph.make("close", skin.muted()));
+        close.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        close.setPadding(dp(12), dp(12), dp(12), dp(12));
         close.setContentDescription(Text.CLOSE);
+        Motion.press(close);
         close.setOnClickListener(v -> {
             donateClosed = true;
             View banner = card;
@@ -1073,66 +1074,34 @@ public class SettingsActivity extends Activity {
             View gone = holder != null && holder != column ? holder : banner;
             gone.animate().alpha(0f).setDuration(160).withEndAction(() -> rebuild()).start();
         });
-        top.addView(close, new LinearLayout.LayoutParams(dp(36), dp(36)));
+        top.addView(close, new LinearLayout.LayoutParams(dp(48), dp(48)));
         card.addView(top);
 
         TextView body = new TextView(this);
         body.setText(Text.DONATE_BANNER_TEXT);
-        body.setTextColor(skin.text);
-        body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
-        body.setPadding(0, dp(4), 0, 0);
+        body.setTextColor(skin.muted());
+        M3Type.bodyMedium(body);
+        body.setPadding(0, 0, dp(8), 0);
         card.addView(body);
-
-        TextView how = new TextView(this);
-        how.setText(Text.DONATE_BANNER_HOW);
-        how.setTextColor(skin.muted());
-        how.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
-        how.setPadding(0, dp(8), 0, 0);
-        card.addView(how);
 
         TextView go = new TextView(this);
         go.setText(Text.DONATE_BANNER_BUTTON);
         go.setTextColor(onAccent());
-        go.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        go.setTypeface(android.graphics.Typeface.DEFAULT_BOLD);
+        M3Type.line(go, 14, 0.1f);
+        go.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         go.setGravity(Gravity.CENTER);
-        go.setPadding(0, dp(11), 0, dp(11));
-        GradientDrawable pill = new GradientDrawable();
-        pill.setColor(Accent.colour());
-        pill.setCornerRadius(dp(14));
-        go.setBackground(pill);
+        go.setPadding(dp(24), 0, dp(24), 0);
+        go.setBackground(Expressive.tile(this, Accent.colour(), 0x33FFFFFF, dp(20), dp(20), dp(8)));
         go.setOnClickListener(v -> showDonations());
-
-        TextView write = new TextView(this);
-        write.setText(Text.DONATE_BANNER_WRITE);
-        write.setTextColor(skin.text);
-        write.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        write.setGravity(Gravity.CENTER);
-        write.setPadding(0, dp(11), 0, dp(11));
-        GradientDrawable quiet = new GradientDrawable();
-        quiet.setColor(0x00000000);
-        quiet.setCornerRadius(dp(14));
-        quiet.setStroke(dp(1), skin.muted());
-        write.setBackground(quiet);
-        write.setOnClickListener(v -> open(CHANNEL_WRITE));
-
-        LinearLayout buttons = new LinearLayout(this);
-        buttons.setOrientation(LinearLayout.HORIZONTAL);
         LinearLayout.LayoutParams below = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        below.topMargin = dp(14);
-
-        LinearLayout.LayoutParams half =
-                new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        LinearLayout.LayoutParams second =
-                new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
-        second.leftMargin = dp(8);
-        buttons.addView(go, half);
-        buttons.addView(write, second);
-        card.addView(buttons, below);
+                ViewGroup.LayoutParams.WRAP_CONTENT, dp(40));
+        below.topMargin = dp(16);
+        below.gravity = Gravity.END;
+        below.rightMargin = dp(8);
+        card.addView(go, below);
 
         LinearLayout holder = new LinearLayout(this);
-        holder.setPadding(dp(20), dp(14), dp(20), dp(2));
+        holder.setPadding(edge(), dp(8), edge(), dp(2));
         holder.addView(card, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return holder;

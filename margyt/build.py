@@ -247,6 +247,9 @@ class Build:
         manifest_module.add_activity(manifest, PACKAGE + ".PluginEditorActivity", SETTINGS_LABEL, theme)
         # a .mtp opened from a file manager comes to the mod (Theme.NoDisplay: it only hands the file on)
         manifest_module.add_file_opener(manifest, PACKAGE + ".PluginOpenActivity", "Плагин MargyT", 0x01030055, "mtp", ["application/octet-stream", "application/zip", "application/x-zip-compressed"])
+        # Margy Store under its new name and its old one: without this Android 11
+        # and later will not tell the mod whether the store is there at all
+        manifest_module.add_queries(manifest, ["cat.narezany.store", "cat.narezany.patcher"])
         self.detail("%s declared, the plugin store" % STORE_ACTIVITY)
 
         if not self.lite and not manifest_module.has_activity(manifest, TIKTOK_SETTINGS):

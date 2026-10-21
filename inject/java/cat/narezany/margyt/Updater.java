@@ -213,31 +213,41 @@ public final class Updater {
 
     // ----------------------------------------------------------- Margy Store
 
-    static final String STORE_PACKAGE = "cat.narezany.patcher";
+    /** The store as it is called now, then as it was until 2.1, when it moved to its own key. */
+    static final String[] STORE_PACKAGES = {"cat.narezany.store", "cat.narezany.patcher"};
     private static final String STORE_PAGE = "https://margy.narez.xyz/app/margyt";
     private static final String STORE_APK = "https://margy.narez.xyz/get";
 
-    static boolean storeInstalled(Context context) {
-        try {
-            context.getPackageManager().getPackageInfo(STORE_PACKAGE, 0);
-            return true;
-        } catch (Throwable ignored) {
-            return false;
+    /** Which of the store's names is on the phone, or null. */
+    static String storePackage(Context context) {
+        for (String name : STORE_PACKAGES) {
+            try {
+                context.getPackageManager().getPackageInfo(name, 0);
+                return name;
+            } catch (Throwable ignored) {
+            }
         }
+        return null;
+    }
+
+    static boolean storeInstalled(Context context) {
+        return storePackage(context) != null;
     }
 
     /** The store, open on MargyT's own page, where the update is one button. */
     static void openStore(Context context) {
+        String store = storePackage(context);
+        if (store == null) { downloadStore(context); return; }
         try {
             android.content.Intent page = new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(STORE_PAGE));
-            page.setPackage(STORE_PACKAGE);
+            page.setPackage(store);
             page.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK);
             context.startActivity(page);
             return;
         } catch (Throwable ignored) {
         }
         try {
-            android.content.Intent launch = context.getPackageManager().getLaunchIntentForPackage(STORE_PACKAGE);
+            android.content.Intent launch = context.getPackageManager().getLaunchIntentForPackage(store);
             if (launch != null) { launch.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK); context.startActivity(launch); return; }
         } catch (Throwable ignored) {
         }

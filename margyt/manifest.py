@@ -391,6 +391,22 @@ def add_file_opener(axml: Axml, class_name: str, label: str, theme: int,
     axml.insert_into(application(axml), subtree)
 
 
+def add_queries(axml: Axml, packages: List[str]) -> None:
+    """Let the app see other apps by name, as a <queries> child of <manifest>.
+
+    From Android 11 an app cannot find out whether another one is installed,
+    or open it by package, unless it says beforehand which ones it looks for.
+    """
+    queries = axml.make_element("queries")
+    subtree = [queries]
+    for name in packages:
+        node = axml.make_element("package")
+        axml.set_attr_string(node, "name", name)
+        subtree += [node, axml.close_element(node)]
+    subtree.append(axml.close_element(queries))
+    axml.insert_into(axml.elements("manifest")[0], subtree)
+
+
 def add_widget(axml: Axml, class_name: str, info: int) -> None:
     """Declare a home-screen widget: a receiver, and where its description is.
 
