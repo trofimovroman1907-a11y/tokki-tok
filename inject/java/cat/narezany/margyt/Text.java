@@ -244,7 +244,11 @@ final class Text {
             "Кнопка на стикерах", "Кнопка на стікерах", "The button on stickers");
 
     static final String COMMENTS = pick("Комментарии", "Коментарі", "Comments");
-    static final String COMMENT_COPY_ON = pick("Копирование комментариев", "Копіювання коментарів", "Copy comments");
+    static final String COMMENT_COPY_ON = pick("Копирование части комментария", "Копіювання частини коментаря", "Copy part of a comment");
+    static final String COMMENT_COPY_NOTE = pick(
+            "TikTok копирует комментарий только целиком. С этим в меню по долгому нажатию на комментарий появится «Выбрать фрагмент»: выделяешь нужные слова и копируешь только их. А обычное «Копировать» мод делает без ника автора.",
+            "TikTok копіює коментар лише цілком. З цим у меню за довгим натисканням на коментар з'явиться «Вибрати фрагмент»: виділяєш потрібні слова й копіюєш лише їх. А звичайне «Копіювати» мод робить без ніка автора.",
+            "TikTok only copies a whole comment. With this, holding a comment adds \u201CSelect part\u201D to the menu: pick the words you want and copy just those. The usual \u201CCopy\u201D also leaves out the author's name.");
     static final String COMMENT_COPY = pick("Скопировать комментарий", "Скопіювати коментар", "Copy comment");
     static final String COMMENT_SELECT = pick("Выбрать фрагмент", "Вибрати фрагмент", "Select part");
     static final String COMMENT_SELECT_COPY = pick("Выделить и копировать", "Виділити й копіювати", "Select and copy");
@@ -870,19 +874,6 @@ final class Text {
     static final String REMIND_NEVER = pick(
             "Больше не напоминать", "Більше не нагадувати", "Never remind me");
 
-    static final String STREAK_TEST = pick(
-            "Отправить тестовое сообщение", "Надіслати тестове повідомлення",
-            "Send a test message");
-
-    static final String STREAK_TEST_NOTE = pick(
-            "Всем, у кого есть серия — даже если огонёк горит. Результат в дневнике.",
-            "Усім, у кого є серія — навіть якщо вогник горить. Результат у щоденнику.",
-            "To everyone with a streak, lit or not. The diary says what happened.");
-
-    static final String STREAK_TEST_GOING = pick(
-            "Отправляю, смотри дневник", "Надсилаю, дивись щоденник",
-            "Sending; the diary will say");
-
     static final String STREAK_ALL = pick(
             "Отправить огонёк всем", "Надіслати вогник усім", "Send the flame to everyone");
 
@@ -1488,7 +1479,7 @@ final class Text {
     static final String PAGE_ACCOUNT_NOTE = pick("Айди аккаунта, чтобы скопировать", "Айді акаунта, щоб скопіювати", "The account's ids, to copy");
     static final String PAGE_FEED_NOTE = pick("Реклама, эфиры, фото, упрощённая лента, фильтр по дате и хештеги", "Реклама, ефіри, фото, спрощена стрічка, фільтр за датою і хештеги", "Ads, lives, photos, the simplified feed, the date filter and hashtags");
     static final String PAGE_VIDEO_NOTE = pick("Кнопки справа, дата, скорость, яркость и частота кадров", "Кнопки праворуч, дата, швидкість, яскравість і частота кадрів", "The buttons on the right, the date, speed, brightness and frame rate");
-    static final String PAGE_COMMENTS_NOTE = pick("Копирование комментариев", "Копіювання коментарів", "Copying comments");
+    static final String PAGE_COMMENTS_NOTE = pick("Копирование части комментария", "Копіювання частини коментаря", "Copying part of a comment");
     static final String PAGE_BURN_NOTE = pick("Глаз, который приглушает кнопки поверх видео, чтобы экран не выгорал", "Око, яке приглушує кнопки поверх відео, щоб екран не вигорав", "The eye that dims what sits over the video so the screen does not burn in");
     static final String PAGE_REGION_NOTE = pick("Страна, для которой TikTok подбирает ленту", "Країна, для якої TikTok підбирає стрічку", "The country TikTok picks the feed for");
     static final String PAGE_DOWNLOADS_NOTE = pick("Без водяного знака, качество, кадры", "Без водяного знака, якість, кадри", "No watermark, quality, frames");

@@ -589,6 +589,7 @@ public class SettingsActivity extends Activity {
         LinearLayout comments = card();
         comments.addView(liveToggleRow("article", Text.COMMENT_COPY_ON, Comments.isCopyEnabled(),
                 Comments::setCopyEnabled));
+        comments.addView(quiet(Text.COMMENT_COPY_NOTE));
         column.addView(wrap(comments));
 
         column.addView(section(BURN));
@@ -673,12 +674,6 @@ public class SettingsActivity extends Activity {
                 () -> Popup.ask(this, Text.STREAK_ALL, Text.STREAK_ALL_ASK,
                         Text.STREAK_ALL_SEND, () -> Streaks.sendAll(this),
                         Text.CANCEL, null, null, null)));
-        streaks.addView(line());
-        streaks.addView(actionRow("play_circle", Text.STREAK_TEST, Text.STREAK_TEST_NOTE,
-                () -> {
-                    Streaks.test(this);
-                    Toast.makeText(this, Text.STREAK_TEST_GOING, Toast.LENGTH_SHORT).show();
-                }));
         column.addView(wrap(streaks));
 
         column.addView(section(Text.NOTIFICATIONS));
