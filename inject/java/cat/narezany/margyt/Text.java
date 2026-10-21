@@ -610,13 +610,13 @@ final class Text {
             "Значок за поддержку", "Значок за підтримку", "A badge for supporting");
 
     static final String DONATE_BANNER_TEXT = pick(
-            "От 250 ₽: значок рядом с ником, градиент на ник и закрытый чат. "
-                    + "Значок и градиент видят все с MargyT.",
-            "Від 250 ₽: значок поруч із ніком, градієнт на нік і закритий чат. "
-                    + "Значок і градієнт бачать усі з MargyT.",
-            "From 250 roubles: a badge beside your name, a gradient on the name "
-                    + "and the private chat. The badge and the gradient are seen "
-                    + "by everyone on MargyT.");
+            "От 250 ₽: значок рядом с ником, градиент на ник, закрытый чат и вход на Minecraft-сервер MargyCraft "
+                    + "(craft.narez.xyz). Значок и градиент видят все с MargyT.",
+            "Від 250 ₽: значок поруч із ніком, градієнт на нік, закритий чат і вхід на Minecraft-сервер MargyCraft "
+                    + "(craft.narez.xyz). Значок і градієнт бачать усі з MargyT.",
+            "From 250 roubles: a badge beside your name, a gradient on the name, the private chat and "
+                    + "access to MargyCraft, the Minecraft server (craft.narez.xyz). The badge and the "
+                    + "gradient are seen by everyone on MargyT.");
 
     static final String DONATE_BANNER_HOW = pick(
             "После перевода — в сообщения канала: чек и ваш ID аккаунта.",

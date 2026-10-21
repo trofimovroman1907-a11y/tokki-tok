@@ -53,6 +53,7 @@ import dep
 import guard
 import panel
 import patcher
+import mc
 import tiktok
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -1574,6 +1575,9 @@ class Handler(BaseHTTPRequestHandler):
             code, out = crash(body, raw.decode("utf-8", "replace"), ip)
         elif path == "/patcher/login/start":
             code, out = patcher.start(ip)
+        elif path.startswith("/mc/"):
+            # the game server's, with a key only it has
+            code, out = mc.handle(path, body, self.headers.get("X-MC-Key", ""))
         elif path == "/patches":
             # 1.x asked here for fixes that travel without an apk. There are
             # none any more, and "nothing new" keeps those phones quiet

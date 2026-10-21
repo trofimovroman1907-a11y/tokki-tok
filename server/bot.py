@@ -33,6 +33,7 @@ sys.path.insert(0, HERE)
 
 import badges as service
 import patcher
+import mc
 import tiktok
 
 TOKEN_FILE = os.path.join(HERE, "bot.txt")
@@ -480,6 +481,14 @@ def handle(update):
             return say(chat, "Готово. Возвращайся в <b>Margy Patcher</b>.")
         return say(chat, "Этот вход уже не действует. Нажми «Войти через Telegram» "
                          "в патчере ещё раз.")
+
+    # Somebody opened the link a MargyCraft player was given: pressing Start tells us
+    # who they are, and the answer is the code to type in the game.
+    if low.startswith("/start m_"):
+        token = text.split("m_", 1)[1].strip()
+        if from_who.get("id"):
+            return say(chat, mc.claim(token, from_who["id"], from_who.get("first_name") or from_who.get("username") or ""))
+        return
 
     # The owner says which group is the supporters' one, from inside it.
     if low.split("@")[0] == "/supporters":
