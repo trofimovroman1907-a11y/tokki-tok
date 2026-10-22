@@ -68,6 +68,10 @@ def with_mod(sources):
         # the words as they were written: the tests read the Russian
         sources.setdefault('cat/narezany/margyt/Local.java',
                            'package cat.narezany.margyt;final class Local{static String of(String russian){return russian;}}')
+    if 'ProfileHeader.' in everything:
+        sources.setdefault('cat/narezany/margyt/ProfileHeader.java',
+                           'package cat.narezany.margyt;final class ProfileHeader{static final String TEST="profile_header_test",'
+                           'OLD_GROUP="profile_old_group";}')
     if 'android.os.Process.' in everything:
         sources.setdefault('android/os/Process.java',
                            'package android.os;public class Process{public static int myUid(){return 10000;}}')
