@@ -40,22 +40,6 @@ public final class ProfileHeader {
      */
     static final String OLD_GROUP = "profile_old_group";
 
-    /**
-     * For a developer whose own account is in the new group, to see what one in
-     * the old group sees: 1 the old header and none of the new profile's
-     * parts, as such an account gets them; 2 the same, then mended as the mod
-     * mends it. 0 is as it is.
-     */
-    static final String TEST = "profile_header_test";
-
-    static int test() {
-        try {
-            return Margy.context().getSharedPreferences(Margy.PREFS, android.content.Context.MODE_PRIVATE).getInt(TEST, 0);
-        } catch (Throwable ignored) {
-            return 0;
-        }
-    }
-
     static boolean oldGroup() {
         try {
             return Margy.context().getSharedPreferences(Margy.PREFS, android.content.Context.MODE_PRIVATE).getBoolean(OLD_GROUP, false);
@@ -66,15 +50,13 @@ public final class ProfileHeader {
 
     /** In place of TikTok's X.0sm9.LJIILIIL(user, page, mine, then). */
     public static ProfileUser LJIILIIL(User user, ProfileUser page, boolean mine, kotlin.jvm.functions.Function1 then) {
+        // Nothing is moved for now: a header rearranged without the rest of what
+        // the new group has came out as neither (two avatars, the old layout
+        // round it). With the developer switch on, the page the server sent and
+        // TikTok's answers for the new profile's parts are written to logcat, to
+        // build the real thing from an account that has it.
         try {
-            int test = test();
-            if (page != null && test > 0) unrearrange(page);
-            if (page != null && (test == 2 || (test == 0 && Flags.newProfile())) && rearrange(page) && test == 0 && !oldGroup()) {
-                Margy.context().getSharedPreferences(Margy.PREFS, android.content.Context.MODE_PRIVATE).edit()
-                        .putBoolean(OLD_GROUP, true).apply();
-                Flags.forget();
-                Diary.note("profile header: the server sends the old header, the new profile's own parts are switched on from the next start");
-            }
+            if (page != null && DevMode.isOn()) record(page, mine);
         } catch (Throwable error) {
             Diary.note("profile header: " + error);
         }
@@ -155,6 +137,57 @@ public final class ProfileHeader {
         }
         header.components = parts;
         return true;
+    }
+
+    // ------------------------------------------------------------ recording
+
+    private static final java.util.Set<String> RECORDED = java.util.Collections.synchronizedSet(new java.util.HashSet<String>());
+    private static volatile boolean flagsRecorded;
+
+    private static final String[] FLAGS = {
+            "profile_left_align", "profile_left_align_ab_group",
+            "profile_left_align_avatar_opt", "profile_left_align_avatar_at_right_opt",
+            "profile_left_align_bio_style_opt", "profile_left_align_cta_style_opt",
+            "profile_left_align_advance_feature_style_opt", "profile_left_align_tab_icon_opt",
+            "profile_left_align_playlist_style_opt", "profile_left_align_relation_info_font_size_opt",
+            "profile_left_align_navbar_icon_small_screen_opt", "profile_left_align_right_avatar_large_font_opt",
+            "profile_left_align_right_avatar_nickname_opt", "profile_left_align_right_avatar_nickname_opt_v2",
+            "profile_left_align_right_avatar_nickname_wordbreak_opt", "profile_left_align_avatar_and_info_merge",
+            "profile_left_align_pronouns", "profile_left_align_small_avatar", "profile_left_align_recommend_card",
+            "enable_profile_left_align_second_line_two_lines_show", "profile_optimize_move_avatar_up",
+            "profile_bg_in_allow_list", "profile_bg_enable_consumption_group", "profile_banner_platform"};
+
+    /** The page as the server sent it, part by part, and TikTok's own answers for the new profile's switches. */
+    private static void record(ProfileUser page, boolean mine) {
+        StringBuilder out = new StringBuilder();
+        outline(out, "nav", page.navBarComponents, 0);
+        outline(out, "header", page.headerComponents, 0);
+        outline(out, "tabs", page.tabsComponents, 0);
+        outline(out, "background", page.profileBackground, 0);
+        String said = out.toString();
+        if (RECORDED.size() < 8 && RECORDED.add((mine ? "mine\n" : "other\n") + said)) {
+            for (String line : ((mine ? "page, mine" : "page, someone else's") + "\n" + said).split("\n"))
+                android.util.Log.i("MargyTProfile", line);
+        }
+        if (!flagsRecorded) {
+            flagsRecorded = true;
+            for (String key : FLAGS) {
+                Object theirs = Flags.own(new Flags.Known(key, "INT", 0));
+                android.util.Log.i("MargyTProfile", "flag " + key + " = " + theirs);
+            }
+        }
+    }
+
+    private static void outline(StringBuilder out, String where, ProfileComponents part, int depth) {
+        if (part == null) {
+            if (depth == 0) out.append(where).append(": none\n");
+            return;
+        }
+        if (depth == 0) out.append(where).append(":\n");
+        for (int i = 0; i <= depth; i++) out.append("  ");
+        String id = part.componentId == null ? "" : part.componentId, name = part.componentName == null ? "" : part.componentName;
+        out.append(id.equals(name) ? (name.length() == 0 ? "(empty)" : name) : id + "/" + name).append('\n');
+        if (part.components != null) for (ProfileComponents child : part.components) outline(out, where, child, depth + 1);
     }
 
     private static ProfileComponents named(List<? extends ProfileComponents> parts, String name) {

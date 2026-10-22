@@ -3617,22 +3617,6 @@ public class SettingsActivity extends Activity {
         into.addView(actionRow("article", Text.DEV_FULL_REPORT, Text.DEV_FULL_NOTE,
                 () -> copy("MargyT full report", Diagnostics.fullReport())));
         into.addView(line());
-        // the old group's profile, seen from an account in the new one
-        LinearLayout headerHead = row();
-        headerHead.addView(icon("account_circle"));
-        LinearLayout headerWords = new LinearLayout(this);
-        headerWords.setOrientation(LinearLayout.VERTICAL);
-        headerWords.addView(label(Text.DEV_PROFILE_TEST));
-        headerWords.addView(detail(Text.DEV_PROFILE_TEST_NOTE));
-        headerHead.addView(headerWords, grow());
-        into.addView(sized(headerHead, 72));
-        into.addView(segmented(new String[] {Text.DEV_PROFILE_OFF, Text.DEV_PROFILE_OLD, Text.DEV_PROFILE_MENDED},
-                ProfileHeader.test(), index -> {
-                    getSharedPreferences(Margy.PREFS, MODE_PRIVATE).edit().putInt(ProfileHeader.TEST, index).apply();
-                    Flags.forget();
-                    markChanged();
-                }));
-        into.addView(line());
         into.addView(toggleRow("tune", Text.DEV_SWITCH, true, on -> {
             if (!on) {
                 DevMode.set(false);

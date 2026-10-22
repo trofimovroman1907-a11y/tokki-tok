@@ -263,20 +263,7 @@ public final class Flags {
             // on top among them, and putting everybody in group 1 took the banner
             // away from those TikTok had put in another.
             made.put("profile_left_align", on(prefs, KEY_NEW_PROFILE) ? one : none);
-            // The new profile's own parts go by switches of their own, and an
-            // account the server keeps in the old group has them all off: the
-            // avatar beside the name and the banner above it ("avatar_opt";
-            // the banner is drawn only with it) are switched on for such an
-            // account, once ProfileHeader has seen the old header come in.
-            // A developer in the new group can be shown the old group's view.
-            int test = prefs.getInt(ProfileHeader.TEST, 0);
-            if (test > 0) {
-                for (String part : NEW_PROFILE_PARTS) made.put(part, none);
-                made.put("profile_left_align_ab_group", none);
-            }
-            if (on(prefs, KEY_NEW_PROFILE) && (test == 2 || (test == 0 && prefs.getBoolean(ProfileHeader.OLD_GROUP, false)))) {
-                made.put("profile_left_align_avatar_opt", one);
-            }
+
 
             // last, so that a developer's answer beats a switch
             if (DevMode.isOn()) {
@@ -294,17 +281,6 @@ public final class Flags {
 
     // --------------------------------------------------- the new profile, always
 
-    /** The new profile's parts that are experiments of their own, beside "profile_left_align". */
-    private static final String[] NEW_PROFILE_PARTS = {
-            "profile_left_align_avatar_opt", "profile_left_align_avatar_at_right_opt",
-            "profile_left_align_bio_style_opt", "profile_left_align_cta_style_opt",
-            "profile_left_align_advance_feature_style_opt", "profile_left_align_tab_icon_opt",
-            "profile_left_align_playlist_style_opt", "profile_left_align_relation_info_font_size_opt",
-            "profile_left_align_navbar_icon_small_screen_opt", "profile_left_align_right_avatar_large_font_opt",
-            "profile_left_align_right_avatar_nickname_opt", "profile_left_align_right_avatar_nickname_opt_v2",
-            "profile_left_align_right_avatar_nickname_wordbreak_opt", "profile_left_align_avatar_and_info_merge",
-            "profile_left_align_pronouns", "profile_left_align_small_avatar",
-            "enable_profile_left_align_second_line_two_lines_show"};
 
     /**
      * What every read of TikTok's own "is this the new profile" goes to.
