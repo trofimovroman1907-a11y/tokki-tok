@@ -504,6 +504,14 @@ STATIC_FIELD_SOURCES: List[Tuple[str, str, str, str, str]] = [
     ("LX/071Z;", "LIZ", "Z", "newProfile", "Lcat/narezany/margyt/Flags;"),
 ]
 
+# Every profile page passes through this on its way to the screen: it pours the
+# account's details into the page's tree of parts. The tree comes from the
+# server, which builds the old header or the new by the account's group; the
+# mod moves an old one into the new shape first (ProfileHeader).
+MODEL_STATICS += [
+    ("LX/0sm9;", "LJIILIIL", "(Lcom/ss/android/ugc/aweme/profile/model/User;Lcom/ss/android/ugc/profile/platform/base/data/ProfileUser;ZLkotlin/jvm/functions/Function1;)Lcom/ss/android/ugc/profile/platform/base/data/ProfileUser;", "(Lcom/ss/android/ugc/aweme/profile/model/User;Lcom/ss/android/ugc/profile/platform/base/data/ProfileUser;ZLkotlin/jvm/functions/Function1;)Lcom/ss/android/ugc/profile/platform/base/data/ProfileUser;", "Lcat/narezany/margyt/ProfileHeader;"),
+]
+
 # The pink TikTok is built around. Most of the places it is drawn hold it as a
 # plain constant in the bytecode, so each of those becomes a call into the mod
 # and the colour turns into something a person can change. The build counts
