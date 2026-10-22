@@ -1282,10 +1282,6 @@ final class Text {
     static final String VERDICT_FAILED = pick("Не получилось сохранить пометку", "Не вдалося зберегти позначку", "Could not save the mark");
 
     static final String ICON_LEGACY = pick("Legacy", "Legacy", "Legacy");
-    static final String DEV_PROFILE_TEST = pick("Проверка починки профиля", "Перевірка лагодження профілю", "Profile mend test");
-    static final String DEV_PROFILE_TEST_NOTE = pick("Шапка разбирается в старую форму и чинится, как у аккаунта из старой группы. Должно выглядеть как обычно. После перезапуска.",
-            "Шапка розбирається на стару форму й лагодиться, як в акаунта зі старої групи. Має виглядати як звичайно. Після перезапуску.",
-            "The header is taken back to the old group's shape and mended, as for an account in the old group. It should look as usual. After a restart.");
     static final String DOWNLOAD_WINDOW = pick("Своё окно скачивания", "Власне вікно завантаження", "The mod's download window");
     static final String DOWNLOAD_WINDOW_NOTE = pick("С выбором качества. Если выключить, TikTok скачивает сам.",
             "З вибором якості. Якщо вимкнути, TikTok завантажує сам.",

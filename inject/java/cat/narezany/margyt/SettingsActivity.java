@@ -3617,13 +3617,6 @@ public class SettingsActivity extends Activity {
         into.addView(actionRow("article", Text.DEV_FULL_REPORT, Text.DEV_FULL_NOTE,
                 () -> copy("MargyT full report", Diagnostics.fullReport())));
         into.addView(line());
-        into.addView(toggleRow("account_circle", Text.DEV_PROFILE_TEST,
-                getSharedPreferences(Margy.PREFS, MODE_PRIVATE).getBoolean(ProfileHeader.TEST, false), on -> {
-                    getSharedPreferences(Margy.PREFS, MODE_PRIVATE).edit().putBoolean(ProfileHeader.TEST, on).apply();
-                    Flags.forget();
-                }));
-        into.addView(quiet(Text.DEV_PROFILE_TEST_NOTE));
-        into.addView(line());
         into.addView(toggleRow("tune", Text.DEV_SWITCH, true, on -> {
             if (!on) {
                 DevMode.set(false);

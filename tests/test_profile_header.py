@@ -20,15 +20,12 @@ STUBS = {
     'com/ss/android/ugc/profile/platform/base/data/ProfileUser.java':
         'package com.ss.android.ugc.profile.platform.base.data;public class ProfileUser{public ProfileComponents navBarComponents,headerComponents,tabsComponents,profileBackground;}',
     'kotlin/jvm/functions/Function1.java': 'package kotlin.jvm.functions;public interface Function1<P,R>{R invoke(P p);}',
-    'cat/narezany/margyt/Flags.java': 'package cat.narezany.margyt;class Flags{static boolean on=true;static int forgot;static boolean newProfile(){return on;}static void forget(){forgot++;}'
-        'static final class Known{Known(String k,String t,Object f){}}static Object own(Known k){return 0;}}',
+    'cat/narezany/margyt/Flags.java': 'package cat.narezany.margyt;class Flags{static boolean on=true;static int forgot;static boolean newProfile(){return on;}static void forget(){forgot++;}}',
     'cat/narezany/margyt/Diary.java': 'package cat.narezany.margyt;class Diary{static void note(String s){}}',
-    'android/util/Log.java': 'package android.util;public class Log{public static int i(String t,String m){return 0;}}',
-    'cat/narezany/margyt/DevMode.java': 'package cat.narezany.margyt;class DevMode{static boolean isOn(){return false;}}',
     'android/content/SharedPreferences.java': 'package android.content;public interface SharedPreferences{int getInt(String k,int d);boolean getBoolean(String k,boolean d);'
         'Editor edit();interface Editor{Editor putBoolean(String k,boolean v);Editor putInt(String k,int v);void apply();}}',
     'android/content/Context.java': 'package android.content;public class Context{public static final int MODE_PRIVATE=0;'
-        'public SharedPreferences getSharedPreferences(String n,int m){return Prefs.ONE;}public java.io.File getExternalFilesDir(String t){return null;}}',
+        'public SharedPreferences getSharedPreferences(String n,int m){return Prefs.ONE;}}',
     'android/content/Prefs.java': 'package android.content;public class Prefs implements SharedPreferences{public static final Prefs ONE=new Prefs();'
         'public java.util.Map<String,Object> kept=new java.util.HashMap<>();public int getInt(String k,int d){Object v=kept.get(k);return v==null?d:(Integer)v;}'
         'public boolean getBoolean(String k,boolean d){Object v=kept.get(k);return v==null?d:(Boolean)v;}public Editor edit(){final Prefs p=this;return new Editor(){'
@@ -60,13 +57,6 @@ public class HeaderHarness{
   ProfileUser theirs=new ProfileUser();
   theirs.headerComponents=c("header",c("header_avatar",c("avatar_normal")),c("info",names(),c("user_relation_info",c("relation_info_following"))),c("cta",c("cta_social_follow")),c("bio",c("bio_signature")));
   check(ProfileHeader.rearrange(theirs,false)&&shape(theirs.headerComponents).equals(shape(realOther().headerComponents)),"someone else's, with the spacer: "+shape(theirs.headerComponents));
-  // the real pages there and back
-  for(ProfileUser real:new ProfileUser[]{realMine(),realOther()}){
-   String was=shape(real.headerComponents);boolean mine=!was.contains("(empty)");
-   check(ProfileHeader.unrearrange(real),"taken back to the old shape");
-   check(shape(real.headerComponents).startsWith("header[header_avatar"),"the avatar on its own above: "+shape(real.headerComponents));
-   check(ProfileHeader.rearrange(real,mine)&&shape(real.headerComponents).equals(was),"and mended it is the same again: "+shape(real.headerComponents));
-  }
   ProfileUser fresh=realMine();String before=shape(fresh.headerComponents);
   check(!ProfileHeader.rearrange(fresh,true)&&shape(fresh.headerComponents).equals(before),"a new header is left alone");
   ProfileUser odd=new ProfileUser();odd.headerComponents=c("header",c("something_else"));check(!ProfileHeader.rearrange(odd,true),"and one it does not know");
@@ -76,10 +66,9 @@ public class HeaderHarness{
   check(ProfileHeader.LJIILIIL(null,page,false,null)==page&&shape(page.headerComponents).startsWith("header[info[user_basic_info[(empty),user_info"),"the call moves then hands on");
   check(X.Calls.count==1,"TikTok's own method ran once");
   check(android.content.Prefs.ONE.getBoolean("profile_old_group",false)&&Flags.forgot==1,"an old header seen is remembered as the old group");
-  // the developer's test: a new page taken back and mended is the same page
-  android.content.Prefs.ONE.kept.put("profile_header_mend_test",true);ProfileUser tested=realMine();String real=shape(tested.headerComponents);
-  ProfileHeader.LJIILIIL(null,tested,true,null);check(shape(tested.headerComponents).equals(real),"the test shows the real thing: "+shape(tested.headerComponents));
-  android.content.Prefs.ONE.kept.put("profile_header_mend_test",false);
+  // a new page through the call is the page the server sent
+  ProfileUser real=realMine();String sent=shape(real.headerComponents);
+  ProfileHeader.LJIILIIL(null,real,true,null);check(shape(real.headerComponents).equals(sent),"a new page passes as it came: "+shape(real.headerComponents));
   Flags.on=false;ProfileUser kept=new ProfileUser();kept.headerComponents=c("header",c("header_avatar"),c("info",c("user_info")));
   ProfileHeader.LJIILIIL(null,kept,false,null);check(shape(kept.headerComponents).startsWith("header[header_avatar"),"with the switch off the page is TikTok's");
   System.out.println("header passed");

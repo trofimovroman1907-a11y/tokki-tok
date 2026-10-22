@@ -272,7 +272,7 @@ public final class Flags {
                 made.put("profile_left_align_avatar_and_info_merge", one);
                 made.put("profile_left_align_pronouns", one);
                 made.put("profile_left_align_recommend_card", one);
-                if (prefs.getBoolean(ProfileHeader.OLD_GROUP, false) || prefs.getBoolean(ProfileHeader.TEST, false))
+                if (prefs.getBoolean(ProfileHeader.OLD_GROUP, false))
                     made.put("profile_left_align_avatar_opt", one);
             }
 
