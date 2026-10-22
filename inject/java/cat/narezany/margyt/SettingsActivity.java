@@ -968,7 +968,7 @@ public class SettingsActivity extends Activity {
         column.addView(section(Text.FUN_RUBBLE));
         LinearLayout rubble = card();
         rubble.addView(new SettingsPictures.Fall(this, skin));
-        rubble.addView(actionRow("open_with", Text.FUN_RUBBLE, null, () -> Rubble.arm(this)));
+        rubble.addView(liveToggleRow("open_with", Text.FUN_RUBBLE, Rubble.on(), on -> { if (on) Rubble.arm(this); else Rubble.stop(); }));
         rubble.addView(quiet(Text.RUBBLE_NOTE));
         column.addView(wrap(rubble));
 
