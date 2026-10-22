@@ -40,6 +40,21 @@ public final class ProfileHeader {
      */
     static final String OLD_GROUP = "profile_old_group";
 
+    /**
+     * For a developer whose account is in the new group: the header is taken
+     * back to the old group's shape and mended, and the account is treated as
+     * in the old group, so what such an account will see can be looked at.
+     */
+    static final String TEST = "profile_header_mend_test";
+
+    static boolean test() {
+        try {
+            return Margy.context().getSharedPreferences(Margy.PREFS, android.content.Context.MODE_PRIVATE).getBoolean(TEST, false);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     static boolean oldGroup() {
         try {
             return Margy.context().getSharedPreferences(Margy.PREFS, android.content.Context.MODE_PRIVATE).getBoolean(OLD_GROUP, false);
@@ -50,13 +65,21 @@ public final class ProfileHeader {
 
     /** In place of TikTok's X.0sm9.LJIILIIL(user, page, mine, then). */
     public static ProfileUser LJIILIIL(User user, ProfileUser page, boolean mine, kotlin.jvm.functions.Function1 then) {
-        // Nothing is moved for now: a header rearranged without the rest of what
-        // the new group has came out as neither (two avatars, the old layout
-        // round it). With the developer switch on, the page the server sent and
-        // TikTok's answers for the new profile's parts are written to logcat, to
-        // build the real thing from an account that has it.
+        // With the developer switch on, the page as the server sent it and
+        // TikTok's answers for the new profile's switches go to a file adb can
+        // read: that is what the move below was built from.
         try {
             if (page != null && DevMode.isOn()) record(page, mine);
+            if (page != null) {
+                boolean test = test();
+                if (test) unrearrange(page);
+                if (Flags.newProfile() && rearrange(page, mine) && !test && !oldGroup()) {
+                    Margy.context().getSharedPreferences(Margy.PREFS, android.content.Context.MODE_PRIVATE).edit()
+                            .putBoolean(OLD_GROUP, true).apply();
+                    Flags.forget();
+                    Diary.note("profile header: the server sends the old header; the banner is built by TikTok from the next start");
+                }
+            }
         } catch (Throwable error) {
             Diary.note("profile header: " + error);
         }
@@ -80,8 +103,18 @@ public final class ProfileHeader {
         }
     }
 
-    /** The old header in the new shape. Does nothing to a header already new, or one it does not recognise. */
-    static boolean rearrange(ProfileUser page) {
+    /**
+     * The old header in the new shape, as TikTok's server sends it to an account
+     * in the new group (read off one that has it):
+     *
+     *     header [ info [ user_basic_info [ (a spacer, on someone else's page),
+     *                                       user_info [ name, @name, user_relation_info ],
+     *                                       header_avatar ] ], ...the rest as it was ]
+     *
+     * The avatar goes after the name, on the right, and the counts go inside the
+     * name's part. Does nothing to a header already new, or one it does not know.
+     */
+    static boolean rearrange(ProfileUser page, boolean mine) {
         ProfileComponents header = page.headerComponents;
         if (header == null || header.components == null) return false;
         List<ProfileComponents> parts = new ArrayList<ProfileComponents>(header.components);
@@ -90,31 +123,39 @@ public final class ProfileHeader {
         if (avatar == null || info == null || info.components == null) return false;
         List<ProfileComponents> inside = new ArrayList<ProfileComponents>(info.components);
         if (named(inside, "user_basic_info") != null) return false;
+
         ProfileComponents names = named(inside, "user_info");
-        if (names == null) return false;
-
-        ProfileComponents basic = new ProfileComponents();
-        basic.componentId = "user_basic_info";
-        basic.componentName = "user_basic_info";
-        List<ProfileComponents> pair = new ArrayList<ProfileComponents>(2);
-        pair.add(avatar);
-        pair.add(names);
-        basic.components = pair;
-        inside.set(inside.indexOf(names), basic);
-        info.components = inside;
-
-        parts.remove(avatar);
-        // the new header has the bio before the buttons
-        ProfileComponents bio = named(parts, "bio"), cta = named(parts, "cta");
-        if (bio != null && cta != null && parts.indexOf(bio) > parts.indexOf(cta)) {
-            parts.remove(bio);
-            parts.add(parts.indexOf(cta), bio);
+        if (names == null) {
+            // the name parts loose in the info: gathered into one, as the new header has them
+            List<ProfileComponents> loose = new ArrayList<ProfileComponents>();
+            for (ProfileComponents part : inside)
+                if (part != null && ("user_account_name_info".equals(part.componentName) || "user_account_base_info".equals(part.componentName))) loose.add(part);
+            if (loose.isEmpty()) return false;
+            names = part("user_info", loose);
+            inside.add(inside.indexOf(loose.get(0)), names);
+            inside.removeAll(loose);
         }
+        List<ProfileComponents> nameParts = names.components == null
+                ? new ArrayList<ProfileComponents>() : new ArrayList<ProfileComponents>(names.components);
+        ProfileComponents counts = named(inside, "user_relation_info");
+        if (counts != null) {
+            inside.remove(counts);
+            if (named(nameParts, "user_relation_info") == null) nameParts.add(counts);
+        }
+        names.components = nameParts;
+
+        List<ProfileComponents> row = new ArrayList<ProfileComponents>(3);
+        if (!mine) row.add(part("", null));
+        row.add(names);
+        row.add(avatar);
+        inside.set(inside.indexOf(names), part("user_basic_info", row));
+        info.components = inside;
+        parts.remove(avatar);
         header.components = parts;
         return true;
     }
 
-    /** The other way: a new header put back in the old shape, as the server sends it to the old group. */
+    /** The new header taken back to the shape the old group gets: for the test only. */
     static boolean unrearrange(ProfileUser page) {
         ProfileComponents header = page.headerComponents;
         if (header == null || header.components == null) return false;
@@ -127,16 +168,29 @@ public final class ProfileHeader {
         ProfileComponents avatar = named(basic.components, "header_avatar");
         ProfileComponents names = named(basic.components, "user_info");
         if (avatar == null || names == null) return false;
-        inside.set(inside.indexOf(basic), names);
+        int at = inside.indexOf(basic);
+        inside.set(at, names);
+        if (names.components != null) {
+            List<ProfileComponents> nameParts = new ArrayList<ProfileComponents>(names.components);
+            ProfileComponents counts = named(nameParts, "user_relation_info");
+            if (counts != null) {
+                nameParts.remove(counts);
+                inside.add(at + 1, counts);
+            }
+            names.components = nameParts;
+        }
         info.components = inside;
         parts.add(0, avatar);
-        ProfileComponents bio = named(parts, "bio"), cta = named(parts, "cta");
-        if (bio != null && cta != null && parts.indexOf(cta) > parts.indexOf(bio)) {
-            parts.remove(cta);
-            parts.add(parts.indexOf(bio), cta);
-        }
         header.components = parts;
         return true;
+    }
+
+    private static ProfileComponents part(String name, List<ProfileComponents> inside) {
+        ProfileComponents made = new ProfileComponents();
+        made.componentId = name;
+        made.componentName = name;
+        made.components = inside;
+        return made;
     }
 
     // ------------------------------------------------------------ recording
@@ -166,15 +220,29 @@ public final class ProfileHeader {
         outline(out, "background", page.profileBackground, 0);
         String said = out.toString();
         if (RECORDED.size() < 8 && RECORDED.add((mine ? "mine\n" : "other\n") + said)) {
-            for (String line : ((mine ? "page, mine" : "page, someone else's") + "\n" + said).split("\n"))
-                android.util.Log.i("MargyTProfile", line);
+            write((mine ? "== page, mine" : "== page, someone else's") + "\n" + said);
         }
         if (!flagsRecorded) {
             flagsRecorded = true;
-            for (String key : FLAGS) {
-                Object theirs = Flags.own(new Flags.Known(key, "INT", 0));
-                android.util.Log.i("MargyTProfile", "flag " + key + " = " + theirs);
+            StringBuilder flags = new StringBuilder("== TikTok's own answers\n");
+            for (String key : FLAGS) flags.append(key).append(" = ").append(Flags.own(new Flags.Known(key, "INT", 0))).append('\n');
+            write(flags.toString());
+        }
+    }
+
+    /**
+     * Into a file in TikTok's own folder on the shared storage, which adb can
+     * read: some phones keep apps' lines out of logcat altogether.
+     */
+    private static synchronized void write(String text) {
+        try {
+            java.io.File folder = new java.io.File(Margy.context().getExternalFilesDir(null), "margyt");
+            if (!folder.isDirectory() && !folder.mkdirs()) return;
+            try (java.io.FileWriter out = new java.io.FileWriter(new java.io.File(folder, "profile.txt"), true)) {
+                out.write(text);
+                out.write('\n');
             }
+        } catch (Throwable ignored) {
         }
     }
 

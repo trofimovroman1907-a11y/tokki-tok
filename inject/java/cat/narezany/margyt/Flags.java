@@ -263,6 +263,18 @@ public final class Flags {
             // on top among them, and putting everybody in group 1 took the banner
             // away from those TikTok had put in another.
             made.put("profile_left_align", on(prefs, KEY_NEW_PROFILE) ? one : none);
+            // As an account in the new group has them (read off one): the avatar
+            // and the name merged into one row -- without it the avatar there is
+            // left empty -- pronouns, and the recommendation card. An account the
+            // server keeps in the old group gets no banner from the server either;
+            // with "avatar_opt" TikTok builds it from the account's own background.
+            if (on(prefs, KEY_NEW_PROFILE)) {
+                made.put("profile_left_align_avatar_and_info_merge", one);
+                made.put("profile_left_align_pronouns", one);
+                made.put("profile_left_align_recommend_card", one);
+                if (prefs.getBoolean(ProfileHeader.OLD_GROUP, false) || prefs.getBoolean(ProfileHeader.TEST, false))
+                    made.put("profile_left_align_avatar_opt", one);
+            }
 
 
             // last, so that a developer's answer beats a switch

@@ -28,7 +28,7 @@ STUBS = {
     'android/content/SharedPreferences.java': 'package android.content;public interface SharedPreferences{int getInt(String k,int d);boolean getBoolean(String k,boolean d);'
         'Editor edit();interface Editor{Editor putBoolean(String k,boolean v);Editor putInt(String k,int v);void apply();}}',
     'android/content/Context.java': 'package android.content;public class Context{public static final int MODE_PRIVATE=0;'
-        'public SharedPreferences getSharedPreferences(String n,int m){return Prefs.ONE;}}',
+        'public SharedPreferences getSharedPreferences(String n,int m){return Prefs.ONE;}public java.io.File getExternalFilesDir(String t){return null;}}',
     'android/content/Prefs.java': 'package android.content;public class Prefs implements SharedPreferences{public static final Prefs ONE=new Prefs();'
         'public java.util.Map<String,Object> kept=new java.util.HashMap<>();public int getInt(String k,int d){Object v=kept.get(k);return v==null?d:(Integer)v;}'
         'public boolean getBoolean(String k,boolean d){Object v=kept.get(k);return v==null?d:(Boolean)v;}public Editor edit(){final Prefs p=this;return new Editor(){'
@@ -43,28 +43,45 @@ import com.ss.android.ugc.profile.platform.base.data.*;import java.util.*;
 public class HeaderHarness{
  static void check(boolean ok,String what){if(!ok)throw new AssertionError(what);}
  static ProfileComponents c(String name,ProfileComponents... kids){ProfileComponents p=new ProfileComponents();p.componentId=name;p.componentName=name;p.components=kids.length==0?null:new ArrayList<ProfileComponents>(Arrays.asList(kids));return p;}
- static String shape(ProfileComponents p){StringBuilder s=new StringBuilder(p.componentName);if(p.components!=null){s.append('[');for(int i=0;i<p.components.size();i++){if(i>0)s.append(',');s.append(shape(p.components.get(i)));}s.append(']');}return s.toString();}
+ static String shape(ProfileComponents p){StringBuilder s=new StringBuilder(p.componentName.length()==0?"(empty)":p.componentName);if(p.components!=null){s.append('[');for(int i=0;i<p.components.size();i++){if(i>0)s.append(',');s.append(shape(p.components.get(i)));}s.append(']');}return s.toString();}
+ static ProfileComponents names(){return c("user_info",c("user_account_name_info",c("user_info_nickname")),c("user_account_base_info",c("user_account_user_name")));}
+ // the new header as the server sends it to an account in the new group, read off a phone
+ static ProfileUser realMine(){ProfileUser p=new ProfileUser();ProfileComponents n=names();n.components=new ArrayList<ProfileComponents>(n.components);((List<ProfileComponents>)n.components).add(c("user_relation_info",c("relation_info_following"),c("relation_info_follower")));
+  p.headerComponents=c("header",c("info",c("user_basic_info",n,c("header_avatar",c("avatar_normal")))),c("bio",c("bio_signature"),c("bio_profile_link")),c("advanced_feature",c("advanced_feature_balance")),c("story_highlight"));return p;}
+ static ProfileUser realOther(){ProfileUser p=new ProfileUser();ProfileComponents n=names();n.components=new ArrayList<ProfileComponents>(n.components);((List<ProfileComponents>)n.components).add(c("user_relation_info",c("relation_info_following")));
+  p.headerComponents=c("header",c("info",c("user_basic_info",c(""),n,c("header_avatar",c("avatar_normal")))),c("cta",c("cta_social_follow")),c("bio",c("bio_signature")));return p;}
  public static void main(String[] a){
+  // the old header, as TikTok's own template for the old group builds it
   ProfileUser old=new ProfileUser();
-  old.headerComponents=c("header",c("header_avatar",c("avatar_normal")),c("info",c("user_info",c("user_account_name_info"),c("user_account_base_info")),c("user_relation_info",c("relation_info_following"))),c("cta",c("cta_social_follow")),c("bio",c("bio_signature")),c("profile_banner"));
-  check(ProfileHeader.rearrange(old),"the old header is moved");
-  check(shape(old.headerComponents).equals("header[info[user_basic_info[header_avatar[avatar_normal],user_info[user_account_name_info,user_account_base_info]],user_relation_info[relation_info_following]],bio[bio_signature],cta[cta_social_follow],profile_banner]"),"into the new shape, the server's extras kept: "+shape(old.headerComponents));
-  check(!ProfileHeader.rearrange(old),"and a second time does nothing");
-  ProfileUser fresh=new ProfileUser();
-  fresh.headerComponents=c("header",c("info",c("user_basic_info",c("header_avatar"),c("user_info")),c("user_relation_info")),c("bio"),c("cta"));
-  String before=shape(fresh.headerComponents);
-  check(!ProfileHeader.rearrange(fresh)&&shape(fresh.headerComponents).equals(before),"a new header is left alone");
-  ProfileUser odd=new ProfileUser();odd.headerComponents=c("header",c("something_else"));
-  check(!ProfileHeader.rearrange(odd),"and one it does not know");
-  ProfileUser empty=new ProfileUser();check(!ProfileHeader.rearrange(empty),"and none at all");
-  // through TikTok's method: handed on as the server sent it, for now
-  ProfileUser page=new ProfileUser();page.headerComponents=c("header",c("header_avatar"),c("info",c("user_info")),c("cta"),c("bio"));
-  String sent=shape(page.headerComponents);
-  check(ProfileHeader.LJIILIIL(null,page,true,null)==page&&shape(page.headerComponents).equals(sent),"the call hands the page on untouched");
+  old.headerComponents=c("header",c("header_avatar",c("avatar_normal")),c("info",names(),c("user_relation_info",c("relation_info_following"),c("relation_info_follower"))),c("bio",c("bio_signature"),c("bio_profile_link")),c("advanced_feature",c("advanced_feature_balance")),c("story_highlight"));
+  check(ProfileHeader.rearrange(old,true),"the old header is moved");
+  check(shape(old.headerComponents).equals(shape(realMine().headerComponents)),"into exactly what the new group gets: "+shape(old.headerComponents));
+  check(!ProfileHeader.rearrange(old,true),"and a second time does nothing");
+  ProfileUser theirs=new ProfileUser();
+  theirs.headerComponents=c("header",c("header_avatar",c("avatar_normal")),c("info",names(),c("user_relation_info",c("relation_info_following"))),c("cta",c("cta_social_follow")),c("bio",c("bio_signature")));
+  check(ProfileHeader.rearrange(theirs,false)&&shape(theirs.headerComponents).equals(shape(realOther().headerComponents)),"someone else's, with the spacer: "+shape(theirs.headerComponents));
+  // the real pages there and back
+  for(ProfileUser real:new ProfileUser[]{realMine(),realOther()}){
+   String was=shape(real.headerComponents);boolean mine=!was.contains("(empty)");
+   check(ProfileHeader.unrearrange(real),"taken back to the old shape");
+   check(shape(real.headerComponents).startsWith("header[header_avatar"),"the avatar on its own above: "+shape(real.headerComponents));
+   check(ProfileHeader.rearrange(real,mine)&&shape(real.headerComponents).equals(was),"and mended it is the same again: "+shape(real.headerComponents));
+  }
+  ProfileUser fresh=realMine();String before=shape(fresh.headerComponents);
+  check(!ProfileHeader.rearrange(fresh,true)&&shape(fresh.headerComponents).equals(before),"a new header is left alone");
+  ProfileUser odd=new ProfileUser();odd.headerComponents=c("header",c("something_else"));check(!ProfileHeader.rearrange(odd,true),"and one it does not know");
+  ProfileUser empty=new ProfileUser();check(!ProfileHeader.rearrange(empty,true),"and none at all");
+  // through TikTok's method: moved, remembered as the old group, handed on
+  ProfileUser page=new ProfileUser();page.headerComponents=c("header",c("header_avatar"),c("info",names(),c("user_relation_info")),c("cta"),c("bio"));
+  check(ProfileHeader.LJIILIIL(null,page,false,null)==page&&shape(page.headerComponents).startsWith("header[info[user_basic_info[(empty),user_info"),"the call moves then hands on");
   check(X.Calls.count==1,"TikTok's own method ran once");
-  ProfileUser round=new ProfileUser();round.headerComponents=c("header",c("info",c("user_basic_info",c("header_avatar",c("avatar_normal")),c("user_info",c("user_account_name_info"))),c("user_relation_info")),c("bio"),c("cta"),c("profile_extra"));
-  String real=shape(round.headerComponents);
-  check(ProfileHeader.unrearrange(round)&&ProfileHeader.rearrange(round)&&shape(round.headerComponents).equals(real),"the moves undo each other");
+  check(android.content.Prefs.ONE.getBoolean("profile_old_group",false)&&Flags.forgot==1,"an old header seen is remembered as the old group");
+  // the developer's test: a new page taken back and mended is the same page
+  android.content.Prefs.ONE.kept.put("profile_header_mend_test",true);ProfileUser tested=realMine();String real=shape(tested.headerComponents);
+  ProfileHeader.LJIILIIL(null,tested,true,null);check(shape(tested.headerComponents).equals(real),"the test shows the real thing: "+shape(tested.headerComponents));
+  android.content.Prefs.ONE.kept.put("profile_header_mend_test",false);
+  Flags.on=false;ProfileUser kept=new ProfileUser();kept.headerComponents=c("header",c("header_avatar"),c("info",c("user_info")));
+  ProfileHeader.LJIILIIL(null,kept,false,null);check(shape(kept.headerComponents).startsWith("header[header_avatar"),"with the switch off the page is TikTok's");
   System.out.println("header passed");
  }
 }'''
