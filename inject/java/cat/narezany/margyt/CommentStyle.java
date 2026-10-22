@@ -135,7 +135,9 @@ final class CommentStyle {
             int colour=sheet?card:blend(card,Accent.colour(),.12f);
             float radius=(sheet?(Design.fluent()?8:28):(Design.fluent()?4:24))*dp;
             // The footer is square against the display edge; a single sheet owns the material.
-            if(!Design.draw(canvas,this,view,rect,radius,sheet?0:radius,colour,view.isPressed()?1:0)){
+            // The sheet itself is solid in every design: as glass or acrylic the words of the
+            // comments sat on a see-through surface and could hardly be read.
+            if(sheet || !Design.draw(canvas,this,view,rect,radius,sheet?0:radius,colour,view.isPressed()?1:0)){
                 paint.setColor(colour);float[] corners={radius,radius,radius,radius,sheet?0:radius,sheet?0:radius,sheet?0:radius,sheet?0:radius};
                 Path path=new Path();path.addRoundRect(rect,corners,Path.Direction.CW);canvas.drawPath(path,paint);
             }

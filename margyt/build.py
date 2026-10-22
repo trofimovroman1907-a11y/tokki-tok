@@ -247,6 +247,8 @@ class Build:
         manifest_module.add_activity(manifest, PACKAGE + ".PluginEditorActivity", SETTINGS_LABEL, theme)
         # a .mtp opened from a file manager comes to the mod (Theme.NoDisplay: it only hands the file on)
         manifest_module.add_file_opener(manifest, PACKAGE + ".PluginOpenActivity", "Плагин MargyT", 0x01030055, "mtp", ["application/octet-stream", "application/zip", "application/x-zip-compressed"])
+        # and a .mttheme, a theme somebody made (ThemeFile)
+        manifest_module.add_file_opener(manifest, PACKAGE + ".ThemeOpenActivity", "Тема MargyT", 0x01030055, "mttheme", ["application/octet-stream", "application/json", "text/plain"])
         # Margy Store under its new name and its old one: without this Android 11
         # and later will not tell the mod whether the store is there at all
         manifest_module.add_queries(manifest, ["cat.narezany.store", "cat.narezany.patcher"])
@@ -572,6 +574,8 @@ class Build:
         # the anti-burn eye: two small transparent PNGs, drawn as they are
         for eye in ("burn_eye_open.png", "burn_eye_closed.png"):
             entries.append(("assets/margyt/" + eye, os.path.join(asset_root, eye)))
+        # the fat tilcayo cut out of its background, for the running cats (TilcayoRun)
+        entries.append(("assets/margyt/tilcayo_run.png", os.path.join(asset_root, "tilcayo_run.png")))
         for destination, path in entries:
             with open(path, "rb") as handle:
                 raw = handle.read()

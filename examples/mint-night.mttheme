@@ -1,0 +1,47 @@
+{
+  "mttheme": 1,
+  "name": "Мятная ночь",
+  "author": "narezany",
+  "description": "Тёмная тема с мятным акцентом и светлая пара к ней.",
+  "accent": "#5BE7B9",
+  "design": "md3",
+  "amoled": false,
+  "engine": {
+    "on": true,
+    "wallpaper": false,
+    "strength": 100,
+    "dark": { "background": "#0E1714", "text": "#E6FFF5" },
+    "light": { "background": "#F1FFF9", "text": "#0B2019" }
+  },
+  "dark": {
+    "background": "#0E1714",
+    "secondary_background": "#13201B",
+    "surface": "#182822",
+    "text": "#E6FFF5",
+    "secondary_text": "#9FC2B5",
+    "divider": "#22362E",
+    "selected_tab": "#5BE7B9",
+    "nav_icon": "#CFEFE3",
+    "control": "#5BE7B9",
+    "switch": "#5BE7B9",
+    "progress": "#5BE7B9",
+    "profile": "#5BE7B9",
+    "nickname": "#E6FFF5"
+  },
+  "light": {
+    "background": "#F1FFF9",
+    "secondary_background": "#E4F7EF",
+    "surface": "#FFFFFF",
+    "text": "#0B2019",
+    "secondary_text": "#4C6A5E",
+    "divider": "#CFE6DC",
+    "selected_tab": "#14986E",
+    "nav_icon": "#1F3B31",
+    "control": "#14986E",
+    "switch": "#14986E",
+    "progress": "#14986E",
+    "profile": "#14986E",
+    "nickname": "#0B2019"
+  },
+  "likes": { "feed": "#FF5C8A", "comment": "#FF5C8A" }
+}

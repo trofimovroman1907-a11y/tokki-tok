@@ -728,6 +728,37 @@ final class Text {
     static final String AVARIYKA_NOTE = pick("Иногда выскакивает фейковое «аварийное обновление», как в старых модах. Никуда не ведёт.", "Іноді вискакує фейкове «аварійне оновлення», як у старих модах. Нікуди не веде.", "Now and then a fake “emergency update” pops up, like in old mods. It leads nowhere.");
     static final String FUN_RUBBLE = pick("Рассыпать интерфейс", "Розсипати інтерфейс", "Shatter the interface");
     static final String RUBBLE_NOTE = pick("Кнопки и надписи падают и катаются от наклона телефона. Выключается этим же переключателем или закрытием TikTok.", "Кнопки й написи падають і котяться від нахилу телефона. Вимикається цим самим перемикачем або закриттям TikTok.", "Buttons and labels fall and roll as you tilt the phone. This switch or closing TikTok turns it off.");
+    static final String THEME_FILE_INSTALL = pick("Установить тему .mttheme", "Встановити тему .mttheme", "Install a .mttheme theme");
+    static final String THEME_FILE_INSTALL_NOTE = pick("Тема из файла: цвета, акцент, стиль", "Тема з файлу: кольори, акцент, стиль", "A theme from a file: colours, accent, style");
+    static final String THEME_FILE_WEARING = pick("Сейчас:", "Зараз:", "Now:");
+    static final String THEME_FILE_SAVE = pick("Сохранить тему в файл", "Зберегти тему у файл", "Save as a theme file");
+    static final String THEME_FILE_SAVE_NOTE = pick("Текущее оформление как .mttheme", "Поточне оформлення як .mttheme", "What is set now, as a .mttheme");
+    static final String THEME_FILE_SAVE_ASK = pick("Как назвать тему? Файл можно отправить друзьям или поправить в любом редакторе текста.", "Як назвати тему? Файл можна надіслати друзям або підправити в будь-якому редакторі тексту.", "What is the theme called? The file can be sent to friends or changed in any text editor.");
+    static final String THEME_FILE_NAME = pick("Название темы", "Назва теми", "Theme name");
+    static final String THEME_FILE_DEFAULT_NAME = pick("Моя тема", "Моя тема", "My theme");
+    static final String THEME_FILE_SAVE_GO = pick("Выбрать, куда сохранить", "Вибрати, куди зберегти", "Choose where to save");
+    static final String THEME_FILE_SAVED = pick("Тема сохранена", "Тему збережено", "Theme saved");
+    static final String THEME_FILE_SAVE_FAILED = pick("Не получилось сохранить тему", "Не вдалося зберегти тему", "Could not save the theme");
+    static final String THEME_FILE_DOCS = pick("Как сделать свою тему", "Як зробити свою тему", "How to make a theme");
+    static final String THEME_FILE_REVIEW = pick("Тема", "Тема", "Theme");
+    static final String THEME_FILE_BY = pick("Автор:", "Автор:", "By");
+    static final String THEME_FILE_COLOURS = pick("Цветов в теме:", "Кольорів у темі:", "Colours in the theme:");
+    static final String THEME_FILE_APPLY = pick("Применить", "Застосувати", "Apply");
+    static final String THEME_FILE_APPLIED = pick("Тема применена", "Тему застосовано", "Theme applied");
+    static final String THEME_FILE_REFUSED = pick("Это не тема", "Це не тема", "Not a theme");
+    static final String THEME_FILE_UNREADABLE = pick("Файл не открылся", "Файл не відкрився", "The file could not be opened");
+    static final String THEME_FILE_EMPTY = pick("Файл пустой.", "Файл порожній.", "The file is empty.");
+    static final String THEME_FILE_BIG = pick("Файл больше 64 КБ, для темы это слишком.", "Файл більший за 64 КБ, для теми це забагато.", "The file is over 64 KB, too big for a theme.");
+    static final String THEME_FILE_NOT_JSON = pick("Внутри не JSON.", "Усередині не JSON.", "There is no JSON inside.");
+    static final String THEME_FILE_NOT_THEME = pick("Нет поля \"mttheme\": это не тема MargyT.", "Немає поля \"mttheme\": це не тема MargyT.", "No \"mttheme\" field: this is not a MargyT theme.");
+    static final String THEME_FILE_NEWER = pick("Тема сделана для более новой версии MargyT. Обновите мод.", "Тему зроблено для новішої версії MargyT. Оновіть мод.", "The theme is for a newer MargyT. Update the mod.");
+    static final String THEME_FILE_NO_NAME = pick("У темы нет названия (поле \"name\").", "У теми немає назви (поле \"name\").", "The theme has no name (the \"name\" field).");
+    static final String THEME_FILE_BAD_COLOUR = pick("Цвет не в формате #RRGGBB:", "Колір не у форматі #RRGGBB:", "A colour not written as #RRGGBB:");
+    static final String THEME_FILE_BAD_DESIGN = pick("Неизвестный стиль интерфейса:", "Невідомий стиль інтерфейсу:", "Unknown interface style:");
+    static final String FUN_TILCAYO_RUN = pick("Бегающие тилкайо", "Бігаючі тілкайо", "Running tilcayos");
+    static final String TILCAYO_RUN_NOTE = pick("Внизу экрана бегают и прыгают толстые тилкайо, иногда обнимаются, целуются и пускают салют. Нажатиям не мешают.",
+            "Унизу екрана бігають і стрибають товсті тілкайо, іноді обіймаються, цілуються й пускають салют. Натисканням не заважають.",
+            "Fat tilcayos run and jump along the bottom of the screen, now and then hugging, kissing and setting off fireworks. Taps go through them.");
     static final String FUN_NOTE = pick("Деп калькулятор, скримеры и тилкайо",
             "Деп калькулятор, скримери й тілкайо", "Dep Calculator, screamers and tilcayo");
     static final String FUN_HELP = pick("Ни для чего не нужное. Само ничего не включится.", "Ні для чого не потрібне. Само нічого не ввімкнеться.", "Good for nothing. Nothing here turns on by itself.");
@@ -1461,6 +1492,7 @@ final class Text {
     static final String PAGE_DEP_NOTE = pick("Казино понарошку и значок за победу", "Казино понарошку і значок за перемогу", "A pretend casino with a badge to win");
     static final String PAGE_RUBBLE_NOTE = pick("Интерфейс TikTok падает и катается по экрану", "Інтерфейс TikTok падає й котиться екраном", "TikTok's buttons fall and roll about");
     static final String PAGE_SCREAMERS_NOTE = pick("Внезапный кот поверх ленты", "Раптовий кіт поверх стрічки", "A sudden cat over the feed");
+    static final String PAGE_TILCAYO_NOTE = pick("Тилкайо бегают и прыгают внизу экрана", "Тілкайо бігають і стрибають унизу екрана", "Tilcayos run and jump along the bottom");
     static final String PAGE_CAT_NOTE = pick("Толстый тилкайо", "Товстий тілкайо", "The fat tilcayo");
     static final String AMOLED = pick("AMOLED", "AMOLED", "AMOLED");
     static final String AMOLED_NOTE = pick("Чистый чёрный вместо тёмно-серого.", "Чистий чорний замість темно-сірого.", "Pure black instead of dark grey.");

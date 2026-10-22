@@ -226,7 +226,7 @@ public final class Themes {
         put(modeKey(KEY_BACKGROUND, isDark()), colour);
     }
 
-    private static String modeKey(String key, boolean dark) {
+    static String modeKey(String key, boolean dark) {
         return key + (dark ? "_dark" : "_light");
     }
 

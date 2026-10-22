@@ -97,6 +97,8 @@ public class SettingsActivity extends Activity {
     private static final String GIT = "https://git.narez.xyz/narezany/MargyT";
     private static final String DOCS_PLUGINS =
             "https://git.narez.xyz/narezany/MargyT/src/branch/main/docs/plugins.md";
+    private static final String DOCS_THEMES =
+            "https://git.narez.xyz/narezany/MargyT/src/branch/main/docs/themes.md";
     private static final String YOOMONEY = "https://yoomoney.ru/to/4100118196133693";
     private static final String BOOSTY = "https://boosty.to/ega_link";
     private static final String FUNPAY = "https://funpay.com/lots/offer?id=80127335";
@@ -158,6 +160,7 @@ public class SettingsActivity extends Activity {
             new Shelf(7, "notifications", "notifications", Text.NOTIFICATIONS, Text.PAGE_NOTIFICATIONS_NOTE, Text.NOTIFICATIONS),
             new Shelf(8, "dep", "flare", Text.FUN_DEP, Text.PAGE_DEP_NOTE, Text.FUN_DEP),
             new Shelf(8, "rubble", "open_with", Text.FUN_RUBBLE, Text.PAGE_RUBBLE_NOTE, Text.FUN_RUBBLE),
+            new Shelf(8, "tilcayo", "animation", Text.FUN_TILCAYO_RUN, Text.PAGE_TILCAYO_NOTE, Text.FUN_TILCAYO_RUN),
             new Shelf(8, "screamers", "animation", Text.FUN_SCREAMERS, Text.PAGE_SCREAMERS_NOTE, Text.FUN_SCREAMERS),
             new Shelf(8, "avariyka", "notifications", Text.FUN_AVARIYKA, Text.PAGE_AVARIYKA_NOTE, Text.FUN_AVARIYKA),
             new Shelf(8, "cat", "image", Text.FUN_CAT, Text.PAGE_CAT_NOTE, Text.FUN_CAT),
@@ -244,16 +247,32 @@ public class SettingsActivity extends Activity {
         maybeAskForSupport();
         if(getIntent().getBooleanExtra("margyt_tutorial",false))root.postDelayed(()->Tutorial.show(this),350L);
         openPluginFile(getIntent());
+        openThemeFile(getIntent());
     }
 
     /** Set by PluginOpenActivity: a .mtp opened from a file manager, to review as if it were picked here. */
     static final String OPEN_PLUGIN = "margyt_open_plugin";
+    /** Set by ThemeOpenActivity: a .mttheme opened from a file manager. */
+    static final String OPEN_THEME = "margyt_open_theme";
+
+    private void openThemeFile(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra(OPEN_THEME, false) || intent.getData() == null) return;
+        final Uri file = intent.getData();
+        intent.removeExtra(OPEN_THEME);
+        searchQuery = "";
+        settingsGroup = groupOf(Text.THEME);
+        Shelf to = shelfOfSection(Text.THEME);
+        settingsPage = to == null ? null : to.id;
+        rebuild();
+        root.post(() -> reviewTheme(file));
+    }
 
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
         openPluginFile(intent);
+        openThemeFile(intent);
     }
 
     private void openPluginFile(Intent intent) {
@@ -458,6 +477,15 @@ public class SettingsActivity extends Activity {
         theme.addView(line());
         theme.addView(actionRow("palette", Text.THEME_PRESETS, Text.THEME_PRESETS_NOTE,
                 this::chooseThemePreset));
+        theme.addView(line());
+        String wearing = ThemeFile.current(this);
+        theme.addView(actionRow("download", Text.THEME_FILE_INSTALL,
+                wearing.isEmpty() ? Text.THEME_FILE_INSTALL_NOTE : Text.THEME_FILE_WEARING + " " + wearing, this::pickTheme));
+        theme.addView(line());
+        theme.addView(actionRow("upload", Text.THEME_FILE_SAVE, Text.THEME_FILE_SAVE_NOTE, this::saveTheme));
+        theme.addView(line());
+        theme.addView(actionRow("article", Text.THEME_FILE_DOCS, null,
+                () -> startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(DOCS_THEMES)))));
         theme.addView(line());
         theme.addView(themeColoursHead());
         if (themeColoursOpen) {
@@ -971,6 +999,14 @@ public class SettingsActivity extends Activity {
         rubble.addView(liveToggleRow("open_with", Text.FUN_RUBBLE, Rubble.on(), on -> { if (on) Rubble.arm(this); else Rubble.stop(); }));
         rubble.addView(quiet(Text.RUBBLE_NOTE));
         column.addView(wrap(rubble));
+
+        column.addView(section(Text.FUN_TILCAYO_RUN));
+        LinearLayout runway = card();
+        runway.addView(new TilcayoRun.Runway(this, false),
+                new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(130)));
+        runway.addView(liveToggleRow("animation", Text.FUN_TILCAYO_RUN, TilcayoRun.isOn(this), on -> TilcayoRun.set(this, on)));
+        runway.addView(quiet(Text.TILCAYO_RUN_NOTE));
+        column.addView(wrap(runway));
 
         column.addView(section(Text.FUN_AVARIYKA));
         LinearLayout avariyka = card();
@@ -3333,6 +3369,81 @@ public class SettingsActivity extends Activity {
         panel.quiet(Local.of("Назад"),null).show();
     }
 
+    private static final int PICK_THEME = 0x4D54;   // "MT"
+    private static final int CREATE_THEME = 0x4D53; // "MS"
+    /** The name typed for a theme being saved, until the file is chosen. */
+    private String themeToSave;
+
+    private void pickTheme() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            // .mttheme is nobody's registered type either
+            intent.setType("*/*");
+            startActivityForResult(intent, PICK_THEME);
+        } catch (Throwable error) {
+            Toast.makeText(this, String.valueOf(error), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void saveTheme() {
+        final Panel panel = Panel.with(this, skin, Text.THEME_FILE_SAVE).text(Text.THEME_FILE_SAVE_ASK);
+        final EditText name = panel.field(Text.THEME_FILE_NAME);
+        String wearing = ThemeFile.current(this);
+        name.setText(wearing.isEmpty() ? Text.THEME_FILE_DEFAULT_NAME : wearing);
+        panel.primary(Text.THEME_FILE_SAVE_GO, () -> {
+            String chosen = name.getText().toString().trim();
+            themeToSave = chosen.isEmpty() ? Text.THEME_FILE_DEFAULT_NAME : chosen;
+            try {
+                Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                intent.addCategory(Intent.CATEGORY_OPENABLE);
+                intent.setType("application/octet-stream");
+                intent.putExtra(Intent.EXTRA_TITLE, ThemeFile.fileName(themeToSave));
+                startActivityForResult(intent, CREATE_THEME);
+            } catch (Throwable error) {
+                Toast.makeText(this, String.valueOf(error), Toast.LENGTH_LONG).show();
+            }
+        }).quiet(Local.of("Назад"), null).show();
+    }
+
+    private void reviewTheme(final Uri source) {
+        Net.away("theme review", () -> {
+            String trouble = null;
+            ThemeFile.Theme theme = null;
+            try (java.io.InputStream in = getContentResolver().openInputStream(source)) {
+                java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+                byte[] chunk = new byte[8192];
+                for (int n; in != null && (n = in.read(chunk)) > 0 && out.size() <= 70 * 1024; ) out.write(chunk, 0, n);
+                theme = ThemeFile.read(out.toByteArray());
+            } catch (ThemeFile.Refused refused) {
+                trouble = refused.getMessage();
+            } catch (Throwable error) {
+                trouble = Text.THEME_FILE_UNREADABLE;
+            }
+            final ThemeFile.Theme found = theme;
+            final String why = trouble;
+            runOnUiThread(() -> {
+                if (isFinishing()) return;
+                if (found == null) {
+                    Panel.with(this, skin, Text.THEME_FILE_REFUSED).text(why).quiet(Local.of("Назад"), null).show();
+                    return;
+                }
+                StringBuilder about = new StringBuilder(found.name);
+                if (!found.author.isEmpty()) about.append('\n').append(Text.THEME_FILE_BY).append(' ').append(found.author);
+                if (!found.description.isEmpty()) about.append("\n\n").append(found.description);
+                about.append("\n\n").append(Text.THEME_FILE_COLOURS).append(' ').append(found.colours);
+                Panel.with(this, skin, Text.THEME_FILE_REVIEW).text(about.toString())
+                        .primary(Text.THEME_FILE_APPLY, () -> {
+                            ThemeFile.apply(this, found);
+                            markChanged();
+                            rebuild();
+                            Screen.say(Text.THEME_FILE_APPLIED);
+                        })
+                        .quiet(Local.of("Назад"), null).show();
+            });
+        });
+    }
+
     private void pickPlugin() {
         try {
             Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
@@ -3363,6 +3474,25 @@ public class SettingsActivity extends Activity {
         }
         if (request == PICK_BACKUP) {
             reviewBackup(source);
+            return;
+        }
+        if (request == PICK_THEME) {
+            reviewTheme(source);
+            return;
+        }
+        if (request == CREATE_THEME) {
+            final String name = themeToSave == null ? Text.THEME_FILE_DEFAULT_NAME : themeToSave;
+            Net.away("theme save", () -> {
+                String json = ThemeFile.export(this, name);
+                boolean done = false;
+                if (json != null) try (java.io.OutputStream out = getContentResolver().openOutputStream(source)) {
+                    if (out != null) { out.write(json.getBytes("UTF-8")); done = true; }
+                } catch (Throwable error) {
+                    Diary.note("theme save: " + error);
+                }
+                final boolean saved = done;
+                runOnUiThread(() -> Screen.say(saved ? Text.THEME_FILE_SAVED : Text.THEME_FILE_SAVE_FAILED));
+            });
             return;
         }
 
