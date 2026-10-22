@@ -3,12 +3,7 @@ import android.app.Dialog;import android.view.View;import android.view.ViewGroup
 /** One bounded pass when the native share sheet opens, without polling the feed. */
 public final class DownloadChoice {
  
- static final String KEY="download_window";
- /** Whether Download on TikTok's sheet opens the mod's window, with its choice of quality. Off, TikTok saves the video itself. */
- static boolean windowOn(){try{return Margy.context().getSharedPreferences(Margy.PREFS,android.content.Context.MODE_PRIVATE).getBoolean(KEY,true);}catch(Throwable ignored){return true;}}
- static void setWindow(boolean on){try{Margy.context().getSharedPreferences(Margy.PREFS,android.content.Context.MODE_PRIVATE).edit().putBoolean(KEY,on).apply();}catch(Throwable ignored){}}
-
- public static void show(Dialog dialog){dialog.show();if(!windowOn()||dialog.getClass().getName().startsWith("cat.narezany.margyt.")||dialog.getWindow()==null)return;
+ public static void show(Dialog dialog){dialog.show();if(!VideoActions.windowOn()||dialog.getClass().getName().startsWith("cat.narezany.margyt.")||dialog.getWindow()==null)return;
   Object found=VideoActions.downloadPost(dialog.getContext());if(found==null)found=SheetPost.of(dialog);if(found==null)return;final Object post=found;guard(dialog,post);View root=dialog.getWindow().getDecorView();root.post(()->bind(root,dialog,post,0,new int[]{512}));for(int delay:new int[]{150,500})root.postDelayed(()->{if(dialog.isShowing())bind(root,dialog,post,0,new int[]{512});},delay);
  }
  static boolean saveLabel(CharSequence value){if(value==null)return false;String text=value.toString().trim().toLowerCase(java.util.Locale.ROOT);return text.equals("скачать")||text.equals("download")||text.equals("завантажити")||text.equals("сохранить видео")||text.equals("save video")||text.equals("скачать видео")||text.equals("завантажити відео")||text.equals("зберегти відео")||text.equals("download video")||text.equals("скачать фото")||text.equals("сохранить фото")||text.equals("download photo")||text.equals("save photo")||text.equals("завантажити фото")||text.equals("зберегти фото");}

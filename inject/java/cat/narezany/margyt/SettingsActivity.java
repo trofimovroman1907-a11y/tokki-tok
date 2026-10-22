@@ -768,7 +768,7 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.DOWNLOADS));
         LinearLayout downloads = card();
-        downloads.addView(liveToggleRow("download", Text.DOWNLOAD_WINDOW, DownloadChoice.windowOn(), DownloadChoice::setWindow));
+        downloads.addView(liveToggleRow("download", Text.DOWNLOAD_WINDOW, VideoActions.windowOn(), VideoActions::setWindow));
         downloads.addView(quiet(Text.DOWNLOAD_WINDOW_NOTE));
         downloads.addView(line());
         LinearLayout qualityHead = row();

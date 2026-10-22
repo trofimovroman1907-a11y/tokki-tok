@@ -60,6 +60,25 @@ public final class VideoActions {
   panel.item("fast_forward",Text.SEEK_FORWARD,PlayerTools.step()+Local.of(" с"),null,()->PlayerTools.seek(true,false));
   panel.item("timeline",Text.SEEK_SMOOTH,null,null,()->PlayerTools.seek(false,true));panel.quiet(Text.CLOSE,null).show();
  }
+
+    static final String WINDOW_KEY = "download_window";
+
+    /** Whether Download on TikTok's sheet opens the mod's window, with its choice of quality. Off, TikTok saves the video itself. */
+    static boolean windowOn() {
+        try {
+            return Margy.context().getSharedPreferences(Margy.PREFS, android.content.Context.MODE_PRIVATE).getBoolean(WINDOW_KEY, true);
+        } catch (Throwable ignored) {
+            return true;
+        }
+    }
+
+    static void setWindow(boolean on) {
+        try {
+            Margy.context().getSharedPreferences(Margy.PREFS, android.content.Context.MODE_PRIVATE).edit().putBoolean(WINDOW_KEY, on).apply();
+        } catch (Throwable ignored) {
+        }
+    }
+
  static void chooseDownload(Context c,Object post){
   if(post==null){Screen.say(Text.VIDEO_NOT_READY);return;}
   java.util.List<DownloadQuality.Choice> photos=DownloadQuality.photos(post,Download.isEnabled());
