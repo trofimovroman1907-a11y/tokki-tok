@@ -28,7 +28,9 @@ class NewProfileFlagTest(unittest.TestCase):
             java = handle.read()
         self.assertIn("public static boolean newProfile()", java)
         # the group decides the banner on top: forcing it took the banner away
-        self.assertNotIn('made.put("profile_left_align_ab_group"', java)
+        self.assertNotIn('made.put("profile_left_align_ab_group", one)', java)
+        # an account seen in the old group gets the avatar and banner part of the new profile
+        self.assertIn('made.put("profile_left_align_avatar_opt", one)', java)
         # with no context yet the table is not built, and the profile is still answered
         self.assertIn("if (known == null) return early(key);", java)
         self.assertIn("shared_prefs/\" + Margy.PREFS + \".xml\"", java)

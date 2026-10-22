@@ -20,8 +20,17 @@ STUBS = {
     'com/ss/android/ugc/profile/platform/base/data/ProfileUser.java':
         'package com.ss.android.ugc.profile.platform.base.data;public class ProfileUser{public ProfileComponents headerComponents;}',
     'kotlin/jvm/functions/Function1.java': 'package kotlin.jvm.functions;public interface Function1<P,R>{R invoke(P p);}',
-    'cat/narezany/margyt/Flags.java': 'package cat.narezany.margyt;class Flags{static boolean on=true;static boolean newProfile(){return on;}}',
+    'cat/narezany/margyt/Flags.java': 'package cat.narezany.margyt;class Flags{static boolean on=true;static int forgot;static boolean newProfile(){return on;}static void forget(){forgot++;}}',
     'cat/narezany/margyt/Diary.java': 'package cat.narezany.margyt;class Diary{static void note(String s){}}',
+    'android/content/SharedPreferences.java': 'package android.content;public interface SharedPreferences{int getInt(String k,int d);boolean getBoolean(String k,boolean d);'
+        'Editor edit();interface Editor{Editor putBoolean(String k,boolean v);Editor putInt(String k,int v);void apply();}}',
+    'android/content/Context.java': 'package android.content;public class Context{public static final int MODE_PRIVATE=0;'
+        'public SharedPreferences getSharedPreferences(String n,int m){return Prefs.ONE;}}',
+    'android/content/Prefs.java': 'package android.content;public class Prefs implements SharedPreferences{public static final Prefs ONE=new Prefs();'
+        'public java.util.Map<String,Object> kept=new java.util.HashMap<>();public int getInt(String k,int d){Object v=kept.get(k);return v==null?d:(Integer)v;}'
+        'public boolean getBoolean(String k,boolean d){Object v=kept.get(k);return v==null?d:(Boolean)v;}public Editor edit(){final Prefs p=this;return new Editor(){'
+        'public Editor putBoolean(String k,boolean v){p.kept.put(k,v);return this;}public Editor putInt(String k,int v){p.kept.put(k,v);return this;}public void apply(){}};}}',
+    'cat/narezany/margyt/Margy.java': 'package cat.narezany.margyt;class Margy{static final String PREFS="margyt";static android.content.Context context(){return new android.content.Context();}}',
     # TikTok's own method, which the mod calls after moving the parts
     'X/0sm9.java': None,
 }
@@ -49,6 +58,16 @@ public class HeaderHarness{
   ProfileUser page=new ProfileUser();page.headerComponents=c("header",c("header_avatar"),c("info",c("user_info")),c("cta"),c("bio"));
   check(ProfileHeader.LJIILIIL(null,page,true,null)==page&&shape(page.headerComponents).startsWith("header[info[user_basic_info"),"the call moves then hands on");
   check(X.Calls.count==1,"TikTok's own method ran once");
+  check(android.content.Prefs.ONE.getBoolean("profile_old_group",false)&&Flags.forgot==1,"an old header seen is remembered as the old group");
+  ProfileUser round=new ProfileUser();round.headerComponents=c("header",c("info",c("user_basic_info",c("header_avatar",c("avatar_normal")),c("user_info",c("user_account_name_info"))),c("user_relation_info")),c("bio"),c("cta"),c("profile_extra"));
+  String real=shape(round.headerComponents);
+  check(ProfileHeader.unrearrange(round)&&shape(round.headerComponents).equals("header[header_avatar[avatar_normal],info[user_info[user_account_name_info],user_relation_info],cta,bio,profile_extra]"),"a new header taken back to the old: "+shape(round.headerComponents));
+  check(ProfileHeader.rearrange(round)&&shape(round.headerComponents).equals(real),"and mended, it is the new one again exactly");
+  android.content.Prefs.ONE.kept.put("profile_header_test",1);ProfileUser shown=new ProfileUser();shown.headerComponents=c("header",c("info",c("user_basic_info",c("header_avatar"),c("user_info")),c("user_relation_info")),c("bio"),c("cta"));
+  ProfileHeader.LJIILIIL(null,shown,true,null);check(shape(shown.headerComponents).startsWith("header[header_avatar"),"the old group's view, for testing");
+  android.content.Prefs.ONE.kept.put("profile_header_test",2);ProfileUser mended=new ProfileUser();mended.headerComponents=c("header",c("info",c("user_basic_info",c("header_avatar"),c("user_info")),c("user_relation_info")),c("bio"),c("cta"));
+  ProfileHeader.LJIILIIL(null,mended,true,null);check(shape(mended.headerComponents).startsWith("header[info[user_basic_info"),"and mended, for testing");
+  android.content.Prefs.ONE.kept.put("profile_header_test",0);
   Flags.on=false;ProfileUser kept=new ProfileUser();kept.headerComponents=c("header",c("header_avatar"),c("info",c("user_info")));
   ProfileHeader.LJIILIIL(null,kept,false,null);check(shape(kept.headerComponents).startsWith("header[header_avatar"),"with the switch off the page is TikTok's");
   System.out.println("header passed");

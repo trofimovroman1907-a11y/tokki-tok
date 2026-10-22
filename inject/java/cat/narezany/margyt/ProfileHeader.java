@@ -32,10 +32,49 @@ public final class ProfileHeader {
 
     private static volatile java.lang.reflect.Method original;
 
+    /**
+     * Remembered once the server has been seen sending this phone's account the
+     * old header: the account is in the old group, and the parts of the new
+     * profile that go by their own switches (the avatar and the banner above
+     * it) are switched on for it too (Flags).
+     */
+    static final String OLD_GROUP = "profile_old_group";
+
+    /**
+     * For a developer whose own account is in the new group, to see what one in
+     * the old group sees: 1 the old header and none of the new profile's
+     * parts, as such an account gets them; 2 the same, then mended as the mod
+     * mends it. 0 is as it is.
+     */
+    static final String TEST = "profile_header_test";
+
+    static int test() {
+        try {
+            return Margy.context().getSharedPreferences(Margy.PREFS, android.content.Context.MODE_PRIVATE).getInt(TEST, 0);
+        } catch (Throwable ignored) {
+            return 0;
+        }
+    }
+
+    static boolean oldGroup() {
+        try {
+            return Margy.context().getSharedPreferences(Margy.PREFS, android.content.Context.MODE_PRIVATE).getBoolean(OLD_GROUP, false);
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     /** In place of TikTok's X.0sm9.LJIILIIL(user, page, mine, then). */
     public static ProfileUser LJIILIIL(User user, ProfileUser page, boolean mine, kotlin.jvm.functions.Function1 then) {
         try {
-            if (page != null && Flags.newProfile()) rearrange(page);
+            int test = test();
+            if (page != null && test > 0) unrearrange(page);
+            if (page != null && (test == 2 || (test == 0 && Flags.newProfile())) && rearrange(page) && test == 0 && !oldGroup()) {
+                Margy.context().getSharedPreferences(Margy.PREFS, android.content.Context.MODE_PRIVATE).edit()
+                        .putBoolean(OLD_GROUP, true).apply();
+                Flags.forget();
+                Diary.note("profile header: the server sends the old header, the new profile's own parts are switched on from the next start");
+            }
         } catch (Throwable error) {
             Diary.note("profile header: " + error);
         }
@@ -88,6 +127,31 @@ public final class ProfileHeader {
         if (bio != null && cta != null && parts.indexOf(bio) > parts.indexOf(cta)) {
             parts.remove(bio);
             parts.add(parts.indexOf(cta), bio);
+        }
+        header.components = parts;
+        return true;
+    }
+
+    /** The other way: a new header put back in the old shape, as the server sends it to the old group. */
+    static boolean unrearrange(ProfileUser page) {
+        ProfileComponents header = page.headerComponents;
+        if (header == null || header.components == null) return false;
+        List<ProfileComponents> parts = new ArrayList<ProfileComponents>(header.components);
+        ProfileComponents info = named(parts, "info");
+        if (info == null || info.components == null || named(parts, "header_avatar") != null) return false;
+        List<ProfileComponents> inside = new ArrayList<ProfileComponents>(info.components);
+        ProfileComponents basic = named(inside, "user_basic_info");
+        if (basic == null || basic.components == null) return false;
+        ProfileComponents avatar = named(basic.components, "header_avatar");
+        ProfileComponents names = named(basic.components, "user_info");
+        if (avatar == null || names == null) return false;
+        inside.set(inside.indexOf(basic), names);
+        info.components = inside;
+        parts.add(0, avatar);
+        ProfileComponents bio = named(parts, "bio"), cta = named(parts, "cta");
+        if (bio != null && cta != null && parts.indexOf(cta) > parts.indexOf(bio)) {
+            parts.remove(cta);
+            parts.add(parts.indexOf(bio), cta);
         }
         header.components = parts;
         return true;
