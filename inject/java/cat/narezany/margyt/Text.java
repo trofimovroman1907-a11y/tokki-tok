@@ -1282,6 +1282,10 @@ final class Text {
     static final String VERDICT_FAILED = pick("Не получилось сохранить пометку", "Не вдалося зберегти позначку", "Could not save the mark");
 
     static final String ICON_LEGACY = pick("Legacy", "Legacy", "Legacy");
+    static final String DOWNLOAD_WINDOW = pick("Своё окно скачивания", "Власне вікно завантаження", "The mod's download window");
+    static final String DOWNLOAD_WINDOW_NOTE = pick("С выбором качества. Если выключить, TikTok скачивает сам.",
+            "З вибором якості. Якщо вимкнути, TikTok завантажує сам.",
+            "With a choice of quality. Off, TikTok downloads by itself.");
     static final String RAIL_TAP = pick("Кнопки на картинке тоже нажимаются: так их можно скрыть и вернуть.",
             "Кнопки на картинці теж натискаються: так їх можна сховати й повернути.",
             "The buttons on the picture can be tapped too, to hide them and bring them back.");

@@ -528,7 +528,10 @@ final class SettingsPictures {
             for (int i = 0; i < worn.length; i++) {
                 if (worn[i] == null) continue;
                 float s = size * on.value;
-                box.set(x, cy - s / 2f, x + s, cy + s / 2f);
+                // as wide as the picture is for its height, the way a badge sits after a name
+                float wide = pictures[i] != null && pictures[i].getHeight() > 0
+                        ? s * pictures[i].getWidth() / pictures[i].getHeight() : s;
+                box.set(x, cy - s / 2f, x + wide, cy + s / 2f);
                 if (pictures[i] != null) {
                     paint.setColorFilter(new android.graphics.PorterDuffColorFilter(worn[i].colour == 0 ? 0xFF8DD1B0 : worn[i].colour,
                             android.graphics.PorterDuff.Mode.SRC_IN));
@@ -540,7 +543,7 @@ final class SettingsPictures {
                     paint.setColor(faint(worn[i].colour == 0 ? 0xFF8DD1B0 : worn[i].colour, on.value));
                     canvas.drawCircle(box.centerX(), box.centerY(), s / 2.6f, paint);
                 }
-                x += (size + gap) * on.value;
+                x += (box.width() + gap * on.value);
             }
         }
     }

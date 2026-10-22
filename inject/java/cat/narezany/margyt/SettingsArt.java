@@ -70,23 +70,24 @@ final class SettingsArt {
      * the left, the buttons down the right, the caption and the bottom bar.
      */
     static final class Phone extends View {
-        private static float lastUi = 1f, lastEye = 0f, lastBar = 1f, lastSimple = 0f,
-                lastLiked = 0f, lastCapsule = 0f, lastSeek = 0f, lastDate = 0f;
-        private static final float[] lastRail = {1, 1, 1, 1};
+        /**
+         * How each card's phone was last drawn, by the card: the screen saver's
+         * phone is faint, and that was spilling onto every other phone in the
+         * settings, which then showed nothing but a video.
+         * In order: ui, eye, bar, simple, liked, capsule, seek, date, rail x4.
+         */
+        private static final java.util.HashMap<String, float[]> MEMORY = new java.util.HashMap<String, float[]>();
+        private final float[] memory;
 
         private final Skin skin;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint text = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
         private final RectF box = new RectF();
         private final Path path = new Path();
-        private final Eased ui = new Eased(lastUi), eye = new Eased(lastEye), bar = new Eased(lastBar),
-                simple = new Eased(lastSimple);
-        private float wantUi = 1f, wantEye = 0f, wantBar = 1f, wantSimple = 0f;
-        private final Eased liked = new Eased(lastLiked), capsule = new Eased(lastCapsule),
-                seek = new Eased(lastSeek), date = new Eased(lastDate);
-        private final Eased[] rails = {new Eased(lastRail[0]), new Eased(lastRail[1]), new Eased(lastRail[2]), new Eased(lastRail[3])};
-        private float wantLiked = lastLiked, wantCapsule = lastCapsule, wantSeek = lastSeek, wantDate = lastDate;
-        private final float[] wantRail = lastRail.clone();
+        private final Eased ui, eye, bar, simple, liked, capsule, seek, date;
+        private final Eased[] rails;
+        private float wantUi, wantEye, wantBar, wantSimple, wantLiked, wantCapsule, wantSeek, wantDate;
+        private final float[] wantRail;
         private Bitmap avatar;
 
         /** Told which of the buttons down the right was tapped on the picture itself. */
@@ -134,15 +135,32 @@ final class SettingsArt {
         }
 
         Phone(Context context, Skin skin) {
+            this(context, skin, "phone");
+        }
+
+        /** `key` names the card: each remembers its own phone. */
+        Phone(Context context, Skin skin, String key) {
             super(context);
             this.skin = skin;
+            float[] m = MEMORY.get(key);
+            if (m == null) {
+                m = new float[] {1, 0, 1, 0, 0, 0, 0, 0, 1, 1, 1, 1};
+                MEMORY.put(key, m);
+            }
+            memory = m;
+            ui = new Eased(m[0]); eye = new Eased(m[1]); bar = new Eased(m[2]); simple = new Eased(m[3]);
+            liked = new Eased(m[4]); capsule = new Eased(m[5]); seek = new Eased(m[6]); date = new Eased(m[7]);
+            rails = new Eased[] {new Eased(m[8]), new Eased(m[9]), new Eased(m[10]), new Eased(m[11])};
+            wantUi = m[0]; wantEye = m[1]; wantBar = m[2]; wantSimple = m[3];
+            wantLiked = m[4]; wantCapsule = m[5]; wantSeek = m[6]; wantDate = m[7];
+            wantRail = new float[] {m[8], m[9], m[10], m[11]};
             avatar = Launcher.preview("tilcayo");
             setMinimumHeight(Math.round(dp(context, 250)));
         }
 
         /** The screen saver: on or off, how faint it makes things, and whether the bottom bar stays. */
         Phone burn(boolean on, int strength, boolean keepBar) {
-            float faint = on ? Math.max(0.06f, 1f - strength / 100f) : 1f;
+            float faint = on ? Math.max(0.1f, 1f - strength / 100f) : 1f;
             wantUi = faint;
             wantEye = on ? 1f : 0f;
             wantBar = on ? (keepBar ? faint : 0f) : 1f;
@@ -167,16 +185,10 @@ final class SettingsArt {
             date.to(this, wantDate, 320, EMPHASIZED);
             for (int i = 0; i < 4; i++) {
                 rails[i].to(this, wantRail[i], 300, EMPHASIZED);
-                lastRail[i] = wantRail[i];
+                memory[8 + i] = wantRail[i];
             }
-            lastLiked = wantLiked;
-            lastCapsule = wantCapsule;
-            lastSeek = wantSeek;
-            lastDate = wantDate;
-            lastUi = wantUi;
-            lastEye = wantEye;
-            lastBar = wantBar;
-            lastSimple = wantSimple;
+            memory[0] = wantUi; memory[1] = wantEye; memory[2] = wantBar; memory[3] = wantSimple;
+            memory[4] = wantLiked; memory[5] = wantCapsule; memory[6] = wantSeek; memory[7] = wantDate;
         }
 
         @Override
@@ -199,13 +211,23 @@ final class SettingsArt {
             float height = getHeight() - 28 * d;
             float width = height * 0.49f;
             float left = (getWidth() - width) / 2f, top = 14 * d;
-            // the phone
-            box.set(left, top, left + width, top + height);
+            // the phone: side buttons, a dark body with a thin bezel
             paint.setShader(null);
             paint.setStyle(Paint.Style.FILL);
-            paint.setColor(Expressive.mix(skin.card, skin.text, 0.18f));
-            canvas.drawRoundRect(box, width * 0.15f, width * 0.15f, paint);
-            box.inset(3 * d, 3 * d);
+            paint.setColor(0xFF2C2C30);
+            box.set(left + width - d, top + height * 0.2f, left + width + 2.2f * d, top + height * 0.3f);
+            canvas.drawRoundRect(box, d, d, paint);
+            box.set(left + width - d, top + height * 0.36f, left + width + 2.2f * d, top + height * 0.52f);
+            canvas.drawRoundRect(box, d, d, paint);
+            box.set(left, top, left + width, top + height);
+            paint.setColor(0xFF1B1B1F);
+            canvas.drawRoundRect(box, width * 0.16f, width * 0.16f, paint);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(d);
+            paint.setColor((skin.text & 0xFFFFFF) | 0x26000000);
+            canvas.drawRoundRect(box, width * 0.16f, width * 0.16f, paint);
+            paint.setStyle(Paint.Style.FILL);
+            box.inset(2.6f * d, 2.6f * d);
             float screenLeft = box.left, screenTop = box.top, w = box.width(), h = box.height();
             u = w / 100f;
             sx = screenLeft;
@@ -222,7 +244,34 @@ final class SettingsArt {
             rail(canvas, w, h, faint, s);
             caption(canvas, w, h, faint, s);
             nav(canvas, w, h, Math.round(255 * bar.value));
+            status(canvas, w, h);
             canvas.restore();
+        }
+
+        /** The phone's own: the time, signal and battery, the camera hole and the gesture handle. */
+        private void status(Canvas canvas, float w, float h) {
+            words(canvas, "12:00", 7 * u, 6.6f * u, 4.2f * u, 255, true, Paint.Align.LEFT);
+            paint.setStyle(Paint.Style.FILL);
+            paint.setColor(0xFF000000);
+            canvas.drawCircle(w / 2f, 4.6f * u, 2.1f * u, paint);
+            paint.setColor(0xFF1E2A3A);
+            canvas.drawCircle(w / 2f, 4.6f * u, 0.9f * u, paint);
+            white(255);
+            for (int i = 0; i < 4; i++) {
+                float bx = w - 22 * u + i * 1.6f * u, bh = (1.2f + i * 0.9f) * u;
+                canvas.drawRect(bx, 6.2f * u - bh, bx + 1f * u, 6.2f * u, paint);
+            }
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(0.5f * u);
+            box.set(w - 14 * u, 3.4f * u, w - 7.5f * u, 6.4f * u);
+            canvas.drawRoundRect(box, 0.8f * u, 0.8f * u, paint);
+            paint.setStyle(Paint.Style.FILL);
+            box.set(w - 13.3f * u, 4.1f * u, w - 9.5f * u, 5.7f * u);
+            canvas.drawRect(box, paint);
+            canvas.drawRect(w - 7.3f * u, 4.4f * u, w - 6.7f * u, 5.4f * u, paint);
+            paint.setColor(0xCCFFFFFF);
+            box.set(w / 2f - 15 * u, h - 2.6f * u, w / 2f + 15 * u, h - 1.6f * u);
+            canvas.drawRoundRect(box, 0.5f * u, 0.5f * u, paint);
         }
 
         /** The video: a dark picture with two soft lights in it, never dimmed. */
@@ -254,7 +303,7 @@ final class SettingsArt {
         }
 
         private void top(Canvas canvas, float w, int alpha, float s) {
-            float y = 13 * u;
+            float y = 17 * u;
             // LIVE, or the eye that takes its place
             float e = eye.value;
             if (e < 0.999f) {
@@ -301,10 +350,10 @@ final class SettingsArt {
         }
 
         private void rail(Canvas canvas, float w, float h, int alpha, float s) {
-            float x = 88 * u;
-            float scale = 1f - 0.18f * s;
-            float y = h * 0.45f;
-            float step = 15.5f * u * scale;
+            float x = 91 * u;
+            float scale = 1f - 0.15f * s;
+            float y = h * 0.5f;
+            float step = 14.5f * u;
             // the author's picture and the follow button, gone in the simple feed
             int author = Math.round(alpha * (1f - s));
             if (author > 0) {
@@ -329,7 +378,7 @@ final class SettingsArt {
             }
             String[] counts = {"12K", "345", "1K", "89"};
             for (int i = 0; i < 4; i++) {
-                float cy = y + i * step + (s * -step * 0.5f);
+                float cy = y + i * step;
                 railCentres[i * 2] = sx + x;
                 railCentres[i * 2 + 1] = sy + cy;
                 float there = rails[i].value;
@@ -422,7 +471,7 @@ final class SettingsArt {
                 words(canvas, " · " + Local.of("3 дня назад"), after, y, 4.2f * u, Math.round(alpha * date.value * 0.8f), false, Paint.Align.LEFT);
             }
             if (seek.value > 0.01f) {
-                float line = h - 15.5f * u;
+                float line = h - 18.5f * u;
                 int sa = Math.round(alpha * seek.value);
                 paint.setStyle(Paint.Style.FILL);
                 paint.setColor(Color.argb(sa * 80 / 255, 255, 255, 255));
@@ -450,7 +499,7 @@ final class SettingsArt {
         private void nav(Canvas canvas, float w, float h, int alpha) {
             if (alpha <= 0) return;
             float c = capsule.value;
-            float top = h - 13 * u - 2.5f * u * c;
+            float top = h - 16 * u - 2.5f * u * c;
             paint.setStyle(Paint.Style.FILL);
             paint.setColor(Color.argb(Math.round(alpha * (1f - 0.25f * c)), Math.round(28 * c), Math.round(28 * c), Math.round(32 * c)));
             box.set(7 * u * c, top, w - 7 * u * c, h - 3 * u * c);

@@ -373,7 +373,7 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.ACCENT));
         LinearLayout accent = card();
-        accent.addView(phone().liked(true));
+        accent.addView(phone("accent").liked(true));
         accent.addView(accentHead());
         if (accentOpen) {
             if (Accent.fromWallpaper() != 0) {
@@ -408,7 +408,7 @@ public class SettingsActivity extends Activity {
         column.addView(wrap(shapes));
 
         loading = card();
-        final SettingsArt.Phone md3Phone = phone();
+        final SettingsArt.Phone md3Phone = phone("md3");
         loading.addView(md3Phone);
         loading.addView(toggleRow("tune", Text.NAV_CAPSULE, NavBar.isEnabled(), on -> {
             NavBar.setEnabled(on);
@@ -416,8 +416,6 @@ public class SettingsActivity extends Activity {
         }));
         loading.addView(line());
         loading.addView(toggleRow("tune", Design.caption(Text.MD3_FEED), Md3.isOn(Md3.KEY_FEED), on -> Md3.set(Md3.KEY_FEED, on)));
-        loading.addView(line());
-        loading.addView(toggleRow("tune", Design.caption(Text.MD3_ICONS), Md3.isOn(Md3.KEY_ICONS), on -> Md3.set(Md3.KEY_ICONS, on)));
         loading.addView(line());
         loading.addView(toggleRow("tune", Design.caption(Text.MD3_PROFILE), Md3.isOn(Md3.KEY_PROFILE), on -> Md3.set(Md3.KEY_PROFILE, on)));
         loading.addView(line());
@@ -568,8 +566,7 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.SIMPLE_FEED));
         LinearLayout simpler = card();
-        final SettingsArt.Phone simpleArt = new SettingsArt.Phone(this, skin)
-                .burn(Dim.isConfigured(), Dim.strength(), NavBar.isKept()).simple(SimpleFeed.isOn());
+        final SettingsArt.Phone simpleArt = phone("simple").simple(SimpleFeed.isOn());
         simpler.addView(simpleArt);
         simpler.addView(liveToggleRow("view_compact", Text.SIMPLE_FEED, SimpleFeed.isOn(), on -> {
             SimpleFeed.set(this, on);
@@ -632,7 +629,7 @@ public class SettingsActivity extends Activity {
         column.addView(section(Text.RAIL));
         LinearLayout rail=card();
         // the buttons can be tapped on the picture itself, and the switches follow
-        final SettingsArt.Phone railArt = phone();
+        final SettingsArt.Phone railArt = phone("rail");
         rail.addView(railArt);
         String[] railNames={Text.RAIL_LIKE,Text.RAIL_COMMENT,Text.RAIL_FAV,Text.RAIL_SHARE};
         String[] railIcons={"favorite_border","chat","star","share"};
@@ -749,8 +746,7 @@ public class SettingsActivity extends Activity {
         column.addView(section(BURN));
         LinearLayout burn = card();
         // the phone shows what the switch and the slider do, as they are moved
-        final SettingsArt.Phone burnArt = new SettingsArt.Phone(this, skin)
-                .burn(Dim.isConfigured(), Dim.strength(), NavBar.isKept()).simple(SimpleFeed.isOn());
+        final SettingsArt.Phone burnArt = phone("burn").burn(Dim.isConfigured(), Dim.strength(), NavBar.isKept());
         burn.addView(burnArt);
         burn.addView(liveToggleRow("eye_open", Text.DIM, Dim.isConfigured(), on -> {
             Dim.setEnabled(on);
@@ -772,6 +768,9 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(Text.DOWNLOADS));
         LinearLayout downloads = card();
+        downloads.addView(liveToggleRow("download", Text.DOWNLOAD_WINDOW, DownloadChoice.windowOn(), DownloadChoice::setWindow));
+        downloads.addView(quiet(Text.DOWNLOAD_WINDOW_NOTE));
+        downloads.addView(line());
         LinearLayout qualityHead = row();
         qualityHead.addView(icon("image"));
         qualityHead.addView(label(Text.FRAME_QUALITY), grow());
@@ -2487,10 +2486,14 @@ public class SettingsActivity extends Activity {
         }
     }
 
-    /** TikTok's feed on a phone, as every setting that shows on it now is. */
-    private SettingsArt.Phone phone() {
-        SettingsArt.Phone art = new SettingsArt.Phone(this, skin)
-                .burn(Dim.isConfigured(), Dim.strength(), NavBar.isKept()).simple(SimpleFeed.isOn())
+    /**
+     * TikTok's feed on a phone for one card. The bar, the seek bar, the date
+     * and the buttons are drawn as they are set; the screen saver and the
+     * simple feed only on their own cards, or every phone came out faint.
+     */
+    private SettingsArt.Phone phone(String card) {
+        SettingsArt.Phone art = new SettingsArt.Phone(this, skin, card)
+                .burn(false, 0, true).simple(false)
                 .capsule(NavBar.isEnabled()).seekbar(Seekbar.isEnabled()).date(Dates.isEnabled());
         for (int i = 0; i < 4; i++) art.rail(i, FeedRail.shown(i));
         return art;
@@ -2590,7 +2593,8 @@ public class SettingsActivity extends Activity {
         });
         picture.setClipToOutline(true);
         frame.addView(picture, new android.widget.FrameLayout.LayoutParams(dp(60), dp(60)));
-        tile.addView(frame);
+        // wrapped, or the column stretched it to the label's width and the ring came out oblong
+        tile.addView(frame, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         frames.add(frame);
         TextView name = new TextView(this);
         name.setText(Launcher.nameOf(which));
@@ -2658,10 +2662,11 @@ public class SettingsActivity extends Activity {
             name.setText(AvatarShape.nameOf(shape));
             M3Type.line(name, 12, 0.4f);
             name.setGravity(Gravity.CENTER);
-            name.setSingleLine(true);
+            name.setMaxLines(2);
             name.setTag("name");
             name.setPadding(0, dp(6), 0, 0);
-            chip.addView(name);
+            // a width of its own: wrapped to the word, letter spacing cut the last letter off
+            chip.addView(name, new LinearLayout.LayoutParams(dp(76), ViewGroup.LayoutParams.WRAP_CONTENT));
             chips.add(chip);
             if (shape.equals(AvatarShape.chosen())) chosen = chip;
             chip.setOnClickListener(v -> {
@@ -4227,7 +4232,6 @@ public class SettingsActivity extends Activity {
         found+=searchControl(results,Text.PROFILE_VIEW,Text.NEW_PROFILE,Flags.isOn(Flags.KEY_NEW_PROFILE));
         found+=searchControl(results,Text.MD3_TIKTOK,Text.NAV_CAPSULE,NavBar.isEnabled());
         found+=searchControl(results,Text.MD3_TIKTOK,Text.MD3_FEED,Md3.isOn(Md3.KEY_FEED));
-        found+=searchControl(results,Text.MD3_TIKTOK,Text.MD3_ICONS,Md3.isOn(Md3.KEY_ICONS));
         found+=searchControl(results,Text.MD3_TIKTOK,Text.MD3_PROFILE,Md3.isOn(Md3.KEY_PROFILE));
         found+=searchControl(results,Text.MD3_TIKTOK,Text.MD3_INBOX,Md3.isOn(Md3.KEY_INBOX));
         found+=searchControl(results,Text.MD3_TIKTOK,Text.DESIGN_COMMENTS,CommentStyle.enabled());

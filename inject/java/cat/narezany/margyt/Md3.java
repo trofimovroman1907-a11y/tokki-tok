@@ -69,6 +69,9 @@ final class Md3 {
 
     private static boolean on(int which) {
         if (Version.LITE) return false;
+        // the rounded icons are gone from the settings since 2.1.0, and with them
+        // the icons themselves, for whoever had switched them on
+        if (which == ICONS) return false;
         Boolean known = ON[which];
         if (known != null) return known;
         Context context = Margy.context();
