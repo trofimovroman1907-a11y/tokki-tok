@@ -27,11 +27,17 @@ import java.util.Random;
  * TikTok's screens. Mostly they jump; now and then a scene plays: a hug, a
  * kiss, a triple salute with fireworks, or one enormous leap.
  *
+ * And they are alive to a finger. A tap pets one (it blushes and purrs), a
+ * long press strokes it (hearts), two taps feed it (a fish falls, it catches
+ * it and goes round for a while), a drag picks it up and a flick throws it
+ * (it flies, bounces, lands in a puff and laughs), and a lot of quick taps
+ * tickle it (it giggles and shakes).
+ *
  * The cats come from the home screen made for the television (TVHome,
- * CatRunway), the same picture and the same moves. Here they are a layer over
- * TikTok that never takes a touch: everything underneath works as before.
- * Drawing follows the display's own frame rate and only the strip the cats
- * move through is drawn again. Off by default, kept on once switched on.
+ * CatRunway), the same picture and the same moves. Over TikTok they are a
+ * layer that takes a touch only when it lands on a cat: everything else goes
+ * through to TikTok as before. Drawing follows the display's own frame rate
+ * and only what moves is drawn again. Off by default, kept on once switched on.
  */
 final class TilcayoRun {
 
@@ -115,6 +121,14 @@ final class TilcayoRun {
         float x, phase, air = -1f, airDur, airH, rest, tx, lean, sx = 1f, sy = 1f, lifted, sceneRot;
         int dir;
         boolean spin, busy, still;
+        /** Picked up by a finger, or thrown and in the air: then fy is its centre and it falls freely. */
+        boolean held, flying;
+        float fy, vx, vy, angle, turn;
+        /** How red its cheeks are, 0 to 1; how long it laughs, how long it is round from a meal. */
+        float blush, laugh, full;
+        /** A word over its head, and how long it stays. */
+        String say;
+        float sayLeft;
 
         Cat(float h, int dir, float speed, Random random) {
             this.h = h;
@@ -122,6 +136,8 @@ final class TilcayoRun {
             this.speed = speed;
             phase = random.nextFloat();
         }
+
+        boolean free() { return held || flying; }
     }
 
     private static final class Part {
@@ -136,14 +152,24 @@ final class TilcayoRun {
         }
     }
 
+    /** A fish falling to a cat that was fed. */
+    private static final class Treat {
+        float x, y, vy, turn;
+        final Cat to;
+        boolean gone;
+
+        Treat(float x, float y, Cat to) { this.x = x; this.y = y; this.to = to; }
+    }
+
     private abstract static class Scene {
         float t;
         abstract boolean update(float dt);
+        abstract boolean has(Cat cat);
     }
 
     /**
-     * The strip with the cats. Over TikTok it fills the screen and lets every touch
-     * through; in the settings it is the picture of itself, in a card.
+     * The strip with the cats. Over TikTok it fills the screen and takes only the
+     * touches that land on a cat; in the settings it is the picture of itself, in a card.
      */
     static final class Runway extends View {
         private final boolean overTikTok;
@@ -152,16 +178,30 @@ final class TilcayoRun {
         private final Random random = new Random();
         private final List<Cat> cats = new ArrayList<>();
         private final ArrayList<Part> parts = new ArrayList<>();
+        private final ArrayList<Treat> treats = new ArrayList<>();
         private Scene scene;
         private float nextScene = 7f, clock;
         private long last;
         private final Paint bmp = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         private final Paint groundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint partPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Path heart = new Path(), ground = new Path();
+        private final Paint cheek = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint bubble = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint words = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint fish = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path heart = new Path(), ground = new Path(), fishShape = new Path();
         private final Rect dirty = new Rect(), lastDirty = new Rect(), box = new Rect();
-        private final RectF place = new RectF();
+        private final RectF place = new RectF(), round = new RectF();
         private final int[] sparks;
+
+        // the finger
+        private Cat grabbed;
+        private boolean dragging, stroking;
+        private float downX, downY, lastX, lastY, velX, velY, nextHeart;
+        private long downAt, lastAt;
+        private Cat lastTapped;
+        private long lastTapAt;
+        private int taps;
 
         Runway(Context context, boolean overTikTok) {
             super(context);
@@ -185,15 +225,26 @@ final class TilcayoRun {
             heart.cubicTo(-1.5f, -0.2f, -0.7f, -1.3f, 0f, -0.45f);
             heart.cubicTo(0.7f, -1.3f, 1.5f, -0.2f, 0f, 0.9f);
             heart.close();
+            // a little fish, a unit long, nose to the right
+            fishShape.moveTo(0.5f, 0f);
+            fishShape.cubicTo(0.3f, -0.32f, -0.2f, -0.3f, -0.28f, 0f);
+            fishShape.lineTo(-0.5f, -0.22f);
+            fishShape.lineTo(-0.45f, 0f);
+            fishShape.lineTo(-0.5f, 0.22f);
+            fishShape.lineTo(-0.28f, 0f);
+            fishShape.cubicTo(-0.2f, 0.3f, 0.3f, 0.32f, 0.5f, 0f);
+            fishShape.close();
+            cheek.setColor(0xFFFF6F91);
+            bubble.setColor(0xF2FFFFFF);
+            words.setColor(0xFF2B2B2B);
+            words.setTextSize(dp1 * 12);
+            words.setTextAlign(Paint.Align.CENTER);
+            words.setFakeBoldText(true);
             setClickable(false);
             setFocusable(false);
             setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
             setWillNotDraw(false);
         }
-
-        // never a touch: what is under the cats goes on working
-        @Override public boolean dispatchTouchEvent(MotionEvent event) { return false; }
-        @Override public boolean onTouchEvent(MotionEvent event) { return false; }
 
         @Override protected void onSizeChanged(int w, int h, int oldw, int oldh) {
             for (int i = 0; i < cats.size(); i++) cats.get(i).x = w * (0.2f + 0.3f * i);
@@ -232,6 +283,239 @@ final class TilcayoRun {
             return k * k * (3f - 2f * k);
         }
 
+        // ---------- the finger ----------
+
+        /** The middle of a cat as drawn, wherever it is. */
+        private float centreY(Cat cat) {
+            return cat.free() ? cat.fy : groundY(cat.x) - lift(cat) - cat.h / 2f;
+        }
+
+        private Cat hit(float x, float y) {
+            List<Cat> order = new ArrayList<>(cats);
+            Collections.sort(order, (a, b) -> Float.compare(a.h, b.h));
+            Cat found = null;
+            // the one drawn last is on top: the biggest
+            for (Cat cat : order) {
+                float halfW = cat.h * aspect / 2f + dp1 * 10, halfH = cat.h / 2f + dp1 * 10;
+                if (Math.abs(x - cat.x) <= halfW && Math.abs(y - centreY(cat)) <= halfH) found = cat;
+            }
+            return found;
+        }
+
+        // a touch is taken only when it lands on a cat; everything else is TikTok's
+        @Override public boolean dispatchTouchEvent(MotionEvent event) {
+            int action = event.getActionMasked();
+            float x = event.getX(), y = event.getY();
+            long now = event.getEventTime();
+            if (action == MotionEvent.ACTION_DOWN) {
+                Cat cat = hit(x, y);
+                if (cat == null) return false;
+                grab(cat, x, y, now);
+                return true;
+            }
+            if (grabbed == null) return false;
+            if (action == MotionEvent.ACTION_MOVE) move(x, y, now);
+            else if (action == MotionEvent.ACTION_UP) letGo(now);
+            else if (action == MotionEvent.ACTION_CANCEL) drop();
+            return true;
+        }
+
+        @Override public boolean onTouchEvent(MotionEvent event) { return false; }
+
+        private void grab(Cat cat, float x, float y, long now) {
+            if (scene != null && scene.has(cat)) { releaseAll(); scene = null; nextScene = 8f; }
+            if (getParent() != null) getParent().requestDisallowInterceptTouchEvent(true);
+            grabbed = cat;
+            cat.fy = centreY(cat);
+            cat.busy = true;
+            cat.air = -1f;
+            cat.rest = 0f;
+            dragging = false;
+            stroking = false;
+            downX = lastX = x;
+            downY = lastY = y;
+            downAt = lastAt = now;
+            velX = velY = 0f;
+            nextHeart = 0f;
+            invalidate();
+        }
+
+        private void move(float x, float y, long now) {
+            Cat cat = grabbed;
+            if (!dragging && Math.hypot(x - downX, y - downY) > dp1 * 10) {
+                dragging = true;
+                stroking = false;
+                cat.held = true;
+                cat.flying = false;
+                cat.angle = 0f;
+                say(cat, "!", 0.6f);
+            }
+            if (dragging) {
+                float dt = Math.max(1, now - lastAt) / 1000f;
+                // the speed the finger has at the end is the throw
+                velX = velX * 0.5f + (x - lastX) / dt * 0.5f;
+                velY = velY * 0.5f + (y - lastY) / dt * 0.5f;
+                cat.x = Math.max(cat.h * aspect / 2f, Math.min(getWidth() - cat.h * aspect / 2f, x));
+                cat.fy = Math.max(cat.h / 2f, Math.min(groundY(cat.x) - cat.h / 2f, y));
+            }
+            lastX = x;
+            lastY = y;
+            lastAt = now;
+        }
+
+        private void letGo(long now) {
+            Cat cat = grabbed;
+            grabbed = null;
+            if (dragging) {
+                // a flick: off it goes, spinning the way it was thrown
+                float most = dp1 * 2600;
+                cat.held = false;
+                cat.flying = true;
+                cat.vx = Math.max(-most, Math.min(most, velX));
+                cat.vy = Math.max(-most, Math.min(most, velY));
+                cat.turn = cat.vx * 0.35f / dp1;
+                if (Math.hypot(cat.vx, cat.vy) > dp1 * 500) say(cat, Text.TILCAYO_WHEE, 1.1f);
+                return;
+            }
+            cat.busy = false;
+            if (stroking) {
+                say(cat, Text.TILCAYO_PURR, 1.2f);
+                return;
+            }
+            // a tap: petted; two quick ones: fed; a lot of them: tickled
+            boolean twice = cat == lastTapped && now - lastTapAt < 320;
+            taps = cat == lastTapped && now - lastTapAt < 600 ? taps + 1 : 1;
+            lastTapped = cat;
+            lastTapAt = now;
+            if (taps >= 4) {
+                cat.laugh = 2.2f;
+                cat.blush = Math.min(1f, cat.blush + 0.5f);
+                say(cat, Text.TILCAYO_HEHE, 1.6f);
+                taps = 0;
+            } else if (twice) {
+                feed(cat);
+            } else {
+                cat.blush = Math.min(1f, cat.blush + 0.6f);
+                heartAt(cat.x, centreY(cat) - cat.h * 0.7f, false);
+                say(cat, Text.TILCAYO_PURR, 1f);
+                if (cat.air < 0) {
+                    cat.air = 0f;
+                    cat.airDur = 0.35f;
+                    cat.airH = dp1 * 10;
+                    cat.spin = false;
+                }
+            }
+        }
+
+        private void drop() {
+            Cat cat = grabbed;
+            grabbed = null;
+            if (cat == null) return;
+            cat.busy = false;
+            if (cat.held) { cat.held = false; cat.flying = true; cat.vx = 0; cat.vy = 0; cat.turn = 0; }
+        }
+
+        private void say(Cat cat, String text, float seconds) {
+            cat.say = text;
+            cat.sayLeft = seconds;
+        }
+
+        /** A fish falls from above; the cat looks up, hops and catches it. */
+        private void feed(Cat cat) {
+            float from = Math.max(dp1 * 10, groundY(cat.x) - cat.h - dp1 * 170);
+            treats.add(new Treat(cat.x + cat.dir * cat.h * aspect * 0.3f, from, cat));
+            cat.rest = 2.5f;
+        }
+
+        private void stroke(float dt) {
+            Cat cat = grabbed;
+            if (cat == null || dragging) return;
+            if (!stroking && android.os.SystemClock.uptimeMillis() - downAt > 420) {
+                stroking = true;
+                say(cat, Text.TILCAYO_PURR, 30f);
+            }
+            if (!stroking) return;
+            cat.blush = Math.min(1f, cat.blush + dt * 0.8f);
+            cat.phase += dt * 0.5f;
+            nextHeart -= dt;
+            if (nextHeart <= 0f) {
+                nextHeart = 0.35f;
+                heartAt(cat.x + (random.nextFloat() - 0.5f) * cat.h * 0.6f, centreY(cat) - cat.h * 0.6f, random.nextFloat() < 0.3f);
+            }
+        }
+
+        // ---------- the air ----------
+
+        private void fly(Cat cat, float dt) {
+            float g = dp1 * 1500, w = cat.h * aspect / 2f;
+            cat.vy += g * dt;
+            cat.x += cat.vx * dt;
+            cat.fy += cat.vy * dt;
+            cat.angle += cat.turn * dt;
+            cat.turn *= 0.995f;
+            if (cat.x < w) { cat.x = w; cat.vx = -cat.vx * 0.55f; cat.turn = -cat.turn * 0.6f; }
+            if (cat.x > getWidth() - w) { cat.x = getWidth() - w; cat.vx = -cat.vx * 0.55f; cat.turn = -cat.turn * 0.6f; }
+            if (cat.fy < cat.h / 2f) { cat.fy = cat.h / 2f; cat.vy = Math.abs(cat.vy) * 0.4f; }
+            float floor = groundY(cat.x) - cat.h / 2f;
+            if (cat.fy >= floor && cat.vy > 0) {
+                cat.fy = floor;
+                if (cat.vy > dp1 * 380) {
+                    // a bounce, and a little dust each time
+                    cat.vy = -cat.vy * 0.38f;
+                    cat.vx *= 0.7f;
+                    dust(cat.x, groundY(cat.x));
+                } else {
+                    cat.flying = false;
+                    cat.busy = false;
+                    cat.vx = cat.vy = 0f;
+                    cat.angle = 0f;
+                    cat.air = -1f;
+                    cat.rest = 0.6f;
+                    dust(cat.x, groundY(cat.x));
+                    cat.laugh = 1.6f;
+                    cat.blush = Math.min(1f, cat.blush + 0.3f);
+                    say(cat, Text.TILCAYO_HEHE, 1.4f);
+                }
+            }
+        }
+
+        private void treats(float dt) {
+            Iterator<Treat> it = treats.iterator();
+            while (it.hasNext()) {
+                Treat treat = it.next();
+                treat.vy += dp1 * 900 * dt;
+                treat.y += treat.vy * dt;
+                treat.turn += dt * 6f;
+                Cat cat = treat.to;
+                float mouth = centreY(cat) - cat.h * 0.05f;
+                boolean near = !cat.free() && Math.abs(treat.x - cat.x) < cat.h * aspect * 0.6f;
+                // the cat hops up to meet it
+                if (near && cat.air < 0 && treat.y > mouth - cat.h * 1.1f) {
+                    cat.air = 0f;
+                    cat.airDur = 0.45f;
+                    cat.airH = dp1 * 22;
+                    cat.spin = false;
+                }
+                if (near && treat.y >= mouth - cat.h * 0.25f) {
+                    // caught
+                    for (int i = 0; i < 7; i++)
+                        parts.add(new Part(treat.x, treat.y, (random.nextFloat() - 0.5f) * dp1 * 120, -dp1 * (20 + random.nextFloat() * 60),
+                                0.5f, 0xFFF2A65A, false, dp1 * 2.4f));
+                    cat.full = 8f;
+                    cat.blush = Math.min(1f, cat.blush + 0.7f);
+                    cat.rest = 0.8f;
+                    heartAt(cat.x, centreY(cat) - cat.h * 0.8f, true);
+                    say(cat, Text.TILCAYO_NOM, 1.3f);
+                    it.remove();
+                } else if (treat.y > groundY(treat.x)) {
+                    // missed: it lies there a moment and is gone
+                    say(cat, "?", 0.9f);
+                    cat.rest = 0f;
+                    it.remove();
+                }
+            }
+        }
+
         // ---------- ordinary life: mostly jumping ----------
 
         private void jump(Cat cat, boolean bigOne) {
@@ -247,6 +531,7 @@ final class TilcayoRun {
             if (cat.rest > 0) {
                 cat.rest -= dt;
                 cat.phase += dt * 0.6f;
+                if (cat.air >= 0) { cat.air += dt; if (cat.air >= cat.airDur) cat.air = -1f; }
                 return;
             }
             if (cat.air >= 0) {
@@ -282,6 +567,10 @@ final class TilcayoRun {
                 cat.busy = false; cat.still = false; cat.lean = 0f;
                 cat.sx = 1f; cat.sy = 1f; cat.lifted = 0f; cat.sceneRot = 0f;
             }
+        }
+
+        private void releaseAll() {
+            for (Cat cat : cats) if (!cat.free()) release(cat);
         }
 
         private void heartAt(float x, float y, boolean big) {
@@ -324,6 +613,8 @@ final class TilcayoRun {
                 right.busy = true;
             }
 
+            @Override boolean has(Cat cat) { return cat == left || cat == right; }
+
             @Override boolean update(float dt) {
                 t += dt;
                 if (phase == 0) {
@@ -344,6 +635,8 @@ final class TilcayoRun {
                     right.x = right.tx - off;
                     left.lifted = left.h * 0.05f * ease;
                     right.lifted = right.h * 0.05f * ease;
+                    left.blush = Math.max(left.blush, ease);
+                    right.blush = Math.max(right.blush, ease);
                     if (hold > 0.75f && nextHeart > 0f) {
                         nextHeart = -1f;
                         float mid = (left.x + right.x) / 2;
@@ -391,6 +684,8 @@ final class TilcayoRun {
                     trio.get(i).busy = true;
                 }
             }
+
+            @Override boolean has(Cat cat) { return trio.contains(cat); }
 
             private float lift(int i) {
                 for (int r = 0; r <= 1; r++) {
@@ -448,6 +743,8 @@ final class TilcayoRun {
                 cat.still = true;
             }
 
+            @Override boolean has(Cat other) { return other == cat; }
+
             @Override boolean update(float dt) {
                 t += dt;
                 if (phase == 0) {
@@ -480,7 +777,7 @@ final class TilcayoRun {
 
         private void startScene() {
             List<Cat> free = new ArrayList<>();
-            for (Cat cat : cats) if (!cat.busy && cat.air < 0 && cat.rest <= 0) free.add(cat);
+            for (Cat cat : cats) if (!cat.busy && !cat.free() && cat.air < 0 && cat.rest <= 0) free.add(cat);
             Collections.shuffle(free, random);
             int pick = random.nextInt(4);
             if (pick <= 1) scene = free.size() >= 2 ? new Duo(free.get(0), free.get(1), random.nextBoolean()) : null;
@@ -492,12 +789,13 @@ final class TilcayoRun {
         // ---------- frame ----------
 
         private float lift(Cat cat) {
+            float laugh = cat.laugh > 0 ? Math.abs((float) Math.sin(cat.laugh * 18f)) * cat.h * 0.06f : 0f;
             if (cat.air >= 0) {
                 float u = cat.air / cat.airDur;
-                return 4f * cat.airH * u * (1f - u);
+                return 4f * cat.airH * u * (1f - u) + laugh;
             }
-            if (cat.still || cat.rest > 0) return cat.lifted;
-            return Math.abs((float) Math.sin(cat.phase * Math.PI)) * cat.h * 0.12f + cat.lifted;
+            if (cat.still || cat.rest > 0) return cat.lifted + laugh;
+            return Math.abs((float) Math.sin(cat.phase * Math.PI)) * cat.h * 0.12f + cat.lifted + laugh;
         }
 
         private void updateParts(float dt) {
@@ -530,7 +828,16 @@ final class TilcayoRun {
                 nextScene -= dt;
                 if (nextScene <= 0f) startScene();
             }
-            for (Cat cat : cats) if (!cat.busy) live(cat, dt);
+            for (Cat cat : cats) {
+                if (cat.flying) fly(cat, dt);
+                else if (!cat.busy) live(cat, dt);
+                cat.blush = Math.max(0f, cat.blush - dt * 0.25f);
+                cat.laugh = Math.max(0f, cat.laugh - dt);
+                cat.full = Math.max(0f, cat.full - dt);
+                if (cat.sayLeft > 0) cat.sayLeft -= dt;
+            }
+            stroke(dt);
+            treats(dt);
             updateParts(dt);
 
             ground.rewind();
@@ -544,7 +851,9 @@ final class TilcayoRun {
             List<Cat> order = new ArrayList<>(cats);
             Collections.sort(order, (a, b) -> Float.compare(a.h, b.h));
             for (Cat cat : order) drawCat(canvas, cat);
+            for (Treat treat : treats) drawTreat(canvas, treat);
             for (Part p : parts) drawPart(canvas, p);
+            for (Cat cat : order) if (cat.sayLeft > 0 && cat.say != null) drawWords(canvas, cat);
 
             // on until the screen goes: a window out of sight stops the frames by itself
             if (isShown() && getWindowVisibility() == VISIBLE) {
@@ -557,23 +866,70 @@ final class TilcayoRun {
 
         private void drawCat(Canvas canvas, Cat cat) {
             float w = cat.h * aspect;
-            float feet = groundY(cat.x) - lift(cat);
             float breathe = (float) Math.sin(cat.phase * 2f * Math.PI * (cat.rest > 0 || cat.still ? 0.5f : 1f));
+            float plump = 1f + 0.12f * smooth(cat.full / 1.5f);
             float sy = (1f + 0.05f * breathe) * cat.sy;
-            float sx = cat.sx / (1f + 0.05f * breathe);
-            float rot = cat.lean + cat.sceneRot;
-            if (!cat.still) rot += (float) Math.toDegrees(Math.atan(slope(cat.x))) + (float) Math.sin(cat.phase * 2f * Math.PI) * 3f;
-            if (cat.air >= 0 && cat.spin) rot += -cat.dir * 360f * (cat.air / cat.airDur);
-            float cy = feet - cat.h / 2f;
+            float sx = cat.sx / (1f + 0.05f * breathe) * plump;
+            float cy, rot;
+            if (cat.free()) {
+                cy = cat.fy;
+                // held, it dangles and wriggles
+                rot = cat.held ? (float) Math.sin(clock * 14f) * 9f : cat.angle;
+            } else {
+                cy = groundY(cat.x) - lift(cat) - cat.h / 2f;
+                rot = cat.lean + cat.sceneRot;
+                if (!cat.still) rot += (float) Math.toDegrees(Math.atan(slope(cat.x))) + (float) Math.sin(cat.phase * 2f * Math.PI) * 3f;
+                if (cat.air >= 0 && cat.spin) rot += -cat.dir * 360f * (cat.air / cat.airDur);
+            }
+            if (cat.laugh > 0) rot += (float) Math.sin(cat.laugh * 36f) * 7f * Math.min(1f, cat.laugh);
             canvas.save();
             canvas.translate(cat.x, cy);
             canvas.rotate(rot);
             canvas.scale(cat.dir * sx, sy);
             place.set(-w / 2, -cat.h / 2, w / 2, cat.h / 2);
             canvas.drawBitmap(picture, null, place, bmp);
+            if (cat.blush > 0.02f) {
+                // the cheeks either side of the nose, where the picture has them
+                cheek.setAlpha(Math.round(150 * Math.min(1f, cat.blush)));
+                float r = cat.h * 0.055f;
+                cheekAt(canvas, -w / 2 + w * 0.69f, -cat.h / 2 + cat.h * 0.585f, r);
+                cheekAt(canvas, -w / 2 + w * 0.955f, -cat.h / 2 + cat.h * 0.585f, r);
+            }
             canvas.restore();
-            int r = (int) (Math.max(w, cat.h) * 0.8f);
-            dirty.union((int) (cat.x - r), (int) (cy - r), (int) (cat.x + r), (int) (cy + r));
+            int reach = (int) (Math.max(w, cat.h) * 0.8f);
+            dirty.union((int) (cat.x - reach), (int) (cy - reach), (int) (cat.x + reach), (int) (cy + reach));
+        }
+
+        private void cheekAt(Canvas canvas, float x, float y, float r) {
+            round.set(x - r * 1.4f, y - r, x + r * 1.4f, y + r);
+            canvas.drawOval(round, cheek);
+        }
+
+        private void drawTreat(Canvas canvas, Treat treat) {
+            float size = treat.to.h * 0.42f;
+            canvas.save();
+            canvas.translate(treat.x, treat.y);
+            canvas.rotate((float) Math.sin(treat.turn) * 25f);
+            canvas.scale(size, size);
+            fish.setColor(0xFF7EB8E8);
+            canvas.drawPath(fishShape, fish);
+            fish.setColor(0xFF2B2B2B);
+            canvas.drawCircle(0.28f, -0.04f, 0.045f, fish);
+            canvas.restore();
+            int reach = (int) size;
+            dirty.union((int) treat.x - reach, (int) treat.y - reach, (int) treat.x + reach, (int) treat.y + reach);
+        }
+
+        private void drawWords(Canvas canvas, Cat cat) {
+            float a = Math.min(1f, cat.sayLeft / 0.3f);
+            float cy = centreY(cat) - cat.h * 0.75f - dp1 * 12;
+            float width = words.measureText(cat.say) + dp1 * 16, height = dp1 * 22;
+            bubble.setAlpha(Math.round(242 * a));
+            words.setAlpha(Math.round(255 * a));
+            round.set(cat.x - width / 2, cy - height / 2, cat.x + width / 2, cy + height / 2);
+            canvas.drawRoundRect(round, height / 2, height / 2, bubble);
+            canvas.drawText(cat.say, cat.x, cy + words.getTextSize() * 0.36f, words);
+            dirty.union((int) round.left - 2, (int) round.top - 2, (int) round.right + 2, (int) round.bottom + 2);
         }
 
         private void drawPart(Canvas canvas, Part p) {

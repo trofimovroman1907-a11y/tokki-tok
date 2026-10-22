@@ -755,9 +755,13 @@ final class Text {
     static final String UI_FILE_NO_BASE = pick("Поле \"base\" должно быть md3, glass или fluent.", "Поле \"base\" має бути md3, glass або fluent.", "\"base\" must be md3, glass or fluent.");
     static final String UI_FILE_BAD_VALUE = pick("Неверное значение:", "Неправильне значення:", "A wrong value:");
     static final String FUN_TILCAYO_RUN = pick("Бегающие тилкайо", "Бігаючі тілкайо", "Running tilcayos");
-    static final String TILCAYO_RUN_NOTE = pick("Внизу экрана бегают и прыгают толстые тилкайо, иногда обнимаются, целуются и пускают салют. Нажатиям не мешают.",
-            "Унизу екрана бігають і стрибають товсті тілкайо, іноді обіймаються, цілуються й пускають салют. Натисканням не заважають.",
-            "Fat tilcayos run and jump along the bottom of the screen, now and then hugging, kissing and setting off fireworks. Taps go through them.");
+    static final String TILCAYO_RUN_NOTE = pick("Внизу экрана бегают и прыгают толстые тилкайо, обнимаются, целуются и пускают салют. Нажмите на кота, чтобы погладить, подержите, чтобы почесать, два раза, чтобы покормить, много раз, чтобы пощекотать, или схватите и подкиньте. Мимо котов нажатия уходят в TikTok.",
+            "Унизу екрана бігають і стрибають товсті тілкайо, обіймаються, цілуються й пускають салют. Натисніть на кота, щоб погладити, потримайте, щоб почухати, двічі, щоб нагодувати, багато разів, щоб полоскотати, або схопіть і підкиньте. Повз котів натискання йдуть у TikTok.",
+            "Fat tilcayos run and jump along the bottom of the screen, hugging, kissing and setting off fireworks. Tap a cat to pet it, hold to stroke it, tap twice to feed it, tap a lot to tickle it, or grab and toss it. Taps beside the cats go to TikTok.");
+    static final String TILCAYO_PURR = pick("мур", "мур", "purr");
+    static final String TILCAYO_NOM = pick("ням!", "ням!", "nom!");
+    static final String TILCAYO_HEHE = pick("хи-хи", "хі-хі", "hehe");
+    static final String TILCAYO_WHEE = pick("уиии!", "уііі!", "wheee!");
     static final String FUN_NOTE = pick("Деп калькулятор, скримеры и тилкайо",
             "Деп калькулятор, скримери й тілкайо", "Dep Calculator, screamers and tilcayo");
     static final String FUN_HELP = pick("Ни для чего не нужное. Само ничего не включится.", "Ні для чого не потрібне. Само нічого не ввімкнеться.", "Good for nothing. Nothing here turns on by itself.");
