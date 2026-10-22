@@ -247,8 +247,8 @@ class Build:
         manifest_module.add_activity(manifest, PACKAGE + ".PluginEditorActivity", SETTINGS_LABEL, theme)
         # a .mtp opened from a file manager comes to the mod (Theme.NoDisplay: it only hands the file on)
         manifest_module.add_file_opener(manifest, PACKAGE + ".PluginOpenActivity", "Плагин MargyT", 0x01030055, "mtp", ["application/octet-stream", "application/zip", "application/x-zip-compressed"])
-        # and a .mttheme, a theme somebody made (ThemeFile)
-        manifest_module.add_file_opener(manifest, PACKAGE + ".ThemeOpenActivity", "Тема MargyT", 0x01030055, "mttheme", ["application/octet-stream", "application/json", "text/plain"])
+        # and a .mtui, an interface style somebody made (UiStyle)
+        manifest_module.add_file_opener(manifest, PACKAGE + ".StyleOpenActivity", "Стиль MargyT", 0x01030055, "mtui", ["application/octet-stream", "application/json", "text/plain"])
         # Margy Store under its new name and its old one: without this Android 11
         # and later will not tell the mod whether the store is there at all
         manifest_module.add_queries(manifest, ["cat.narezany.store", "cat.narezany.patcher"])

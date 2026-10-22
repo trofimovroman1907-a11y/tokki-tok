@@ -509,7 +509,7 @@ public final class AppearanceColors {
         return -1;
     }
 
-    static String key(String role, boolean dark) {
+    private static String key(String role, boolean dark) {
         return "appearance_color_" + role + (dark ? "_dark" : "_light");
     }
 
