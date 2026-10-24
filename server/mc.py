@@ -35,7 +35,8 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 DB = os.path.join(HERE, "mc.db")
 KEY_FILE = os.path.join(HERE, "mc.key")
 
-NICK = re.compile(r"^[A-Za-z0-9_]{3,16}$")
+# Bedrock players come through Geyser and Floodgate with a dot before the gamertag
+NICK = re.compile(r"^\.?[A-Za-z0-9_]{3,16}$")
 #: a code is good for five minutes and five wrong guesses; a start link for a quarter of an hour
 CODE_LIVES = 300
 PENDING_LIVES = 900
