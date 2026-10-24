@@ -40,8 +40,10 @@ class McTests(unittest.TestCase):
         mc.telegram = self.fake.telegram
         mc.supporter = lambda who: who in self.fake.supporters
         mc.bot_name = lambda: "margybot"
+        mc.ONLY_SUPPORTERS = True
 
     def tearDown(self):
+        mc.ONLY_SUPPORTERS = False
         mc._local.link = None
         self.dir.cleanup()
 
@@ -119,6 +121,12 @@ class McTests(unittest.TestCase):
         self.ask("/mc/unban", nick="Margy")
         # a ban also ends the session, so a code is asked for again
         self.assertEqual(self.ask("/mc/join", nick="Margy", ip="1.1.1.1")[1]["state"], "code")
+
+    def test_open_to_all_anyone_with_telegram_signs_in(self):
+        mc.ONLY_SUPPORTERS = False
+        code = self.first_login(nick="Stranger", who=999, ip="2.2.2.2")
+        self.assertEqual(self.ask("/mc/check", nick="Stranger", ip="2.2.2.2", code=code)[1]["state"], "ok")
+        self.assertNotIn("только для поддержавших", mc.bind(999, "Чужой", "Stranger_Two"))
 
     def test_leaving_the_group_closes_the_door(self):
         code = self.first_login()

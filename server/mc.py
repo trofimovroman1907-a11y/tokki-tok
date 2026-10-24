@@ -45,6 +45,9 @@ TRIES = 5
 SESSION = 12 * 3600
 #: names one Telegram account may tie to itself
 NICKS_EACH = 2
+#: whether only supporters may play; since 2026-10-25 anyone with Telegram may, and
+#: being a supporter gives a tag in the game instead
+ONLY_SUPPORTERS = False
 #: the least time between two codes for one name, and joins from one address in a minute
 RESEND = 30
 JOINS_MINUTE = 30
@@ -199,7 +202,7 @@ def join(body):
     ban = _banned(tg)
     if ban is not None:
         return 200, {"state": "banned", "reason": ban[0]}
-    if not supporter(tg):
+    if ONLY_SUPPORTERS and not supporter(tg):
         return 200, {"state": "nosupport"}
     if ip and ip == was and now - verified < SESSION:
         return 200, {"state": "ok"}
@@ -246,7 +249,7 @@ def check(body):
     ban = _banned(tg)
     if ban is not None:
         return 200, {"state": "banned", "reason": ban[0]}
-    if not supporter(tg):
+    if ONLY_SUPPORTERS and not supporter(tg):
         return 200, {"state": "nosupport"}
     owner = link.execute("SELECT tg FROM mc_link WHERE nick = ?", (nick,)).fetchone()
     if owner is not None and owner[0] != tg:
@@ -363,7 +366,7 @@ def bind(who, name, text):
     nick = shown.lower()
     if _banned(who) is not None:
         return "Этот аккаунт заблокирован на MargyCraft."
-    if not supporter(who):
+    if ONLY_SUPPORTERS and not supporter(who):
         return ("MargyCraft только для поддержавших MargyT. Когда окажешься в группе поддержавших, "
                 "напиши мне ник ещё раз. Как поддержать: %s" % CHANNEL)
     link = db()
@@ -407,7 +410,7 @@ def claim(token, who, name):
     who = int(who)
     if _banned(who) is not None:
         return "Этот аккаунт заблокирован на MargyCraft."
-    if not supporter(who):
+    if ONLY_SUPPORTERS and not supporter(who):
         return ("MargyCraft только для поддержавших MargyT. Когда окажешься в группе поддержавших, "
                 "нажми ссылку ещё раз. Как поддержать: %s" % CHANNEL)
     owner = link.execute("SELECT tg FROM mc_link WHERE nick = ?", (nick,)).fetchone()
