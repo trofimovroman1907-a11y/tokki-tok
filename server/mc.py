@@ -326,8 +326,40 @@ def unlink(body):
     return 200, {}
 
 
+#: how sending to many is taken off the request; the tests send at once
+later = lambda work: threading.Thread(target=work, daemon=True).start()
+
+
+def notify(body):
+    """News from the game for everyone who tied a name (a meteor is coming), but not for those
+    already in the game or who turned such news off: the plugin names them in `skip`.
+
+    At most once in four minutes, so a key that leaked cannot flood people's chats.
+    """
+    text = str(body.get("text") or "").strip()[:1000]
+    if not text:
+        return 400, {"error": "text"}
+    skip = body.get("skip") if isinstance(body.get("skip"), list) else []
+    skip = {n.lower() for n in skip if isinstance(n, str)}
+    if _fast("notify", "game", 1, within=240):
+        return 429, {"error": "too often"}
+    accounts = {}
+    for nick, tg in db().execute("SELECT nick, tg FROM mc_link WHERE verified > 0"):
+        accounts.setdefault(tg, []).append(nick)
+    to = [tg for tg, nicks in accounts.items() if not any(n in skip for n in nicks) and not _banned(tg)]
+    words = html.escape(text)
+
+    def send_all():
+        for tg in to:
+            _send(tg, words)
+            time.sleep(0.05)
+
+    later(send_all)
+    return 200, {"sent": len(to)}
+
+
 ROUTES = {"/mc/join": join, "/mc/check": check, "/mc/ban": ban, "/mc/unban": unban,
-          "/mc/info": info, "/mc/unlink": unlink}
+          "/mc/info": info, "/mc/unlink": unlink, "/mc/notify": notify}
 
 
 def handle(path, body, header):
