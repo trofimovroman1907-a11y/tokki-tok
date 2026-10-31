@@ -139,10 +139,13 @@ public class SettingsActivity extends Activity {
             new Shelf(1, "md3", "view_compact", Text.MD3_TIKTOK, Text.PAGE_MD3_NOTE, Text.MD3_TIKTOK),
             new Shelf(1, "theme", "contrast", Text.THEME, Text.PAGE_THEME_NOTE, Text.THEME),
             new Shelf(1, "font", "text_fields", Text.FONT, Text.PAGE_FONT_NOTE, Text.FONT),
+            new Shelf(1, "editor", "tune", EDITOR, EDITOR_NOTE, EDITOR),
+            new Shelf(1, "typing", "edit", TYPING, TYPING_NOTE, TYPING),
             new Shelf(2, "badges", "verified", Text.BADGES, Text.PAGE_BADGES_NOTE, Text.BADGES),
             new Shelf(2, "gradient", "palette", Text.GRADIENT, Text.PAGE_GRADIENT_NOTE, Text.GRADIENT),
             new Shelf(2, "look", "account_circle", Text.PROFILE_VIEW, Text.PAGE_LOOK_NOTE, Text.PROFILE_VIEW),
             new Shelf(2, "account", "fingerprint", Text.ACCOUNT, Text.PAGE_ACCOUNT_NOTE, Text.ACCOUNT),
+            new Shelf(2, "reposts", "repeat", REPOSTS, REPOSTS_NOTE, REPOSTS),
             new Shelf(3, "feed", "view_compact", Text.FEED, Text.PAGE_FEED_NOTE, Text.FEED, Text.DATE_FILTER, Text.TAGS),
             new Shelf(3, "video", "play_circle", Text.VIDEO, Text.PAGE_VIDEO_NOTE, Text.RAIL, Text.VIDEO, Text.FPS),
             new Shelf(3, "comments", "chat", Text.COMMENTS, Text.PAGE_COMMENTS_NOTE, Text.COMMENTS),
@@ -156,6 +159,8 @@ public class SettingsActivity extends Activity {
             new Shelf(5, "links", "link", Text.LINKS, Text.PAGE_LINKS_NOTE, Text.LINKS),
             new Shelf(5, "thanks", "favorite_border", Text.THANKS, Text.PAGE_THANKS_NOTE, Text.THANKS),
             new Shelf(6, "plugins", "extension", Text.PLUGINS, "", Text.PLUGINS),
+            new Shelf(7, "chats", "chat", MESSAGES, MESSAGES_NOTE, MESSAGES, INBOX_CLEAN),
+            new Shelf(7, "ghost", "visibility_off", GHOST, GHOST_NOTE, GHOST),
             new Shelf(7, "streaks", "schedule", Text.STREAKS, Text.PAGE_STREAKS_NOTE, Text.STREAKS),
             new Shelf(7, "notifications", "notifications", Text.NOTIFICATIONS, Text.PAGE_NOTIFICATIONS_NOTE, Text.NOTIFICATIONS),
             new Shelf(8, "dep", "flare", Text.FUN_DEP, Text.PAGE_DEP_NOTE, Text.FUN_DEP),
@@ -759,6 +764,10 @@ public class SettingsActivity extends Activity {
             copying.set(on);
         }));
         comments.addView(quiet(Text.COMMENT_COPY_NOTE));
+        comments.addView(line());
+        comments.addView(liveToggleRow("article", Local.of("Длинные комментарии"),
+                Ghost.on(Ghost.LONG_COMMENTS), on -> Ghost.set(Ghost.LONG_COMMENTS, on)));
+        comments.addView(quiet(Local.of("Без ограничения TikTok на длину комментария.")));
         column.addView(wrap(comments));
 
         column.addView(section(BURN));
@@ -1008,6 +1017,108 @@ public class SettingsActivity extends Activity {
         column.addView(section(Text.FUN_CAT));
         column.addView(fatCat());
 
+        // from LotusTok (@saintcursed), with the ghost and long comments from the TT Extras plugin
+        column.addView(section(EDITOR));
+        LinearLayout editor = card();
+        editor.addView(actionRow("tune", Local.of("Открыть редактор"), Local.of("Нажимайте на любой элемент TikTok: скрыть, сдвинуть, изменить размер и цвет"), () -> {
+            ViewEditor.begin();
+            Toast.makeText(this, Local.of("Откройте нужный экран TikTok"), Toast.LENGTH_LONG).show();
+            finish();
+        }));
+        editor.addView(line());
+        editor.addView(actionRow("block", Local.of("Сбросить все правки"), Integer.toString(ViewEditor.count()), () -> {
+            ViewEditor.resetAll();
+            rebuild();
+        }));
+        column.addView(wrap(editor));
+
+        column.addView(section(TYPING));
+        LinearLayout typing = card();
+        typing.addView(quiet(Local.of("Буквы выезжают и пружинят, удалённые улетают, курсор плывёт. В комментариях и сообщениях.")));
+        typing.addView(liveToggleRow("edit", Local.of("Анимация набора текста"), TypingAnim.on(TypingAnim.ON),
+                on -> {
+                    TypingAnim.set(TypingAnim.ON, on);
+                    rebuildAfterSwitchAnimation();
+                }));
+        if (TypingAnim.on(TypingAnim.ON)) {
+            String[][] looks = {
+                    {TypingAnim.BLUR, "visibility_off", Local.of("Размытие при появлении")},
+                    {TypingAnim.SLIDE, "expand_more", Local.of("Подъём снизу")},
+                    {TypingAnim.SCALE, "add", Local.of("Увеличение (пружина)")},
+                    {TypingAnim.ROTATE, "animation", Local.of("Лёгкий поворот")},
+                    {TypingAnim.GHOST, "restore", Local.of("Анимация удаления")},
+                    {TypingAnim.CURSOR, "edit", Local.of("Плавный курсор")}};
+            for (String[] motion : looks) {
+                final String key = motion[0];
+                typing.addView(line());
+                typing.addView(liveToggleRow(motion[1], motion[2], TypingAnim.on(key), on -> TypingAnim.set(key, on)));
+            }
+            typing.addView(line());
+            typing.addView(actionRow("speed", Local.of("Скорость"), TypingAnim.speedName(), () -> {
+                TypingAnim.nextSpeed();
+                rebuild();
+            }));
+            typing.addView(line());
+            typing.addView(actionRow("tune", Local.of("Кривая"), TypingAnim.curveName(), () -> {
+                TypingAnim.nextCurve();
+                rebuild();
+            }));
+        }
+        column.addView(wrap(typing));
+
+        column.addView(section(REPOSTS));
+        LinearLayout reposts = card();
+        reposts.addView(actionRow("repeat", Local.of("Удалить все мои репосты"), Local.of("Отменит каждый ваш репост, по одному"), () -> RepostPurge.begin(this)));
+        column.addView(wrap(reposts));
+
+        column.addView(section(MESSAGES));
+        LinearLayout messages = card();
+        String inboxNow = InboxTitle.get(this);
+        messages.addView(actionRow("edit", Local.of("Название «Входящие»"),
+                inboxNow.isEmpty() ? null : inboxNow, this::changeInboxTitle));
+        messages.addView(line());
+        messages.addView(toggleRow("chat", Local.of("Папки в личных сообщениях"), ChatFolders.enabled(), ChatFolders::setEnabled));
+        messages.addView(quiet(Local.of("Добавить чат в папку: долгое нажатие на чат, «Добавить в папку».")));
+        column.addView(wrap(messages));
+
+        // what stands in the inbox besides the chats, each piece on its own
+        column.addView(section(INBOX_CLEAN));
+        LinearLayout clean = card();
+        String[][] pieces = {
+                {InboxClean.STRIP, "visibility_off", Local.of("Скрыть полосу историй целиком")},
+                {InboxClean.CREATE, "add", Local.of("Скрыть «Создать» (свою историю)")},
+                {InboxClean.STORIES, "play_circle", Local.of("Скрыть истории друзей")},
+                {InboxClean.LIVE, "play_arrow", Local.of("Скрыть эфиры")},
+                {InboxClean.NOTES, "chat", Local.of("Скрыть заметки над аватарками")},
+                {InboxClean.EXTRAS, "view_compact", Local.of("Скрыть виджет и суперподписку в полосе")},
+                {InboxClean.SUGGESTED, "group", Local.of("Скрыть «Ваши вероятные знакомые»")}};
+        for (int i = 0; i < pieces.length; i++) {
+            final String key = pieces[i][0];
+            if (i > 0) clean.addView(line());
+            clean.addView(liveToggleRow(pieces[i][1], pieces[i][2], InboxClean.on(key), on -> InboxClean.set(key, on)));
+        }
+        column.addView(wrap(clean));
+
+        column.addView(section(GHOST));
+        LinearLayout ghost = card();
+        ghost.addView(quiet(Local.of("TikTok не узнает, что ты в сети, прочитал чат, печатаешь или смотрел историю и профиль. Чтобы скрыть «в сети», после включения перезапусти приложение.")));
+        ghost.addView(toggleRow("visibility_off", Local.of("Режим призрака"), Ghost.on(Ghost.KEY),
+                on -> Ghost.set(Ghost.KEY, on)));
+        if (Ghost.on(Ghost.KEY)) {
+            String[][] parts = {
+                    {Ghost.ONLINE, Local.of("Не показывать «в сети»")},
+                    {Ghost.READ, Local.of("Не отправлять «прочитано»")},
+                    {Ghost.TYPING, Local.of("Не отправлять «печатает»")},
+                    {Ghost.STORIES, Local.of("Не отмечать просмотр историй")},
+                    {Ghost.PROFILES, Local.of("Не отмечать посещение профилей")}};
+            for (String[] part : parts) {
+                final String key = part[0];
+                ghost.addView(line());
+                ghost.addView(liveToggleRow("eye_open", part[1], Ghost.on(key), on -> Ghost.set(key, on)));
+            }
+        }
+        column.addView(wrap(ghost));
+
         filterGroup();
         column.addView(versions());
 
@@ -1020,6 +1131,21 @@ public class SettingsActivity extends Activity {
      * the server's and are kept by account, so an account that anybody could
      * claim to be would have its coins staked by anybody.
      */
+    /** The heading of the chat list, under a word of the person's own. */
+    private void changeInboxTitle() {
+        Panel panel = Panel.with(this, skin, Local.of("Название «Входящие»"));
+        panel.text(Local.of("Так будет называться заголовок списка чатов. Пустое поле вернёт обычное слово."));
+        final EditText input = panel.field(Local.of("Входящие"));
+        String now = InboxTitle.get(this);
+        if (!now.isEmpty()) input.setText(now);
+        panel.primary(Local.of("Сохранить"), () -> {
+            String value = input.getText().toString();
+            InboxTitle.set(this, value);
+            InboxTitle.changed(value);
+            rebuild();
+        }).quiet(Local.of("Назад"), null).show();
+    }
+
     private void openDep() {
         if (DepGame.verified()) {
             DepCalc.show(this, skin);
@@ -3509,6 +3635,8 @@ public class SettingsActivity extends Activity {
         rows.addView(owner());
         rows.addView(person("Claude Opus 5", Text.THANKS_CLAUDE, null));
         rows.addView(person("someone's mf", Text.THANKS_TTCUZ, TTCUZ));
+        rows.addView(person("@saintcursed", Local.of("Автор LotusTok: призрак, папки, редактор интерфейса, анимация набора и другое"), LOTUSTOK));
+        rows.addView(person("TT Extras", Local.of("Плагин для MargyT: из него призрак и длинные комментарии"), null));
 
         rows.addView(line());
 
@@ -4363,7 +4491,7 @@ public class SettingsActivity extends Activity {
             case 4: return Local.of("Инструменты");
             case 5: return Local.of("О проекте");
             case 6: return Local.of("Плагины");
-            case 7: return Local.of("Серии и уведомления");
+            case 7: return Local.of("Чаты, серии, уведомления");
             case 8: return Text.FUN;
             default: return "MargyT";
         }
@@ -4495,6 +4623,18 @@ public class SettingsActivity extends Activity {
     }
 
     private static final String BURN = Local.of("Защита экрана");
+    private static final String EDITOR = Local.of("Редактор интерфейса"),
+            EDITOR_NOTE = Local.of("Скрыть, сдвинуть, увеличить или перекрасить любой элемент TikTok"),
+            TYPING = Local.of("Анимация набора текста"),
+            TYPING_NOTE = Local.of("Буквы выпрыгивают, удалённые улетают, курсор плывёт"),
+            REPOSTS = Local.of("Мои репосты"),
+            REPOSTS_NOTE = Local.of("Удалить все свои репосты разом"),
+            MESSAGES = Local.of("Личные сообщения"),
+            MESSAGES_NOTE = Local.of("Папки, название «Входящих», полоса историй"),
+            INBOX_CLEAN = Local.of("Что скрыть во «Входящих»"),
+            GHOST = Local.of("Режим призрака"),
+            GHOST_NOTE = Local.of("Без «в сети», «прочитано» и «печатает»");
+    private static final String LOTUSTOK = "https://github.com/pikmis/lotustok";
 
     private boolean navigating;
     private void goBack() {

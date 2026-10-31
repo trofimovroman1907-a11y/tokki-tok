@@ -33,6 +33,83 @@ final class Local {
     }
 
     static {
+        add("ПОЗИЦИЯ", "ПОЗИЦІЯ", "POSITION");
+        add("центр", "центр", "centre");
+        add("сдвиг", "зсув", "offset");
+        add("шаг", "крок", "step");
+        add("Длинные комментарии", "Довгі коментарі", "Long comments");
+        add("Призрак", "Привид", "Ghost");
+        add("Режим призрака", "Режим привида", "Ghost mode");
+        add("TikTok не узнает, что ты в сети, прочитал чат, печатаешь или смотрел историю и профиль. Чтобы скрыть «в сети», после включения перезапусти приложение.",
+                "TikTok не дізнається, що ти в мережі, прочитав чат, друкуєш чи дивився історію та профіль. Щоб приховати «в мережі», після ввімкнення перезапусти застосунок.",
+                "TikTok will not learn that you are online, have read a chat, are typing, or have seen a story or a profile. To hide being online, restart the app after switching it on.");
+        add("Не показывать «в сети»", "Не показувати «в мережі»", "Do not show as online");
+        add("Не отправлять «прочитано»", "Не надсилати «прочитано»", "Do not send read receipts");
+        add("Не отправлять «печатает»", "Не надсилати «друкує»", "Do not send typing");
+        add("Не отмечать просмотр историй", "Не позначати перегляд історій", "Do not mark stories as seen");
+        add("Не отмечать посещение профилей", "Не позначати відвідування профілів", "Do not mark profile visits");
+        add("Входящие: что скрыть", "Вхідні: що приховати", "Inbox: what to hide");
+        add("Скрыть полосу историй целиком", "Приховати смугу історій повністю", "Hide the whole stories strip");
+        add("Скрыть «Создать» (свою историю)", "Приховати «Створити» (свою історію)", "Hide “Create” (your own story)");
+        add("Скрыть истории друзей", "Приховати історії друзів", "Hide friends' stories");
+        add("Скрыть эфиры", "Приховати ефіри", "Hide LIVE");
+        add("Скрыть виджет и суперподписку в полосе", "Приховати віджет і суперпідписку в смузі", "Hide the widget and super subscription in the strip");
+        add("Скрыть заметки над аватарками", "Приховати нотатки над аватарками", "Hide notes over avatars");
+        add("Скрыть «Ваши вероятные знакомые»", "Приховати «Ваші ймовірні знайомі»", "Hide “People you may know”");
+        add("Изменённые", "Змінені", "Changed");
+        add("Изменённых элементов нет", "Змінених елементів немає", "Nothing has been changed");
+        add("Вернуть как было", "Повернути як було", "Put back as it was");
+        add("скрыт", "приховано", "hidden");
+        add("сдвинут", "зсунуто", "moved");
+        add("размер", "розмір", "size");
+        add("цвет", "колір", "colour");
+        add("вложенный / родитель", "вкладений / батьківський", "inner / parent");
+        add("Анимация набора", "Анімація набору", "Typing animation");
+        add("Буквы появляются плавно, пока вы печатаете, в комментариях и сообщениях.", "Літери з'являються плавно, поки ви друкуєте, у коментарях і повідомленнях.", "Letters appear smoothly as you type, in comments and messages.");
+        add("Анимация набора текста", "Анімація набору тексту", "Typing animation");
+        add("Размытие при появлении", "Розмиття при появі", "Blur on appearing");
+        add("Подъём снизу", "Підйом знизу", "Rise from below");
+        add("Увеличение (пружина)", "Збільшення (пружина)", "Grow (spring)");
+        add("Лёгкий поворот", "Легкий поворот", "Slight tilt");
+        add("Анимация удаления", "Анімація видалення", "Deleting animation");
+        add("Плавный курсор", "Плавний курсор", "Gliding cursor");
+        add("Кривая", "Крива", "Curve");
+        add("мягкая", "м'яка", "soft");
+        add("пружина", "пружина", "spring");
+        add("резкая", "різка", "sharp");
+        add("выскок", "виска", "pop-out");
+        add("Буквы выезжают и пружинят, удалённые улетают, курсор плывёт. В комментариях и сообщениях.", "Літери виїжджають і пружинять, видалені відлітають, курсор пливе. У коментарях і повідомленнях.", "Letters spring in, deleted ones fly away, the cursor glides. In comments and messages.");
+        add("Скорость", "Швидкість", "Speed");
+        add("быстро", "швидко", "fast");
+        add("плавно", "плавно", "smooth");
+        add("медленно", "повільно", "slow");
+        add("СЕТКА", "СІТКА", "GRID");
+        add("Выкл", "Вимк", "Off");
+        add("Центр и линии от углов", "Центр і лінії від кутів", "Centre and lines from corners");
+        add("Сдвиг идёт по линиям сетки", "Зсув іде по лініях сітки", "Moves go along the grid lines");
+        add("Скрыть, сдвинуть, увеличить или перекрасить любой элемент TikTok", "Приховати, зсунути, збільшити чи перефарбувати будь-який елемент TikTok", "Hide, move, enlarge or recolour any part of TikTok");
+        add("Буквы выпрыгивают, удалённые улетают, курсор плывёт", "Літери вистрибують, видалені відлітають, курсор пливе", "Letters pop in, deleted ones fly away, the cursor glides");
+        add("Мои репосты", "Мої репости", "My reposts");
+        add("Удалить все свои репосты разом", "Видалити всі свої репости разом", "Remove all your reposts at once");
+        add("Удалить все мои репосты", "Видалити всі мої репости", "Remove all my reposts");
+        add("Отменит каждый ваш репост, по одному", "Скасує кожен ваш репост, по одному", "Takes back every repost of yours, one by one");
+        add("Личные сообщения", "Особисті повідомлення", "Direct messages");
+        add("Папки, название «Входящих», полоса историй", "Папки, назва «Вхідних», смуга історій", "Folders, the inbox title, the stories strip");
+        add("Что скрыть во «Входящих»", "Що приховати у «Вхідних»", "What to hide in the inbox");
+        add("Без «в сети», «прочитано» и «печатает»", "Без «в мережі», «прочитано» і «друкує»", "No online, read or typing");
+        add("Чаты, серии, уведомления", "Чати, серії, сповіщення", "Chats, streaks, notifications");
+        add("Без ограничения TikTok на длину комментария.", "Без обмеження TikTok на довжину коментаря.", "Without TikTok's limit on a comment's length.");
+        add("Редактор интерфейса", "Редактор інтерфейсу", "Interface editor");
+        add("Открыть редактор", "Відкрити редактор", "Open the editor");
+        add("Нажимайте на любой элемент TikTok: скрыть, сдвинуть, изменить размер и цвет", "Натискайте на будь-який елемент TikTok: приховати, зсунути, змінити розмір і колір", "Tap anything in TikTok: hide it, move it, resize or recolour it");
+        add("Откройте нужный экран TikTok", "Відкрийте потрібний екран TikTok", "Open the TikTok screen you want");
+        add("Сбросить все правки", "Скинути всі правки", "Reset every change");
+        add("Название «Входящие»", "Назва «Вхідні»", "Inbox title");
+        add("Так будет называться заголовок списка чатов. Пустое поле вернёт обычное слово.", "Так називатиметься заголовок списку чатів. Порожнє поле поверне звичайне слово.", "The chat list will be headed with this. An empty field brings back the usual word.");
+        add("Папки в личных сообщениях", "Папки в особистих повідомленнях", "Folders in direct messages");
+        add("Добавить чат в папку: долгое нажатие на чат, «Добавить в папку».", "Додати чат до папки: довге натискання на чат, «Додати до папки».", "To put a chat in a folder: long-press it, then “Add to folder”.");
+        add("Автор LotusTok: призрак, папки, редактор интерфейса, анимация набора и другое", "Автор LotusTok: привид, папки, редактор інтерфейсу, анімація набору та інше", "Made LotusTok: the ghost, folders, the interface editor, the typing animation and more");
+        add("Плагин для MargyT: из него призрак и длинные комментарии", "Плагін для MargyT: з нього привид і довгі коментарі", "A MargyT plugin: the ghost and long comments come from it");
         add("Код плагина не удалось разобрать: ",
                 "Код плагіна не вдалося розібрати: ",
                 "The plugin's code could not be read: ");
