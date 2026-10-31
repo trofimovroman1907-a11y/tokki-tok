@@ -72,7 +72,8 @@ public final class Ghost {
         } catch (Throwable error) {
             Diary.note("ghost apply: " + error);
         }
-        LongComments.apply(on(LONG_COMMENTS));
+        // nobody wants a comment cut short: always on, with no switch
+        LongComments.apply(true);
     }
 
     static String report() {

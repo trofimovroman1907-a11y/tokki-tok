@@ -495,13 +495,14 @@ final class ChatFolders {
             Activity activity = Watch.here();
             if (strip instanceof HorizontalScrollView && activity != null) chips(activity, (HorizontalScrollView) strip);
             final String chosen = id;
-            list.postDelayed(new Runnable() {
+            list.post(new Runnable() {
                 @Override public void run() {
                     if (active == null || !active.equals(chosen)) return;
+                    sweep(list);
                     scrollTo(list, 0);
                     fill(list, chosen, -1, 0, 0);
                 }
-            }, 80L);
+            });
         }
         poke();
         Folder folder = folder(id);
@@ -536,6 +537,7 @@ final class ChatFolders {
      * seen or there are no more to load.
      */
     private static void fill(final ViewGroup list, final String id, final int before, final int quiet, final int steps) {
+        // the first look comes as soon as the list has been laid out: usually every chat is there already
         list.postDelayed(new Runnable() {
             @Override public void run() {
                 Folder folder = folder(active);
@@ -547,14 +549,14 @@ final class ChatFolders {
                 }
                 int now = rows(list);
                 int still = now == before ? quiet + 1 : 0;
-                if (found >= folder.chats.size() || now < 0 || still >= 3 || steps >= 6) {
+                if (found >= folder.chats.size() || now < 0 || still >= 3 || steps >= 8) {
                     scrollTo(list, 0);
                     return;
                 }
                 scrollTo(list, now - 1);
                 fill(list, id, now, still, steps + 1);
             }
-        }, 600L);
+        }, steps == 0 ? 120L : 350L);
     }
 
     // ------------------------------------------------------------ the chips

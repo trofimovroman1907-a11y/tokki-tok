@@ -94,7 +94,7 @@ final class Local {
         add("Удалить все мои репосты", "Видалити всі мої репости", "Remove all my reposts");
         add("Отменит каждый ваш репост, по одному", "Скасує кожен ваш репост, по одному", "Takes back every repost of yours, one by one");
         add("Личные сообщения", "Особисті повідомлення", "Direct messages");
-        add("Папки, название «Входящих», полоса историй", "Папки, назва «Вхідних», смуга історій", "Folders, the inbox title, the stories strip");
+        add("Папки чатов и полоса историй", "Папки чатів і смуга історій", "Chat folders and the stories strip");
         add("Что скрыть во «Входящих»", "Що приховати у «Вхідних»", "What to hide in the inbox");
         add("Без «в сети», «прочитано» и «печатает»", "Без «в мережі», «прочитано» і «друкує»", "No online, read or typing");
         add("Чаты, серии, уведомления", "Чати, серії, сповіщення", "Chats, streaks, notifications");
@@ -104,8 +104,6 @@ final class Local {
         add("Нажимайте на любой элемент TikTok: скрыть, сдвинуть, изменить размер и цвет", "Натискайте на будь-який елемент TikTok: приховати, зсунути, змінити розмір і колір", "Tap anything in TikTok: hide it, move it, resize or recolour it");
         add("Откройте нужный экран TikTok", "Відкрийте потрібний екран TikTok", "Open the TikTok screen you want");
         add("Сбросить все правки", "Скинути всі правки", "Reset every change");
-        add("Название «Входящие»", "Назва «Вхідні»", "Inbox title");
-        add("Так будет называться заголовок списка чатов. Пустое поле вернёт обычное слово.", "Так називатиметься заголовок списку чатів. Порожнє поле поверне звичайне слово.", "The chat list will be headed with this. An empty field brings back the usual word.");
         add("Папки в личных сообщениях", "Папки в особистих повідомленнях", "Folders in direct messages");
         add("Добавить чат в папку: долгое нажатие на чат, «Добавить в папку».", "Додати чат до папки: довге натискання на чат, «Додати до папки».", "To put a chat in a folder: long-press it, then “Add to folder”.");
         add("Автор LotusTok: призрак, папки, редактор интерфейса, анимация набора и другое", "Автор LotusTok: привид, папки, редактор інтерфейсу, анімація набору та інше", "Made LotusTok: the ghost, folders, the interface editor, the typing animation and more");

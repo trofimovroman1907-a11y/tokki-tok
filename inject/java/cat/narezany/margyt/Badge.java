@@ -269,7 +269,6 @@ public final class Badge {
      */
     private static CharSequence typed(TextView view, CharSequence text) {
         watch(view);
-        text = InboxTitle.replace(text);
         if (text == null) return text;
         String cleaned = strip(text.toString());
         return cleaned.equals(text.toString()) ? text : cleaned;
@@ -344,7 +343,6 @@ public final class Badge {
 
     private static CharSequence marked(TextView view, CharSequence text) {
         if (text == null) return text;
-        text = InboxTitle.replace(text);
 
         Looks.clear(view);
 

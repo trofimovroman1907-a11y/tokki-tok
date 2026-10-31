@@ -764,10 +764,6 @@ public class SettingsActivity extends Activity {
             copying.set(on);
         }));
         comments.addView(quiet(Text.COMMENT_COPY_NOTE));
-        comments.addView(line());
-        comments.addView(liveToggleRow("article", Local.of("Длинные комментарии"),
-                Ghost.on(Ghost.LONG_COMMENTS), on -> Ghost.set(Ghost.LONG_COMMENTS, on)));
-        comments.addView(quiet(Local.of("Без ограничения TikTok на длину комментария.")));
         column.addView(wrap(comments));
 
         column.addView(section(BURN));
@@ -1073,10 +1069,6 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(MESSAGES));
         LinearLayout messages = card();
-        String inboxNow = InboxTitle.get(this);
-        messages.addView(actionRow("edit", Local.of("Название «Входящие»"),
-                inboxNow.isEmpty() ? null : inboxNow, this::changeInboxTitle));
-        messages.addView(line());
         messages.addView(toggleRow("chat", Local.of("Папки в личных сообщениях"), ChatFolders.enabled(), ChatFolders::setEnabled));
         messages.addView(quiet(Local.of("Добавить чат в папку: долгое нажатие на чат, «Добавить в папку».")));
         column.addView(wrap(messages));
@@ -1131,21 +1123,6 @@ public class SettingsActivity extends Activity {
      * the server's and are kept by account, so an account that anybody could
      * claim to be would have its coins staked by anybody.
      */
-    /** The heading of the chat list, under a word of the person's own. */
-    private void changeInboxTitle() {
-        Panel panel = Panel.with(this, skin, Local.of("Название «Входящие»"));
-        panel.text(Local.of("Так будет называться заголовок списка чатов. Пустое поле вернёт обычное слово."));
-        final EditText input = panel.field(Local.of("Входящие"));
-        String now = InboxTitle.get(this);
-        if (!now.isEmpty()) input.setText(now);
-        panel.primary(Local.of("Сохранить"), () -> {
-            String value = input.getText().toString();
-            InboxTitle.set(this, value);
-            InboxTitle.changed(value);
-            rebuild();
-        }).quiet(Local.of("Назад"), null).show();
-    }
-
     private void openDep() {
         if (DepGame.verified()) {
             DepCalc.show(this, skin);
@@ -4630,7 +4607,7 @@ public class SettingsActivity extends Activity {
             REPOSTS = Local.of("Мои репосты"),
             REPOSTS_NOTE = Local.of("Удалить все свои репосты разом"),
             MESSAGES = Local.of("Личные сообщения"),
-            MESSAGES_NOTE = Local.of("Папки, название «Входящих», полоса историй"),
+            MESSAGES_NOTE = Local.of("Папки чатов и полоса историй"),
             INBOX_CLEAN = Local.of("Что скрыть во «Входящих»"),
             GHOST = Local.of("Режим призрака"),
             GHOST_NOTE = Local.of("Без «в сети», «прочитано» и «печатает»");
