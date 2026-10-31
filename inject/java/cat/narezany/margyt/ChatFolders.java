@@ -691,6 +691,13 @@ final class ChatFolders {
             java.lang.reflect.Method giving = type.getDeclaredMethod("LIZIZ", List.class, Runnable.class);
             giving.setAccessible(true);
             java.lang.reflect.Field held = field(type, "LJ");
+            // the differ's own executor is asked to work out each new list: a new whole list is
+            // narrowed to the folder there, before it is ever shown
+            Object config = field(type, "LIZIZ").get(found);
+            java.lang.reflect.Field executing = field(config.getClass(), "LIZ");
+            Object executor = executing.get(config);
+            if (executor instanceof java.util.concurrent.Executor && !(executor instanceof Gate))
+                executing.set(config, new Gate((java.util.concurrent.Executor) executor));
             Object listeners = field(type, "LIZLLL").get(found);
             Class<?> face = Class.forName("X.16bj", false, type.getClassLoader());
             Object ear = Proxy.newProxyInstance(face.getClassLoader(), new Class<?>[] {face}, (proxy, method, args) -> {
@@ -710,6 +717,42 @@ final class ChatFolders {
             ours = null;
             shown = new WeakReference<ViewGroup>(list);
             return true;
+        }
+
+        /** Hands the differ's work on, after narrowing a new whole list of TikTok's to the folder. */
+        private static final class Gate implements java.util.concurrent.Executor {
+            private final java.util.concurrent.Executor real;
+
+            Gate(java.util.concurrent.Executor real) {
+                this.real = real;
+            }
+
+            @Override public void execute(Runnable work) {
+                try {
+                    if (active != null && ours != null) intercept(work, active);
+                } catch (Throwable error) {
+                    Diag.say("folders gate: " + error);
+                }
+                real.execute(work);
+            }
+        }
+
+        /** In the differ's work, the list it is going to: TikTok's whole list becomes the folder's part of it. */
+        private static void intercept(Runnable work, String id) throws Exception {
+            Object current = backing.get(differ);
+            for (Class<?> c = work.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+                for (java.lang.reflect.Field one : c.getDeclaredFields()) {
+                    if (java.lang.reflect.Modifier.isStatic(one.getModifiers())) continue;
+                    one.setAccessible(true);
+                    Object value = one.get(work);
+                    if (!(value instanceof List) || value == current || value == ours) continue;
+                    whole = (List<?>) value;
+                    List<Object> part = part(id, whole);
+                    ours = part;
+                    one.set(work, part);
+                    return;
+                }
+            }
         }
 
         /** The differ took a list: if it was not the folder's, it is TikTok's newest whole list. */
@@ -778,16 +821,22 @@ final class ChatFolders {
             return kind.equals("com.ss.android.ugc.aweme.inbox.widget.multi.InboxHorizontalTopListCombinePod") || kind.equals("X.0TD7");
         }
 
+        /** The stories, the chips and the folder's chats of a whole list. */
+        private static List<Object> part(String id, List<?> from) throws Exception {
+            List<Object> out = new ArrayList<Object>();
+            for (Object wrapper : from) {
+                if (wrapper == null) continue;
+                String name = chatName(wrapper);
+                if (name == null ? header(wrapper) : holds(id, name)) out.add(wrapper);
+            }
+            return out;
+        }
+
         private static void give(String id) {
             try {
                 List<?> from = whole;
                 if (from == null) return;
-                List<Object> out = new ArrayList<Object>();
-                for (Object wrapper : from) {
-                    if (wrapper == null) continue;
-                    String name = chatName(wrapper);
-                    if (name == null ? header(wrapper) : holds(id, name)) out.add(wrapper);
-                }
+                List<Object> out = part(id, from);
                 ours = out;
                 final ViewGroup list = shown.get();
                 submit.invoke(differ, out, new Runnable() {
@@ -936,8 +985,9 @@ final class ChatFolders {
         // while a folder is chosen, the chip of TikTok that looked chosen does not
         for (LinearLayout chip : theirs) {
             Object saved = chip.getTag(TAG_SWAPPED);
-            if (active != null && saved == null && selectedLook != null && idleLook != null && inkOf(chip) == selectedLook.ink) {
-                chip.setTag(TAG_SWAPPED, lookOf(chip));
+            // TikTok draws its chips again now and then, its own chosen one chosen again: it is put back each time
+            if (active != null && selectedLook != null && idleLook != null && inkOf(chip) == selectedLook.ink) {
+                if (saved == null) chip.setTag(TAG_SWAPPED, lookOf(chip));
                 dress(chip, idleLook);
             } else if (active == null && saved instanceof Look) {
                 dress(chip, (Look) saved);
