@@ -14,11 +14,18 @@ public final class PlayerTools {
    Object post=NativeRead.get(controller,"LLJJJIL");String next=NativeRead.aid(post);if(next.length()==0 || eventAid==null || !next.equals(eventAid))return;
    Object manager=NativeRead.get(controller,"getPlayerManager");if(manager==null)return;
    current=new WeakReference<Object>(manager);
-   if(next.equals(aid))return;
+   if(next.equals(aid)){SponsorBlock.playing(next);return;}
    aid=next;cancelSmooth();
+   SponsorBlock.playing(next);
   }catch(Throwable error){Diary.note("default speed: "+error);}
  }
  static void accountChanged(){aid="";current=new WeakReference<Object>(null);cancelSmooth();}
+ /** For the skipping of adverts: the player of the video playing, which video it is, where it is and how long. */
+ static Object manager(){return current.get();}
+ static String aid(){return aid;}
+ static long position(Object manager){return NativeRead.number(NativeRead.get(manager,"getCurrentPosition"));}
+ static long duration(Object manager){return NativeRead.number(NativeRead.get(manager,"getDuration"));}
+ static void seekTo(Object manager,long position,long duration){if(manager!=null&&duration>0)seekAt(manager,Math.max(0,Math.min(duration-1,position)),duration);}
  static void setSpeed(float value){
   if(!validSpeed(value)){Screen.say(Text.SPEED_RANGE);return;}
   cancelSmooth();AccountAppearance.prefs(Margy.context()).edit().putFloat(SPEED,value).apply();

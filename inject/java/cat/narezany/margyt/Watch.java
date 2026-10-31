@@ -57,6 +57,7 @@ public final class Watch implements Application.ActivityLifecycleCallbacks {
             ViewEditor.attach(activity);
             Ghost.resumed(activity);
             TypingAnim.attach(activity);
+            SponsorBlock.attach(activity);
         }
         Screamer.attach(activity);
     }

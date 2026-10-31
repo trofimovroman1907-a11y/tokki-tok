@@ -149,6 +149,7 @@ public class SettingsActivity extends Activity {
             new Shelf(3, "feed", "view_compact", Text.FEED, Text.PAGE_FEED_NOTE, Text.FEED, Text.DATE_FILTER, Text.TAGS),
             new Shelf(3, "video", "play_circle", Text.VIDEO, Text.PAGE_VIDEO_NOTE, Text.RAIL, Text.VIDEO, Text.FPS),
             new Shelf(3, "comments", "chat", Text.COMMENTS, Text.PAGE_COMMENTS_NOTE, Text.COMMENTS),
+            new Shelf(3, "sponsor", "fast_forward", SPONSOR, SPONSOR_NOTE, SPONSOR),
             new Shelf(3, "burn", "eye_open", BURN, Text.PAGE_BURN_NOTE, BURN),
             new Shelf(3, "region", "public", Text.REGION, Text.PAGE_REGION_NOTE, Text.REGION, Text.COUNTRY),
             new Shelf(4, "downloads", "download", Text.DOWNLOADS, Text.PAGE_DOWNLOADS_NOTE, Text.DOWNLOADS),
@@ -1065,6 +1066,17 @@ public class SettingsActivity extends Activity {
             }));
         }
         column.addView(wrap(typing));
+
+        column.addView(section(SPONSOR));
+        LinearLayout sponsor = card();
+        sponsor.addView(new NewPictures.Sponsor(this, skin));
+        sponsor.addView(liveToggleRow("fast_forward", Local.of("Пропускать рекламу"), SponsorBlock.skipOn(),
+                on -> SponsorBlock.set(SponsorBlock.KEY_SKIP, on)));
+        sponsor.addView(quiet(Local.of("Куски, где автор рекламирует что-то, пропускаются сами, а вернуться можно кнопкой «Вернуть». Отметить рекламу: зажми «Поделиться» и выбери «Отметить рекламу». Нужен подтверждённый аккаунт.")));
+        sponsor.addView(line());
+        sponsor.addView(liveToggleRow("timeline", Local.of("Показывать рекламу красным на шкале"), SponsorBlock.marksOn(),
+                on -> SponsorBlock.set(SponsorBlock.KEY_MARKS, on)));
+        column.addView(wrap(sponsor));
 
         column.addView(section(REPOSTS));
         LinearLayout reposts = card();
@@ -4628,6 +4640,8 @@ public class SettingsActivity extends Activity {
             GHOST = Local.of("Режим призрака"),
             GHOST_NOTE = Local.of("Без «в сети», «прочитано» и «печатает»");
     private static final String LOTUSTOK = "https://github.com/pikmis/lotustok";
+    private static final String SPONSOR = Local.of("Реклама в видео"),
+            SPONSOR_NOTE = Local.of("Пропуск рекламы, которую читают авторы");
 
     private boolean navigating;
     private void goBack() {

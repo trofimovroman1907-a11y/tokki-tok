@@ -238,6 +238,49 @@ final class NewPictures {
         }
     }
 
+    // ============================================================ adverts in videos
+
+    /** A video's bar with an advert red on it: the playhead runs up to it and jumps over. */
+    static final class Sponsor extends SettingsPictures.Art {
+
+        Sponsor(Context context, Skin skin) {
+            super(context, skin, 120);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            float t = clock() % 4.6f;
+            float left = 28 * d, right = getWidth() - 28 * d, y = 54 * d;
+            float a = 0.38f, b = 0.62f;
+            // where the video is: it runs to the advert, jumps past it, and goes on
+            float place = t < 1.6f ? (t / 1.6f) * a : t < 1.9f ? a : Math.min(1f, b + (t - 1.9f) / 2.4f * (1f - b));
+            boolean jumped = t >= 1.9f && t < 3.4f;
+            paint.setColor(surface(0.14f));
+            box.set(left, y - 3 * d, right, y + 3 * d);
+            canvas.drawRoundRect(box, 3 * d, 3 * d, paint);
+            paint.setColor(Accent.colour());
+            box.set(left, y - 3 * d, left + (right - left) * place, y + 3 * d);
+            canvas.drawRoundRect(box, 3 * d, 3 * d, paint);
+            paint.setColor(0xFFFF3B3B);
+            box.set(left + (right - left) * a, y - 3 * d, left + (right - left) * b, y + 3 * d);
+            canvas.drawRect(box, paint);
+            paint.setColor(skin.text);
+            canvas.drawCircle(left + (right - left) * place, y, 7 * d, paint);
+            words(canvas, Local.of("Реклама"), left + (right - left) * (a + b) / 2f, y - 14 * d, 12, 0xFFFF3B3B, true, Paint.Align.CENTER);
+            if (jumped) {
+                float fade = Math.min(1f, (t - 1.9f) / 0.2f) * Math.min(1f, (3.4f - t) / 0.3f);
+                text.setTextSize(13 * d);
+                String said = Local.of("Реклама пропущена") + "  ·  " + Local.of("Вернуть");
+                float w = text.measureText(said) + 32 * d;
+                paint.setColor(faint(0xE6202020, fade));
+                box.set(getWidth() / 2f - w / 2f, y + 18 * d, getWidth() / 2f + w / 2f, y + 50 * d);
+                canvas.drawRoundRect(box, 16 * d, 16 * d, paint);
+                words(canvas, said, getWidth() / 2f, y + 39 * d, 13, faint(0xFFFFFFFF, fade), false, Paint.Align.CENTER);
+            }
+            again();
+        }
+    }
+
     // ============================================================ the interface editor
 
     /** A screen with buttons on it: one is picked out, then moved, made bigger and painted. */

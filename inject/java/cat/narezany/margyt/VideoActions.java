@@ -46,6 +46,7 @@ public final class VideoActions {
   Context c=anchor.getContext();Panel panel=Panel.with(c,Skin.remembered(c),Text.VIDEO_ACTIONS);
    panel.item("download",Text.ACT_DOWNLOAD,Text.ACT_DOWNLOAD_HINT,()->chooseDownload(c,post));
  panel.item("play_circle",Text.ACT_PLAYBACK,Text.ACT_PLAYBACK_HINT,()->playback(c));
+  panel.item("fast_forward",Local.of("Отметить рекламу"),Local.of("Где автор рекламирует что-то в видео"),()->SponsorBlock.mark(c,post));
   panel.item("image",Text.SAVE_FRAME,Text.ACT_FRAME_HINT,()->FrameCapture.capture(selectedRow,NativeRead.aid(post)));
   panel.item("visibility_off",Text.ACT_HIDE,Text.ACT_HIDE_HINT,()->{
    Panel more=Panel.with(c,Skin.remembered(c),Text.ACT_HIDE);
