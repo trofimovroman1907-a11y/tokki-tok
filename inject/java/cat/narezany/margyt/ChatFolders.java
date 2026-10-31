@@ -207,7 +207,13 @@ final class ChatFolders {
     private static String keyOf(View row) {
         TextView name = nameOf(row);
         if (name == null || name.getText() == null) return null;
-        String text = clean(name.getText().toString());
+        return keyOfName(name.getText().toString());
+    }
+
+    /** How a chat is known from the name written on it, wherever it is written. */
+    static String keyOfName(String written) {
+        if (written == null) return null;
+        String text = clean(written);
         if (text.length() == 0) return null;
         String uid;
         synchronized (uidByName) {
@@ -236,6 +242,43 @@ final class ChatFolders {
             if (Character.isLetterOrDigit(c) || c == ',') return false;
         }
         return true;
+    }
+
+    // ------------------------------------------------------------ for the share sheet
+
+    /** The folders there are, each as its id and its name; none when the folders are switched off. */
+    static List<String[]> list() {
+        List<String[]> out = new ArrayList<String[]>();
+        if (!enabled()) return out;
+        load();
+        synchronized (ChatFolders.class) {
+            for (Folder folder : folders) out.add(new String[] {folder.id, folder.name});
+        }
+        return out;
+    }
+
+    /** How many chats a folder has. */
+    static synchronized int size(String id) {
+        Folder folder = folder(id);
+        return folder == null ? 0 : folder.chats.size();
+    }
+
+    /**
+     * Whether the person whose name is written is in the folder: by the account when
+     * it is known whose the name is, and else by the name the chat had when it went in.
+     */
+    static synchronized boolean holds(String id, String written) {
+        Folder folder = folder(id);
+        if (folder == null || written == null) return false;
+        String key = keyOfName(written);
+        if (key != null && folder.chats.containsKey(key)) return true;
+        String text = clean(written);
+        for (String name : folder.chats.values()) {
+            if (name == null || name.length() < 1) continue;
+            String known = clean(name);
+            if (known.length() > 0 && (text.equals(known) || (text.startsWith(known) && marksOnly(text, known.length())))) return true;
+        }
+        return false;
     }
 
     private static String labelOf(View row) {

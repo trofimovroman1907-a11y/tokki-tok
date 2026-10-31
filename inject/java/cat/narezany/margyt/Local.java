@@ -33,6 +33,7 @@ final class Local {
     }
 
     static {
+        add("Все", "Усі", "All");
         add("ПОЗИЦИЯ", "ПОЗИЦІЯ", "POSITION");
         add("центр", "центр", "centre");
         add("сдвиг", "зсув", "offset");

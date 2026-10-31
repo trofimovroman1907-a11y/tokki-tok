@@ -343,6 +343,8 @@ public final class Badge {
 
     private static CharSequence marked(TextView view, CharSequence text) {
         if (text == null) return text;
+        // the people of the share sheet are named here too: the sheet gets the chat folders
+        ShareFolders.named(view);
 
         Looks.clear(view);
 
