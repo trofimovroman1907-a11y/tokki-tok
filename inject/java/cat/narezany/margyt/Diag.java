@@ -18,7 +18,7 @@ final class Diag {
 
     private Diag() {}
 
-    static final boolean ON = true;
+    static final boolean ON = false;
     private static int said;
 
     private static java.io.Writer file;
