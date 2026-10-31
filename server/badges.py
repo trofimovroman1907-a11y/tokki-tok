@@ -1551,7 +1551,7 @@ class Handler(BaseHTTPRequestHandler):
             if length < 0:
                 self.answer(400, {"error": "unreadable"})
                 return
-            if length > (CRASH_MOST if path == "/crash" else 65536 if path == "/sb/report" else 8192):
+            if length > (CRASH_MOST if path == "/crash" else 196608 if path == "/sb/report" else 8192):
                 self.answer(413, {"error": "that is a lot of json"})
                 return
             raw = self.rfile.read(length) or b"{}"

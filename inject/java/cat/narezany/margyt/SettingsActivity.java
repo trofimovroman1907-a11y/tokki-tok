@@ -1074,6 +1074,10 @@ public class SettingsActivity extends Activity {
                 on -> SponsorBlock.set(SponsorBlock.KEY_SKIP, on)));
         sponsor.addView(quiet(Local.of("Куски, где автор рекламирует что-то, пропускаются сами, а вернуться можно кнопкой «Вернуть». Отметить рекламу: зажми «Поделиться» и выбери «Отметить рекламу». Нужен подтверждённый аккаунт.")));
         sponsor.addView(line());
+        sponsor.addView(liveToggleRow("volume_up", Local.of("Искать рекламу по звуку"), SponsorBlock.soundOn(),
+                on -> SponsorBlock.set(SponsorBlock.KEY_SOUND, on)));
+        sponsor.addView(quiet(Local.of("Одну и ту же рекламу вставляют во много роликов. Мод узнаёт её по звуку, даже если в этом ролике её никто не отмечал. Работает только по Wi-Fi: мод ещё раз скачивает лёгкую версию ролика.")));
+        sponsor.addView(line());
         sponsor.addView(liveToggleRow("timeline", Local.of("Показывать рекламу красным на шкале"), SponsorBlock.marksOn(),
                 on -> SponsorBlock.set(SponsorBlock.KEY_MARKS, on)));
         column.addView(wrap(sponsor));

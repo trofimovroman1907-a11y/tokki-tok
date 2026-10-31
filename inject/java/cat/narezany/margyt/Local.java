@@ -33,6 +33,11 @@ final class Local {
     }
 
     static {
+        add("Искать рекламу по звуку", "Шукати рекламу за звуком", "Find adverts by their sound");
+        add("Одну и ту же рекламу вставляют во много роликов. Мод узнаёт её по звуку, даже если в этом ролике её никто не отмечал. Работает только по Wi-Fi: мод ещё раз скачивает лёгкую версию ролика.", "Одну й ту саму рекламу вставляють у багато роликів. Мод упізнає її за звуком, навіть якщо в цьому ролику її ніхто не позначав. Працює лише через Wi-Fi: мод ще раз завантажує легку версію ролика.", "The same advert is put into many videos. The mod knows it by its sound even where nobody marked it. Only on Wi-Fi: the mod fetches a light copy of the video once more.");
+        add("Потяни красные края к началу и концу рекламы и нажми ▶, чтобы послушать кусок.", "Потягни червоні краї до початку й кінця реклами й натисни ▶, щоб послухати шматок.", "Drag the red edges to where the advert starts and ends, and press ▶ to hear that part.");
+        add("Играет", "Грає", "Playing");
+        add("Секунду, видео ещё загружается", "Секунду, відео ще завантажується", "One moment, the video is still loading");
         add("Потяни красные края к началу и концу рекламы.", "Потягни червоні краї до початку й кінця реклами.", "Drag the red edges to where the advert starts and ends.");
         add("Кадры не загрузились", "Кадри не завантажилися", "The frames did not load");
         add("Загружаю кадры…", "Завантажую кадри…", "Loading frames…");

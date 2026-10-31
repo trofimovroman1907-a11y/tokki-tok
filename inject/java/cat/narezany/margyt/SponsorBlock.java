@@ -94,6 +94,7 @@ final class SponsorBlock {
         if (aid == null || aid.length() == 0) return;
         playing = aid;
         ask(aid, false);
+        listen(aid);
         if (!ticking) {
             ticking = true;
             main.post(tick);
@@ -283,16 +284,141 @@ final class SponsorBlock {
         }
     }
 
+    // ------------------------------------------------------------ hearing adverts in the sound
+
+    static final String KEY_SOUND = "sb_sound";
+
+    static boolean soundOn() {
+        try {
+            return AccountAppearance.prefs(Margy.context()).getBoolean(KEY_SOUND, true);
+        } catch (Throwable ignored) {
+            return true;
+        }
+    }
+
+    private static volatile Hear.Index heard = new Hear.Index();
+    private static long printsUntil, printsAsked;
+    private static final java.util.concurrent.ExecutorService listener = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private static final Set<String> listened = new HashSet<String>();
+    private static boolean printsLoaded;
+
+    private static java.io.File printsFile() {
+        return new java.io.File(Margy.context().getFilesDir(), "margyt-sb-prints.json");
+    }
+
+    /** The prints of adverts the server has: kept on the phone, and the new ones asked for now and then. */
+    private static void prints() {
+        long now = android.os.SystemClock.uptimeMillis();
+        if (printsLoaded && now - printsAsked < 30 * 60 * 1000L) return;
+        printsAsked = now;
+        listener.execute(() -> {
+            try {
+                JSONObject all = new JSONObject();
+                java.io.File file = printsFile();
+                if (file.exists()) all = new JSONObject(new String(java.nio.file.Files.readAllBytes(file.toPath()), "UTF-8"));
+                printsUntil = all.optLong("until");
+                String said = Net.text(Badges.SERVER + "/sb/prints?since=" + printsUntil);
+                if (said != null) {
+                    JSONObject fresh = new JSONObject(said);
+                    JSONArray list = all.optJSONArray("prints");
+                    if (list == null) list = new JSONArray();
+                    JSONArray added = fresh.optJSONArray("prints");
+                    for (int i = 0; added != null && i < added.length(); i++) list.put(added.get(i));
+                    all.put("prints", list).put("until", Math.max(printsUntil, fresh.optLong("until")));
+                    java.nio.file.Files.write(file.toPath(), all.toString().getBytes("UTF-8"));
+                }
+                Hear.Index index = new Hear.Index();
+                JSONArray list = all.optJSONArray("prints");
+                Set<Long> seen = new HashSet<Long>();
+                for (int i = 0; list != null && i < list.length(); i++) {
+                    JSONObject one = list.getJSONObject(i);
+                    if (!seen.add(one.getLong("id"))) continue;
+                    JSONArray hashes = one.getJSONArray("hashes");
+                    int[] flat = new int[hashes.length()];
+                    for (int k = 0; k < flat.length; k++) flat[k] = hashes.getInt(k);
+                    index.add(one.getLong("id"), one.getLong("length"), flat);
+                }
+                heard = index;
+                printsLoaded = true;
+            } catch (Throwable error) {
+                Diary.note("sponsor prints: " + error);
+            }
+        });
+    }
+
+    /** Only on Wi-Fi: the video is fetched once more, in its smallest size, to be listened to. */
+    private static boolean unmetered() {
+        try {
+            android.net.ConnectivityManager net = (android.net.ConnectivityManager) Margy.context().getSystemService(Context.CONNECTIVITY_SERVICE);
+            return net != null && net.getActiveNetwork() != null && !net.isActiveNetworkMetered();
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
+    /** The video playing is listened to for the adverts whose prints are known. */
+    private static void listen(final String aid) {
+        if (!soundOn()) return;
+        prints();
+        final Object post = PlayerTools.post();
+        if (post == null || !aid.equals(NativeRead.aid(post)) || heard.empty() || !unmetered()) return;
+        synchronized (SponsorBlock.class) {
+            if (!listened.add(aid)) return;
+        }
+        listener.execute(() -> {
+            java.io.File file = new java.io.File(Margy.context().getCacheDir(), "margyt-sb-hear-" + aid + ".mp4");
+            try {
+                // a video scrolled past before its turn is not worth fetching
+                if (!aid.equals(PlayerTools.aid())) {
+                    synchronized (SponsorBlock.class) { listened.remove(aid); }
+                    return;
+                }
+                long length = NativeRead.number(NativeRead.get(NativeRead.get(post, "getVideo"), "getDuration"));
+                if (length > 0 && (length < 8000 || length > 10 * 60 * 1000L)) return;
+                if (!fetchSmallest(post, file)) return;
+                short[] sound = Hear.sound(file.getAbsolutePath(), 10 * 60 * 1000L);
+                java.util.List<long[]> found = Hear.find(Hear.whole(sound), heard);
+                if (found.isEmpty()) return;
+                synchronized (SponsorBlock.class) {
+                    long[][] had = known.get(aid);
+                    java.util.ArrayList<long[]> all = new java.util.ArrayList<long[]>();
+                    if (had != null) java.util.Collections.addAll(all, had);
+                    for (long[] one : found) {
+                        boolean same = false;
+                        for (long[] was : all) if (Math.abs(was[0] - one[0]) < 2500 && Math.abs(was[1] - one[1]) < 2500) same = true;
+                        if (!same) all.add(one);
+                    }
+                    known.put(aid, all.toArray(new long[0][]));
+                }
+                Diary.note("sponsor: heard " + found.size() + " advert(s) in " + aid);
+            } catch (Throwable error) {
+                Diary.note("sponsor listen: " + error);
+            } finally {
+                file.delete();
+            }
+        });
+    }
+
+    /** The video's smallest file, fetched into `into`; true when it is there. */
+    static boolean fetchSmallest(Object post, java.io.File into) {
+        if (into.length() > 0) return true;
+        Object video = NativeRead.get(post, "getVideo");
+        Object smallest = DownloadQuality.video(video, NativeRead.get(video, "getPlayAddr"), 2);
+        for (String address : DownloadQuality.all(smallest)) {
+            if (Net.download(address, into, null)) return true;
+        }
+        return false;
+    }
+
     // ------------------------------------------------------------ marking
 
     /** From the video's menu: mark where the advert is, or say a red part is no advert. */
-    static void mark(final Context context, Object post) {
+    static void mark(final Context context, final Object post) {
         final String aid = NativeRead.aid(post);
         if (aid.length() == 0) {
             Screen.say(Text.VIDEO_NOT_READY);
             return;
         }
-        // the player of this very video, when it is the one playing; without it the handles do not move the video
         final Object manager = aid.equals(PlayerTools.aid()) ? PlayerTools.manager() : null;
         final String uid = Account.id();
         final String token = Mine.token();
@@ -310,18 +436,19 @@ final class SponsorBlock {
             Screen.say(Text.PLAYER_NOT_READY);
             return;
         }
-        final Range range = new Range(context, length, Math.max(0, now - 1000), Math.min(length, now + 9000), manager, post);
+        final Marker marker = new Marker(context, post, length, Math.max(0, now - 1000), Math.min(length, now + 9000));
         Panel panel = Panel.with(context, Skin.remembered(context), Local.of("Где реклама"));
-        panel.text(Local.of("Потяни красные края к началу и концу рекламы."));
-        panel.view(range);
+        panel.text(Local.of("Потяни красные края к началу и концу рекламы и нажми ▶, чтобы послушать кусок."));
+        panel.view(marker);
         long[][] parts = partsOf(aid);
         if (parts != null) {
             for (final long[] part : parts) {
+                if (part[2] < 0) continue;
                 panel.item("block", Local.of("Это не реклама"), Local.of("с") + " " + time(part[0]) + " " + Local.of("до") + " " + time(part[1]),
-                        () -> send(context, aid, part[0], part[1], length, true));
+                        () -> send(aid, part[0], part[1], length, true, null));
             }
         }
-        panel.primary(Local.of("Отправить"), () -> send(context, aid, range.start, range.stop, length, false));
+        panel.primary(Local.of("Отправить"), () -> send(aid, marker.range.start, marker.range.stop, length, false, marker.frames.file));
         panel.quiet(Text.CLOSE, null);
         panel.show();
     }
@@ -331,18 +458,44 @@ final class SponsorBlock {
         return (s / 60) + ":" + (s % 60 < 10 ? "0" : "") + (s % 60);
     }
 
-    private static void send(final Context context, final String aid, final long start, final long stop, final long length, final boolean wrong) {
+    private static void send(final String aid, final long start, final long stop, final long length, final boolean wrong, final java.io.File sound) {
         final String uid = Account.id();
         final String token = Mine.token();
+        // the file goes away with the window: it is moved aside now, and listened to away from the screen
+        java.io.File kept = null;
+        if (sound != null && sound.length() > 0 && !wrong) {
+            java.io.File aside = new java.io.File(sound.getParentFile(), "margyt-sb-send-" + aid + ".mp4");
+            if (sound.renameTo(aside)) kept = aside;
+        }
+        final java.io.File heardFile = kept;
         Net.away("sponsor mark", new Runnable() {
             @Override public void run() {
                 try {
                     JSONObject body = new JSONObject().put("uid", uid).put("token", token).put("aid", aid)
                             .put("start", start).put("stop", stop).put("length", length).put("wrong", wrong);
+                    short[] heardNow = null;
+                    if (heardFile != null) {
+                        try {
+                            heardNow = Hear.sound(heardFile.getAbsolutePath(), Math.min(length, stop + 1000) + 1000);
+                        } catch (Throwable error) {
+                            Diary.note("sponsor print: " + error);
+                        } finally {
+                            heardFile.delete();
+                        }
+                    }
+                    if (heardNow != null) {
+                        int[] print = Hear.print(heardNow, start, stop);
+                        if (print.length > 0) {
+                            JSONArray list = new JSONArray();
+                            for (int i = 0; i < print.length && i < 12000; i++) list.put(print[i]);
+                            body.put("print", list);
+                        }
+                    }
                     Net.Said said = Net.talk(Badges.SERVER + "/sb/report", body.toString());
                     if (said.ok()) {
                         JSONObject answer = new JSONObject(said.body);
                         keep(aid, parse(answer.optJSONArray("segments")));
+                        printsAsked = 0;
                         Screen.say(wrong ? Local.of("Спасибо, учтём")
                                 : answer.optBoolean("taken") ? Local.of("Готово, реклама будет пропускаться")
                                 : Local.of("Спасибо! Реклама начнёт пропускаться, когда её отметят ещё несколько человек"));
@@ -364,16 +517,15 @@ final class SponsorBlock {
     // ------------------------------------------------------------ the video's frames
 
     /**
-     * The video's pictures for the marker: its smallest file is fetched into the cache and frames
-     * are read from it, one at a time on a thread of their own, the newest asked for first.
+     * The video for the marker: its smallest file is fetched into the cache, and frames are read
+     * from it one at a time on a thread of their own, the newest asked for first.
      */
     static final class Frames {
-        private final java.io.File file;
+        final java.io.File file;
         private android.media.MediaMetadataRetriever reader;
         private final java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor();
         private final android.util.LruCache<Long, android.graphics.Bitmap> kept = new android.util.LruCache<Long, android.graphics.Bitmap>(48);
         volatile boolean ready, failed;
-        /** What is being read now, for the large frame and for the strip: a newer wish replaces an older one. */
         private final long[] wanted = {-1, -1};
         private final int width;
 
@@ -383,15 +535,7 @@ final class SponsorBlock {
             width = Math.round(context.getResources().getDisplayMetrics().density * 180);
             worker.execute(() -> {
                 try {
-                    Object video = NativeRead.get(post, "getVideo");
-                    Object smallest = DownloadQuality.video(video, NativeRead.get(video, "getPlayAddr"), 2);
-                    boolean got = file.length() > 0;
-                    if (!got) {
-                        for (String address : DownloadQuality.all(smallest)) {
-                            if (Net.download(address, file, null)) { got = true; break; }
-                        }
-                    }
-                    if (!got) throw new java.io.IOException("no file");
+                    if (!fetchSmallest(post, file)) throw new java.io.IOException("no file");
                     android.media.MediaMetadataRetriever opened = new android.media.MediaMetadataRetriever();
                     opened.setDataSource(file.getAbsolutePath());
                     reader = opened;
@@ -443,43 +587,243 @@ final class SponsorBlock {
         }
     }
 
-    /**
-     * The marker: a strip of the video's frames along its whole length, the advert's part between two
-     * handles, and over it the frame where the handle being moved is, large, with its time. Moving a
-     * handle takes the video there too when it is the one playing.
-     */
+    // ------------------------------------------------------------ the marker
+
+    /** The marker's window: a small player of the part chosen, and the strip of the whole video under it. */
+    static final class Marker extends android.widget.LinearLayout {
+        final Frames frames;
+        final Range range;
+        final Preview preview;
+
+        Marker(Context context, Object post, long length, long start, long stop) {
+            super(context);
+            setOrientation(VERTICAL);
+            frames = new Frames(context, post, this::refresh);
+            preview = new Preview(context, this);
+            range = new Range(context, length, start, stop, this);
+            addView(preview, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, Math.round(236 * getResources().getDisplayMetrics().density)));
+            addView(range, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+        }
+
+        void refresh() {
+            preview.refresh();
+            range.invalidate();
+        }
+
+        /** An edge moved: the player stops and shows the frame there. */
+        void edge(long at, boolean moving, boolean isStart) {
+            preview.still(at, !moving, isStart);
+        }
+
+        @Override protected void onDetachedFromWindow() {
+            super.onDetachedFromWindow();
+            preview.release();
+            frames.close();
+        }
+    }
+
+    /** The small player: the frame at an edge while it is moved, and the chosen part, with its sound, on ▶. */
+    static final class Preview extends FrameLayout implements android.view.TextureView.SurfaceTextureListener {
+        private final Marker marker;
+        private final android.view.TextureView screen;
+        private final android.widget.ImageView picture;
+        private final TextView button, caption;
+        private android.media.MediaPlayer player;
+        private boolean prepared, playing, preparing;
+        private android.view.Surface surface;
+        private long shown;
+        private boolean shownStart = true, exact = true;
+        private final android.media.AudioManager audio;
+        private Object focus;
+
+        Preview(Context context, Marker marker) {
+            super(context);
+            this.marker = marker;
+            float d = context.getResources().getDisplayMetrics().density;
+            audio = (android.media.AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
+            FrameLayout box = new FrameLayout(context);
+            GradientDrawable round = new GradientDrawable();
+            round.setColor(0xFF000000);
+            round.setCornerRadius(14 * d);
+            box.setBackground(round);
+            box.setClipToOutline(true);
+            box.setOutlineProvider(android.view.ViewOutlineProvider.BACKGROUND);
+            screen = new android.view.TextureView(context);
+            screen.setSurfaceTextureListener(this);
+            box.addView(screen, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            picture = new android.widget.ImageView(context);
+            picture.setScaleType(android.widget.ImageView.ScaleType.CENTER_CROP);
+            box.addView(picture, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+            button = new TextView(context);
+            button.setText("▶");
+            button.setTextColor(0xFFFFFFFF);
+            button.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+            button.setGravity(Gravity.CENTER);
+            GradientDrawable disc = new GradientDrawable();
+            disc.setShape(GradientDrawable.OVAL);
+            disc.setColor(0x99000000);
+            button.setBackground(disc);
+            box.addView(button, new LayoutParams(Math.round(54 * d), Math.round(54 * d), Gravity.CENTER));
+            int h = Math.round(200 * d), w = Math.round(h * 9f / 16f);
+            addView(box, new LayoutParams(w, h, Gravity.CENTER_HORIZONTAL | Gravity.TOP));
+            caption = new TextView(context);
+            caption.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            caption.setGravity(Gravity.CENTER);
+            caption.setTextColor(Skin.remembered(context).text);
+            Fonts.apply(caption);
+            addView(caption, new LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM));
+            box.setOnClickListener(v -> {
+                if (playing) pause(); else play();
+            });
+            shown = marker == null ? 0 : -1;
+        }
+
+        void refresh() {
+            if (shown < 0) shown = marker.range.start;
+            if (!playing) {
+                android.graphics.Bitmap frame = marker.frames.at(shown, exact, false, marker::refresh);
+                if (frame == null && exact) frame = marker.frames.at(shown, false, false, marker::refresh);
+                if (frame != null) picture.setImageBitmap(frame);
+            }
+            if (!marker.frames.ready && !marker.frames.failed) caption.setText(Local.of("Загружаю кадры…"));
+            else if (marker.frames.failed) caption.setText(Local.of("Кадры не загрузились"));
+            else if (!playing) caption.setText((shownStart ? Local.of("Начало") : Local.of("Конец")) + " · " + time(shown));
+            if (marker.frames.ready && player == null && surface != null) open();
+        }
+
+        void still(long at, boolean settled, boolean isStart) {
+            if (playing) pause();
+            shown = at;
+            shownStart = isStart;
+            exact = settled;
+            picture.setVisibility(VISIBLE);
+            refresh();
+        }
+
+        private void open() {
+            if (preparing || player != null) return;
+            preparing = true;
+            try {
+                android.media.MediaPlayer made = new android.media.MediaPlayer();
+                made.setDataSource(marker.frames.file.getAbsolutePath());
+                made.setSurface(surface);
+                made.setOnPreparedListener(mp -> prepared = true);
+                made.setOnErrorListener((mp, what, extra) -> {
+                    prepared = false;
+                    return true;
+                });
+                made.prepareAsync();
+                player = made;
+            } catch (Throwable error) {
+                Diary.note("sponsor preview: " + error);
+            }
+        }
+
+        private final Runnable watch = new Runnable() {
+            @Override public void run() {
+                if (!playing || player == null) return;
+                long at = player.getCurrentPosition();
+                caption.setText(Local.of("Играет") + " · " + time(at));
+                if (at >= marker.range.stop) {
+                    pause();
+                    return;
+                }
+                postDelayed(this, 50);
+            }
+        };
+
+        private void play() {
+            if (!prepared || player == null) {
+                Screen.say(Local.of("Секунду, видео ещё загружается"));
+                return;
+            }
+            try {
+                if (android.os.Build.VERSION.SDK_INT >= 26) {
+                    android.media.AudioFocusRequest asked = new android.media.AudioFocusRequest.Builder(android.media.AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).build();
+                    audio.requestAudioFocus(asked);
+                    focus = asked;
+                    player.seekTo(marker.range.start, android.media.MediaPlayer.SEEK_CLOSEST);
+                } else {
+                    player.seekTo((int) marker.range.start);
+                }
+                player.start();
+                playing = true;
+                picture.setVisibility(INVISIBLE);
+                button.setText("❚❚");
+                post(watch);
+            } catch (Throwable error) {
+                Diary.note("sponsor play: " + error);
+            }
+        }
+
+        private void pause() {
+            playing = false;
+            removeCallbacks(watch);
+            try {
+                if (player != null && player.isPlaying()) player.pause();
+            } catch (Throwable ignored) {
+            }
+            letGo();
+            button.setText("▶");
+            picture.setVisibility(VISIBLE);
+            refresh();
+        }
+
+        private void letGo() {
+            if (focus != null && android.os.Build.VERSION.SDK_INT >= 26) audio.abandonAudioFocusRequest((android.media.AudioFocusRequest) focus);
+            focus = null;
+        }
+
+        void release() {
+            playing = false;
+            removeCallbacks(watch);
+            letGo();
+            try {
+                if (player != null) player.release();
+            } catch (Throwable ignored) {
+            }
+            player = null;
+        }
+
+        @Override public void onSurfaceTextureAvailable(android.graphics.SurfaceTexture texture, int w, int h) {
+            surface = new android.view.Surface(texture);
+            if (marker.frames.ready) open();
+        }
+
+        @Override public void onSurfaceTextureSizeChanged(android.graphics.SurfaceTexture texture, int w, int h) {}
+
+        @Override public boolean onSurfaceTextureDestroyed(android.graphics.SurfaceTexture texture) {
+            release();
+            return true;
+        }
+
+        @Override public void onSurfaceTextureUpdated(android.graphics.SurfaceTexture texture) {}
+    }
+
+    /** The strip of the whole video's frames, the advert between two red edges. */
     static final class Range extends View {
         final long length;
         long start, stop;
-        private final Object manager;
-        private final Frames frames;
+        private final Marker marker;
         private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         private final Paint words = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final RectF box = new RectF();
         private final android.graphics.Rect from = new android.graphics.Rect();
         private final float d;
-        private int held = -1, shownHandle = 0;
-        private long lastSeek;
-        private final Runnable redraw = this::invalidate;
+        private int held = -1;
 
-        Range(Context context, long length, long start, long stop, Object manager, Object post) {
+        Range(Context context, long length, long start, long stop, Marker marker) {
             super(context);
             this.length = length;
             this.start = start;
             this.stop = Math.max(start + 1000, stop);
-            this.manager = manager;
+            this.marker = marker;
             d = context.getResources().getDisplayMetrics().density;
             words.setTextAlign(Paint.Align.CENTER);
-            frames = new Frames(context, post, redraw);
-        }
-
-        @Override protected void onDetachedFromWindow() {
-            super.onDetachedFromWindow();
-            frames.close();
         }
 
         @Override protected void onMeasure(int w, int h) {
-            setMeasuredDimension(MeasureSpec.getSize(w), Math.round(318 * d));
+            setMeasuredDimension(MeasureSpec.getSize(w), Math.round(104 * d));
         }
 
         private float left() { return 16 * d; }
@@ -490,57 +834,29 @@ final class SponsorBlock {
 
         private long ms(float x) { return Math.max(0, Math.min(length, Math.round((x - left()) / (right() - left()) * length))); }
 
-        private void picture(Canvas canvas, android.graphics.Bitmap frame, RectF into, float radius) {
+        private void picture(Canvas canvas, android.graphics.Bitmap frame, RectF into) {
             if (frame == null) {
                 paint.setColor(0x33808080);
-                canvas.drawRoundRect(into, radius, radius, paint);
+                canvas.drawRect(into, paint);
                 return;
             }
-            // filled and cut to the box, the middle of the frame kept
             float scale = Math.max(into.width() / frame.getWidth(), into.height() / frame.getHeight());
             float w = into.width() / scale, h = into.height() / scale;
             int x0 = Math.round((frame.getWidth() - w) / 2f), y0 = Math.round((frame.getHeight() - h) / 2f);
             from.set(x0, y0, Math.round(x0 + w), Math.round(y0 + h));
-            canvas.save();
-            android.graphics.Path clip = new android.graphics.Path();
-            clip.addRoundRect(into, radius, radius, android.graphics.Path.Direction.CW);
-            canvas.clipPath(clip);
             paint.setColor(0xFFFFFFFF);
             canvas.drawBitmap(frame, from, into, paint);
-            canvas.restore();
         }
 
         @Override protected void onDraw(Canvas canvas) {
             Skin skin = Skin.remembered(getContext());
-            long at = shownHandle == 0 ? start : stop;
-            // the large frame
-            float ph = 200 * d, pw = ph * 9f / 16f;
-            box.set(getWidth() / 2f - pw / 2f, 4 * d, getWidth() / 2f + pw / 2f, 4 * d + ph);
-            android.graphics.Bitmap big = frames.at(at, held < 0, false, redraw);
-            if (big == null) big = frames.at(at, false, false, redraw);
-            picture(canvas, big, new RectF(box), 14 * d);
-            if (!frames.ready) {
-                words.setColor(skin.text);
-                words.setTextSize(13 * d);
-                canvas.drawText(frames.failed ? Local.of("Кадры не загрузились") : Local.of("Загружаю кадры…"),
-                        getWidth() / 2f, 4 * d + ph / 2f, words);
-            }
-            words.setColor(skin.text);
-            words.setTextSize(14 * d);
-            words.setFakeBoldText(true);
-            canvas.drawText((shownHandle == 0 ? Local.of("Начало") : Local.of("Конец")) + " · " + time(at), getWidth() / 2f, 4 * d + ph + 22 * d, words);
-            words.setFakeBoldText(false);
-
-            // the strip of frames
-            float top = 4 * d + ph + 36 * d, sh = 56 * d;
+            float top = 12 * d, sh = 56 * d;
             int many = Math.max(4, Math.round((right() - left()) / (34 * d)));
             float each = (right() - left()) / many;
             for (int i = 0; i < many; i++) {
                 long t = (long) ((i + 0.5f) * length / many);
-                RectF cell = new RectF(left() + i * each, top, left() + (i + 1) * each, top + sh);
-                picture(canvas, frames.at(t, false, true, redraw), cell, 0);
+                picture(canvas, marker.frames.at(t, false, true, marker::refresh), new RectF(left() + i * each, top, left() + (i + 1) * each, top + sh));
             }
-            // outside the advert dimmed, the advert framed in red, a handle at each end
             paint.setColor(0x99000000);
             canvas.drawRect(left(), top, x(start), top + sh, paint);
             canvas.drawRect(x(stop), top, right(), top + sh, paint);
@@ -559,7 +875,7 @@ final class SponsorBlock {
             }
             words.setColor(skin.muted());
             words.setTextSize(13 * d);
-            canvas.drawText(Local.of("с") + " " + time(start) + " " + Local.of("до") + " " + time(stop), getWidth() / 2f, top + sh + 24 * d, words);
+            canvas.drawText(Local.of("с") + " " + time(start) + " " + Local.of("до") + " " + time(stop), getWidth() / 2f, top + sh + 26 * d, words);
         }
 
         @Override public boolean onTouchEvent(MotionEvent event) {
@@ -567,23 +883,18 @@ final class SponsorBlock {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     held = Math.abs(x - x(start)) <= Math.abs(x - x(stop)) ? 0 : 1;
-                    shownHandle = held;
                     getParent().requestDisallowInterceptTouchEvent(true);
                     // falls through
                 case MotionEvent.ACTION_MOVE:
                     long at = ms(x);
                     if (held == 0) start = Math.min(at, stop - 1000);
                     else if (held == 1) stop = Math.max(at, start + 1000);
-                    long now = android.os.SystemClock.uptimeMillis();
-                    if (now - lastSeek > 120 && manager != null) {
-                        lastSeek = now;
-                        PlayerTools.seekTo(manager, held == 0 ? start : stop, length);
-                    }
+                    marker.edge(held == 0 ? start : stop, true, held == 0);
                     invalidate();
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    if (held >= 0 && manager != null) PlayerTools.seekTo(manager, held == 0 ? start : stop, length);
+                    if (held >= 0) marker.edge(held == 0 ? start : stop, false, held == 0);
                     held = -1;
                     invalidate();
                     return true;

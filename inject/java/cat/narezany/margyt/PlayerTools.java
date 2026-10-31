@@ -4,14 +4,15 @@ import android.content.Context;import java.lang.ref.WeakReference;
 public final class PlayerTools {
  static final String SPEED="player_default_speed",STEP="player_seek_step",REVERSE="player_reverse_rate";
  private static WeakReference<Object> current=new WeakReference<Object>(null);
- private static String aid="";private static Runnable rewind;private static final android.os.Handler handler=new android.os.Handler(android.os.Looper.getMainLooper());
+ private static String aid="";private static WeakReference<Object> post=new WeakReference<Object>(null);private static Runnable rewind;private static final android.os.Handler handler=new android.os.Handler(android.os.Looper.getMainLooper());
  static float speed(){try{float v=AccountAppearance.prefs(Margy.context()).getFloat(SPEED,2f);return validSpeed(v)?v:2f;}catch(Throwable ignored){return 2f;}}
  static boolean validSpeed(float v){return !Float.isNaN(v)&&!Float.isInfinite(v)&&v>=.5f&&v<=3f;}
  static int step(){try{return Math.max(1,Math.min(60,AccountAppearance.prefs(Margy.context()).getInt(STEP,10)));}catch(Throwable ignored){return 10;}}
  static float reverse(){try{float v=AccountAppearance.prefs(Margy.context()).getFloat(REVERSE,1f);return validSpeed(v)?v:1f;}catch(Throwable ignored){return 1f;}}
  public static void resumed(Object controller,String eventAid){
   try{
-   Object post=NativeRead.get(controller,"LLJJJIL");String next=NativeRead.aid(post);if(next.length()==0 || eventAid==null || !next.equals(eventAid))return;
+   Object playing=NativeRead.get(controller,"LLJJJIL");String next=NativeRead.aid(playing);if(next.length()==0 || eventAid==null || !next.equals(eventAid))return;
+   post=new WeakReference<Object>(playing);
    Object manager=NativeRead.get(controller,"getPlayerManager");if(manager==null)return;
    current=new WeakReference<Object>(manager);
    if(next.equals(aid)){SponsorBlock.playing(next);return;}
@@ -33,6 +34,7 @@ public final class PlayerTools {
  /** For the skipping of adverts: the player of the video playing, which video it is, where it is and how long. */
  static Object manager(){return current.get();}
  static String aid(){return aid;}
+ static Object post(){return post.get();}
  static long position(Object manager){return NativeRead.number(NativeRead.get(manager,"getCurrentPosition"));}
  static long duration(Object manager){return NativeRead.number(NativeRead.get(manager,"getDuration"));}
  static void seekTo(Object manager,long position,long duration){if(manager!=null&&duration>0)seekAt(manager,Math.max(0,Math.min(duration-1,position)),duration);}

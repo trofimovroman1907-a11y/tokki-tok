@@ -1141,6 +1141,10 @@ final class ChatFolders {
                             touched(activity, (MotionEvent) args[0]);
                         } catch (Throwable ignored) {
                         }
+                        try {
+                            VideoActions.touched(activity, (MotionEvent) args[0]);
+                        } catch (Throwable ignored) {
+                        }
                     }
                     try {
                         return method.invoke(base, args);
