@@ -1070,16 +1070,32 @@ public class SettingsActivity extends Activity {
         column.addView(section(SPONSOR));
         LinearLayout sponsor = card();
         sponsor.addView(new NewPictures.Sponsor(this, skin));
-        sponsor.addView(liveToggleRow("fast_forward", Local.of("Пропускать рекламу"), SponsorBlock.skipOn(),
-                on -> SponsorBlock.set(SponsorBlock.KEY_SKIP, on)));
-        sponsor.addView(quiet(Local.of("Куски, где автор рекламирует что-то, пропускаются сами, а вернуться можно кнопкой «Вернуть». Отметить рекламу: зажми «Поделиться» и выбери «Отметить рекламу». Нужен подтверждённый аккаунт.")));
-        sponsor.addView(line());
-        sponsor.addView(liveToggleRow("volume_up", Local.of("Искать рекламу по звуку"), SponsorBlock.soundOn(),
-                on -> SponsorBlock.set(SponsorBlock.KEY_SOUND, on)));
-        sponsor.addView(quiet(Local.of("Одну и ту же рекламу вставляют во много роликов. Мод узнаёт её по звуку, даже если в этом ролике её никто не отмечал. Работает только по Wi-Fi: мод ещё раз скачивает лёгкую версию ролика.")));
-        sponsor.addView(line());
-        sponsor.addView(liveToggleRow("timeline", Local.of("Показывать рекламу красным на шкале"), SponsorBlock.marksOn(),
-                on -> SponsorBlock.set(SponsorBlock.KEY_MARKS, on)));
+        sponsor.addView(liveToggleRow("fast_forward", Local.of("Спонсор-блок"), SponsorBlock.enabled(), on -> {
+            SponsorBlock.set(SponsorBlock.KEY_ON, on);
+            rebuildAfterSwitchAnimation();
+        }));
+        sponsor.addView(quiet(Local.of("Куски, где автор что-то рекламирует, пропускаются сами, а вернуться можно кнопкой «Вернуть». Отметить рекламу: зажми «Поделиться» и выбери «Отметить рекламу». Нужен подтверждённый аккаунт.")));
+        if (SponsorBlock.enabled()) {
+            sponsor.addView(line());
+            sponsor.addView(liveToggleRow("fast_forward", Local.of("Пропускать рекламу"), SponsorBlock.skipOn(),
+                    on -> SponsorBlock.set(SponsorBlock.KEY_SKIP, on)));
+            sponsor.addView(quiet(Local.of("Выключи, если хочешь только видеть рекламу на шкале.")));
+            sponsor.addView(line());
+            sponsor.addView(liveToggleRow("volume_up", Local.of("Искать рекламу по звуку"), SponsorBlock.soundOn(), on -> {
+                SponsorBlock.set(SponsorBlock.KEY_SOUND, on);
+                rebuildAfterSwitchAnimation();
+            }));
+            sponsor.addView(quiet(Local.of("Одну и ту же рекламу вставляют во много роликов. Мод узнаёт её по звуку, даже если в этом ролике её никто не отмечал. Для этого он ещё раз скачивает лёгкую версию ролика.")));
+            if (SponsorBlock.soundOn()) {
+                sponsor.addView(line());
+                sponsor.addView(liveToggleRow("public", Local.of("По звуку и на мобильном интернете"), SponsorBlock.mobileOn(),
+                        on -> SponsorBlock.set(SponsorBlock.KEY_MOBILE, on)));
+                sponsor.addView(quiet(Local.of("Без этого по звуку ищется только на Wi-Fi. Лёгкая версия ролика весит обычно от 1 до 3 МБ.")));
+            }
+            sponsor.addView(line());
+            sponsor.addView(liveToggleRow("timeline", Local.of("Показывать рекламу красным на шкале"), SponsorBlock.marksOn(),
+                    on -> SponsorBlock.set(SponsorBlock.KEY_MARKS, on)));
+        }
         column.addView(wrap(sponsor));
 
         column.addView(section(REPOSTS));

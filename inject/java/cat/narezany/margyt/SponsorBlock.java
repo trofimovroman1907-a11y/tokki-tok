@@ -41,7 +41,25 @@ final class SponsorBlock {
 
     private SponsorBlock() {}
 
-    static final String KEY_SKIP = "sb_skip", KEY_MARKS = "sb_marks";
+    static final String KEY_SKIP = "sb_skip", KEY_MARKS = "sb_marks", KEY_ON = "sb_on", KEY_MOBILE = "sb_mobile";
+
+    /** The whole of it: on unless switched off. */
+    static boolean enabled() {
+        return flag(KEY_ON, true);
+    }
+
+    /** Listening on mobile data too, which costs data: off unless switched on. */
+    static boolean mobileOn() {
+        return flag(KEY_MOBILE, false);
+    }
+
+    private static boolean flag(String key, boolean otherwise) {
+        try {
+            return AccountAppearance.prefs(Margy.context()).getBoolean(key, otherwise);
+        } catch (Throwable ignored) {
+            return otherwise;
+        }
+    }
 
     static boolean skipOn() {
         try {
@@ -91,7 +109,7 @@ final class SponsorBlock {
 
     /** A video began to play. */
     static void playing(String aid) {
-        if (aid == null || aid.length() == 0) return;
+        if (aid == null || aid.length() == 0 || !enabled()) return;
         playing = aid;
         ask(aid, false);
         listen(aid);
@@ -151,7 +169,7 @@ final class SponsorBlock {
 
     /** Looks where the video is; returns how soon to look again. */
     private static long look() {
-        if (!skipOn() || Watch.here() == null) return 1000L;
+        if (!enabled() || !skipOn() || Watch.here() == null) return 1000L;
         Object manager = PlayerTools.manager();
         String aid = PlayerTools.aid();
         long[][] parts = partsOf(aid);
@@ -259,7 +277,7 @@ final class SponsorBlock {
 
         @Override public void draw(Canvas canvas) {
             SeekBar seek = bar.get();
-            if (seek == null || !marksOn() || !seek.isShown()) return;
+            if (seek == null || !enabled() || !marksOn() || !seek.isShown()) return;
             Object manager = PlayerTools.manager();
             long[][] parts = partsOf(PlayerTools.aid());
             if (manager == null || parts == null || parts.length == 0) return;
@@ -346,7 +364,7 @@ final class SponsorBlock {
         });
     }
 
-    /** Only on Wi-Fi: the video is fetched once more, in its smallest size, to be listened to. */
+    /** On Wi-Fi, or on mobile data when that is switched on: the video is fetched once more, in its smallest size, to be listened to. */
     private static boolean unmetered() {
         try {
             android.net.ConnectivityManager net = (android.net.ConnectivityManager) Margy.context().getSystemService(Context.CONNECTIVITY_SERVICE);
@@ -361,7 +379,7 @@ final class SponsorBlock {
         if (!soundOn()) return;
         prints();
         final Object post = PlayerTools.post();
-        if (post == null || !aid.equals(NativeRead.aid(post)) || heard.empty() || !unmetered()) return;
+        if (post == null || !aid.equals(NativeRead.aid(post)) || heard.empty() || !(unmetered() || mobileOn())) return;
         synchronized (SponsorBlock.class) {
             if (!listened.add(aid)) return;
         }
