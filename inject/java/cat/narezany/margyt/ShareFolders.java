@@ -51,6 +51,7 @@ final class ShareFolders {
         if (id == View.NO_ID) return;
         if (nameId == -1) ids(view.getContext());
         if (id != nameId || nameId == 0 || listId == 0) return;
+        Diag.sheet(view);
         ViewGroup known = hooked.get();
         if (known != null && known.isAttachedToWindow()) return;
         // a name is written while its person is bound, before it is in the list

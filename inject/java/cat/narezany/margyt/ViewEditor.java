@@ -278,7 +278,7 @@ public final class ViewEditor {
     }
 
     private static Rule ruleOf(View v) {
-        Rule rule = ruleOf(v);
+        Rule rule = rules.get(keyOf(v));
         return rule != null ? rule : rules.get(legacyKey(v));
     }
 

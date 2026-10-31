@@ -351,7 +351,15 @@ final class ChatFolders {
             return;
         }
         ViewGroup list = inbox();
-        if (active != null && list != null) sweep(list);
+        if (active != null && list != null) {
+            long started = SystemClock.uptimeMillis();
+            sweep(list);
+            long took = SystemClock.uptimeMillis() - started;
+            if (Diag.ON && (diagFrames < 12 || took > 4)) {
+                diagFrames++;
+                Diag.say("folder frame +" + (started - diagFrom) + " ms, sweep " + took + " ms, children " + list.getChildCount() + ", rows " + rows(list));
+            }
+        }
         if (lastPass != -1 && now - lastPass < (gated ? 0L : 150L)) return;
         lastPass = now;
         load();
@@ -413,6 +421,7 @@ final class ChatFolders {
         if (strip == null) return;
         if (inbox.get() != list) {
             inbox = new WeakReference<ViewGroup>(list);
+            Diag.adapter(list);
             list.setOnHierarchyChangeListener(new ViewGroup.OnHierarchyChangeListener() {
                 @Override public void onChildViewAdded(View parent, View child) {
                     if (active != null) shape(child);
@@ -526,7 +535,14 @@ final class ChatFolders {
 
     private static volatile long settleUntil;
 
+    private static long diagFrom;
+    private static int diagFrames;
+
     private static void narrow(String id) {
+        diagFrom = SystemClock.uptimeMillis();
+        diagFrames = 0;
+        ViewGroup known = inbox();
+        Diag.say("folder narrow to " + id + ": children " + (known == null ? -1 : known.getChildCount()) + ", rows " + (known == null ? -1 : rows(known)));
         active = id;
         settleUntil = System.currentTimeMillis() + 1500L;
         final ViewGroup list = inbox();
@@ -592,6 +608,7 @@ final class ChatFolders {
                 }
                 int now = rows(list);
                 int still = now == before ? quiet + 1 : 0;
+                Diag.say("folder fill step " + steps + " +" + (SystemClock.uptimeMillis() - diagFrom) + " ms: found " + found + " of " + folder.chats.size() + ", rows " + now + ", children " + list.getChildCount());
                 if (found >= folder.chats.size() || now < 0 || still >= 3 || steps >= 8) {
                     scrollTo(list, 0);
                     return;
