@@ -1016,7 +1016,8 @@ public class SettingsActivity extends Activity {
         // from LotusTok (@saintcursed), with the ghost and long comments from the TT Extras plugin
         column.addView(section(EDITOR));
         LinearLayout editor = card();
-        editor.addView(actionRow("tune", Local.of("Открыть редактор"), Local.of("Нажимайте на любой элемент TikTok: скрыть, сдвинуть, изменить размер и цвет"), () -> {
+        editor.addView(new NewPictures.Editor(this, skin));
+        editor.addView(actionRow("tune", Local.of("Открыть редактор"), Local.of("Нажми на что угодно в TikTok, чтобы спрятать, сдвинуть или перекрасить"), () -> {
             ViewEditor.begin();
             Toast.makeText(this, Local.of("Откройте нужный экран TikTok"), Toast.LENGTH_LONG).show();
             finish();
@@ -1030,12 +1031,15 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(TYPING));
         LinearLayout typing = card();
-        typing.addView(quiet(Local.of("Буквы выезжают и пружинят, удалённые улетают, курсор плывёт. В комментариях и сообщениях.")));
+        final NewPictures.Typing typingArt = new NewPictures.Typing(this, skin, TypingAnim.on(TypingAnim.ON));
+        typing.addView(typingArt);
         typing.addView(liveToggleRow("edit", Local.of("Анимация набора текста"), TypingAnim.on(TypingAnim.ON),
                 on -> {
                     TypingAnim.set(TypingAnim.ON, on);
+                    typingArt.set(on);
                     rebuildAfterSwitchAnimation();
                 }));
+        typing.addView(quiet(Local.of("Работает в комментариях и сообщениях.")));
         if (TypingAnim.on(TypingAnim.ON)) {
             String[][] looks = {
                     {TypingAnim.BLUR, "visibility_off", Local.of("Размытие при появлении")},
@@ -1064,13 +1068,19 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(REPOSTS));
         LinearLayout reposts = card();
-        reposts.addView(actionRow("repeat", Local.of("Удалить все мои репосты"), Local.of("Отменит каждый ваш репост, по одному"), () -> RepostPurge.begin(this)));
+        reposts.addView(new NewPictures.Reposts(this, skin));
+        reposts.addView(actionRow("repeat", Local.of("Удалить все мои репосты"), Local.of("Все репосты пропадут из профиля"), () -> RepostPurge.begin(this)));
         column.addView(wrap(reposts));
 
         column.addView(section(MESSAGES));
         LinearLayout messages = card();
-        messages.addView(toggleRow("chat", Local.of("Папки в личных сообщениях"), ChatFolders.enabled(), ChatFolders::setEnabled));
-        messages.addView(quiet(Local.of("Добавить чат в папку: долгое нажатие на чат, «Добавить в папку».")));
+        final NewPictures.Folders foldersArt = new NewPictures.Folders(this, skin, ChatFolders.enabled());
+        messages.addView(foldersArt);
+        messages.addView(liveToggleRow("chat", Local.of("Папки в личных сообщениях"), ChatFolders.enabled(), on -> {
+            ChatFolders.setEnabled(on);
+            foldersArt.set(on);
+        }));
+        messages.addView(quiet(Local.of("Чтобы добавить чат в папку, зажми его и выбери «Добавить в папку».")));
         column.addView(wrap(messages));
 
         // what stands in the inbox besides the chats, each piece on its own
@@ -1093,9 +1103,14 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(GHOST));
         LinearLayout ghost = card();
-        ghost.addView(quiet(Local.of("TikTok не узнает, что ты в сети, прочитал чат, печатаешь или смотрел историю и профиль. Чтобы скрыть «в сети», после включения перезапусти приложение.")));
-        ghost.addView(toggleRow("visibility_off", Local.of("Режим призрака"), Ghost.on(Ghost.KEY),
-                on -> Ghost.set(Ghost.KEY, on)));
+        final NewPictures.Ghosting ghostArt = new NewPictures.Ghosting(this, skin, Ghost.on(Ghost.KEY));
+        ghost.addView(ghostArt);
+        ghost.addView(liveToggleRow("visibility_off", Local.of("Режим призрака"), Ghost.on(Ghost.KEY), on -> {
+            Ghost.set(Ghost.KEY, on);
+            ghostArt.set(on);
+            rebuildAfterSwitchAnimation();
+        }));
+        ghost.addView(quiet(Local.of("Никто не увидит, что ты в сети, читаешь или печатаешь, смотрел историю или профиль. «В сети» спрячется после перезапуска TikTok.")));
         if (Ghost.on(Ghost.KEY)) {
             String[][] parts = {
                     {Ghost.ONLINE, Local.of("Не показывать «в сети»")},
@@ -3687,6 +3702,7 @@ public class SettingsActivity extends Activity {
     private TextView quiet(String message) {
         TextView view = new TextView(this);
         view.setText(message);
+        view.setTag(CAPTION, message);
         view.setTextColor(skin.muted());
         if (Design.frosted()) view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 12);
         else M3Type.bodySmall(view);
@@ -4601,11 +4617,11 @@ public class SettingsActivity extends Activity {
 
     private static final String BURN = Local.of("Защита экрана");
     private static final String EDITOR = Local.of("Редактор интерфейса"),
-            EDITOR_NOTE = Local.of("Скрыть, сдвинуть, увеличить или перекрасить любой элемент TikTok"),
+            EDITOR_NOTE = Local.of("Прячь, двигай и перекрашивай что угодно"),
             TYPING = Local.of("Анимация набора текста"),
-            TYPING_NOTE = Local.of("Буквы выпрыгивают, удалённые улетают, курсор плывёт"),
+            TYPING_NOTE = Local.of("Буквы пружинят, пока печатаешь"),
             REPOSTS = Local.of("Мои репосты"),
-            REPOSTS_NOTE = Local.of("Удалить все свои репосты разом"),
+            REPOSTS_NOTE = Local.of("Удалить все репосты разом"),
             MESSAGES = Local.of("Личные сообщения"),
             MESSAGES_NOTE = Local.of("Папки чатов и полоса историй"),
             INBOX_CLEAN = Local.of("Что скрыть во «Входящих»"),
@@ -4814,8 +4830,82 @@ public class SettingsActivity extends Activity {
         return new Expressive.Group(this, skin.card, (Accent.colour() & 0xFFFFFF) | 0x33000000);
     }
 
+    /** A caption of a function, which wrap() turns into the (i) of the function's row. */
+    private static final int CAPTION = 0x7e0c0440, INFO = 0x7e0c0441;
+
+    /**
+     * What a function is about goes behind a round (i) at the right of its row, not into a tile
+     * of its own: a caption is given to the row above it, or to the one below when it comes first.
+     * A caption with no row beside it stays as it was.
+     */
+    private void explain(ViewGroup card) {
+        for (int i = 0; i < card.getChildCount(); i++) {
+            Object note = card.getChildAt(i).getTag(CAPTION);
+            if (!(note instanceof String) || ((String) note).length() == 0) continue;
+            LinearLayout row = null;
+            for (int k = i - 1; k >= 0 && row == null; k--) row = functionRow(card.getChildAt(k));
+            for (int k = i + 1; k < card.getChildCount() && row == null; k++) row = functionRow(card.getChildAt(k));
+            if (row == null) continue;
+            card.removeViewAt(i);
+            i--;
+            info(row, (String) note);
+        }
+    }
+
+    /** A row with a name on it: a switch, a choice or an action. */
+    private LinearLayout functionRow(View view) {
+        if (!(view instanceof LinearLayout) || view.getVisibility() != View.VISIBLE) return null;
+        LinearLayout row = (LinearLayout) view;
+        if (row.getOrientation() != LinearLayout.HORIZONTAL || row.getChildCount() < 2) return null;
+        return firstText(row) != null ? row : null;
+    }
+
+    private void info(LinearLayout row, final String note) {
+        Object had = row.getTag(INFO);
+        if (had instanceof String[]) {
+            ((String[]) had)[0] = ((String[]) had)[0] + "\n\n" + note;
+            return;
+        }
+        final String[] said = {note};
+        row.setTag(INFO, said);
+        int after = row.getChildCount() - 1;
+        for (int i = 0; i < row.getChildCount(); i++) {
+            if (firstText(row.getChildAt(i)) != null) {
+                after = i;
+                break;
+            }
+        }
+        TextView name = firstText(row);
+        final String title = name == null ? "" : String.valueOf(name.getText());
+        android.widget.ImageView button = new android.widget.ImageView(this);
+        button.setImageDrawable(SettingsGlyph.make("info", skin.muted()));
+        button.setPadding(dp(8), dp(8), dp(8), dp(8));
+        GradientDrawable round = new GradientDrawable();
+        round.setShape(GradientDrawable.OVAL);
+        round.setColor(0xFFFFFFFF);
+        button.setBackground(new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf((Accent.colour() & 0xFFFFFF) | 0x33000000), null, round));
+        button.setContentDescription(title);
+        button.setOnClickListener(v -> Panel.with(this, skin, title).text(said[0]).primary(Local.of("Понятно"), null).show());
+        LinearLayout.LayoutParams place = new LinearLayout.LayoutParams(dp(40), dp(40));
+        place.rightMargin = dp(4);
+        row.addView(button, Math.min(after + 1, row.getChildCount()), place);
+    }
+
+    private static TextView firstText(View view) {
+        if (view instanceof TextView) return (TextView) view;
+        if (!(view instanceof ViewGroup)) return null;
+        ViewGroup group = (ViewGroup) view;
+        for (int i = 0; i < group.getChildCount(); i++) {
+            TextView found = firstText(group.getChildAt(i));
+            if (found != null) return found;
+        }
+        return null;
+    }
+
     /** A lone row is a one-tile list, so it looks like every other group. */
     private View wrap(View card) {
+        if (card instanceof Expressive.Group) explain((ViewGroup) card);
         LinearLayout box = new LinearLayout(this);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(edge(), 0, edge(), dp(6));

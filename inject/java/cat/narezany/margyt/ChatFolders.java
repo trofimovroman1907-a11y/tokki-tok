@@ -276,7 +276,8 @@ final class ChatFolders {
         for (String name : folder.chats.values()) {
             if (name == null || name.length() < 1) continue;
             String known = clean(name);
-            if (known.length() > 0 && (text.equals(known) || (text.startsWith(known) && marksOnly(text, known.length())))) return true;
+            if (known.length() > 0 && (text.equals(known) || (text.startsWith(known) && marksOnly(text, known.length()))
+                    || (known.startsWith(text) && text.length() >= 1 && marksOnly(known, text.length())))) return true;
         }
         return false;
     }
@@ -300,6 +301,7 @@ final class ChatFolders {
                         frame(activity);
                     } catch (Throwable error) {
                         Diary.detail("chat folders: " + error);
+                        Diag.say("chat folders frame: " + android.util.Log.getStackTraceString(error));
                     }
                     return true;
                 }
@@ -422,6 +424,16 @@ final class ChatFolders {
         if (inbox.get() != list) {
             inbox = new WeakReference<ViewGroup>(list);
             Diag.adapter(list);
+            // back to an inbox that was left in a folder: its new list is narrowed too
+            if (active != null) {
+                final String chosen = active;
+                final ViewGroup shownList = list;
+                list.post(new Runnable() {
+                    @Override public void run() {
+                        if (chosen.equals(active)) Narrowed.narrow(shownList, chosen);
+                    }
+                });
+            }
             list.setOnHierarchyChangeListener(new ViewGroup.OnHierarchyChangeListener() {
                 @Override public void onChildViewAdded(View parent, View child) {
                     if (active != null) shape(child);
@@ -500,7 +512,8 @@ final class ChatFolders {
     private static void shape(View row) {
         Folder folder = folder(active);
         boolean hide = false;
-        if (folder != null && !header(row)) {
+        // with TikTok's list itself narrowed, every row there is is wanted
+        if (folder != null && !Narrowed.on() && !header(row)) {
             String key = keyOf(row);
             hide = key == null || !folder.chats.containsKey(key);
         }
@@ -546,7 +559,12 @@ final class ChatFolders {
         active = id;
         settleUntil = System.currentTimeMillis() + 1500L;
         final ViewGroup list = inbox();
-        if (list != null) {
+        if (list != null && Narrowed.narrow(list, id)) {
+            View strip = stripOf(list);
+            Activity activity = Watch.here();
+            if (strip instanceof HorizontalScrollView && activity != null) chips(activity, (HorizontalScrollView) strip);
+            sweep(list);
+        } else if (list != null) {
             // The chips change now and are drawn on this frame. The list is narrowed on the next:
             // taking the other rows down to nothing makes TikTok make and fill the rows that were
             // not on the screen, which takes a good part of a second, and nothing is drawn meanwhile.
@@ -617,6 +635,196 @@ final class ChatFolders {
                 fill(list, id, now, still, steps + 1);
             }
         }, steps == 0 ? 120L : 350L);
+    }
+
+    // ------------------------------------------------------------ narrowing TikTok's list itself
+
+    /**
+     * The inbox's list is TikTok's own kind of ListAdapter (X.1Hw7): what it shows is a list given
+     * to its differ (X.1Hw8), which works out what changed and tells the list. A folder hands the
+     * differ the list without the chats that are not in it, so TikTok makes and fills only the rows
+     * of the folder. Taking the other rows down to nothing in place made it make and fill every
+     * chat it had loaded, a hundred and more, which held the screen still for two seconds.
+     *
+     * TikTok hands the differ a new list whenever something changes. A listener of the differ hears
+     * of it: the newest whole list is kept, and the folder's part of it is handed over again. Leaving
+     * the folder hands back the newest whole list. Written for TikTok 47.2.41's names; if they are not
+     * there, the folder falls back to taking rows down to nothing.
+     */
+    private static final class Narrowed {
+        static Object differ;
+        static java.lang.reflect.Method submit;
+        static java.lang.reflect.Field backing;
+        /** The newest list TikTok gave, and the one handed over for the folder. */
+        static List<?> whole, ours;
+        static WeakReference<ViewGroup> shown = new WeakReference<ViewGroup>(null);
+        private static final Map<Class<?>, java.lang.reflect.Field> sessions = new java.util.HashMap<Class<?>, java.lang.reflect.Field>();
+        private static java.lang.reflect.Field model, nameField;
+
+        static boolean on() {
+            return ours != null && differ != null;
+        }
+
+        private static java.lang.reflect.Field field(Class<?> type, String name) throws NoSuchFieldException {
+            for (Class<?> c = type; c != null; c = c.getSuperclass()) {
+                try {
+                    java.lang.reflect.Field found = c.getDeclaredField(name);
+                    found.setAccessible(true);
+                    return found;
+                } catch (NoSuchFieldException next) {
+                }
+            }
+            throw new NoSuchFieldException(name);
+        }
+
+        /** Finds the differ of the list, and listens to it once. */
+        private static boolean bind(ViewGroup list) throws Exception {
+            Object adapter = list.getClass().getMethod("getAdapter").invoke(list);
+            if (adapter == null) return false;
+            Class<?> base = null;
+            for (Class<?> c = adapter.getClass(); c != null; c = c.getSuperclass()) if (c.getName().equals("X.1Hw7")) base = c;
+            if (base == null) return false;
+            Object found = field(base, "LL").get(adapter);
+            if (found == null) return false;
+            if (found == differ) return true;
+            Class<?> type = found.getClass();
+            java.lang.reflect.Method giving = type.getDeclaredMethod("LIZIZ", List.class, Runnable.class);
+            giving.setAccessible(true);
+            java.lang.reflect.Field held = field(type, "LJ");
+            Object listeners = field(type, "LIZLLL").get(found);
+            Class<?> face = Class.forName("X.16bj", false, type.getClassLoader());
+            Object ear = Proxy.newProxyInstance(face.getClassLoader(), new Class<?>[] {face}, (proxy, method, args) -> {
+                String name = method.getName();
+                if (name.equals("equals")) return proxy == args[0];
+                if (name.equals("hashCode")) return System.identityHashCode(proxy);
+                if (name.equals("toString")) return "MargyT folders";
+                if (name.equals("LIZ")) committed();
+                return null;
+            });
+            @SuppressWarnings("unchecked") List<Object> ears = (List<Object>) listeners;
+            ears.add(ear);
+            differ = found;
+            submit = giving;
+            backing = held;
+            whole = null;
+            ours = null;
+            shown = new WeakReference<ViewGroup>(list);
+            return true;
+        }
+
+        /** The differ took a list: if it was not the folder's, it is TikTok's newest whole list. */
+        private static void committed() {
+            try {
+                Object now = backing.get(differ);
+                if (now == null || now == ours) return;
+                whole = (List<?>) now;
+                if (ours == null || active == null) return;
+                ViewGroup list = shown.get();
+                if (list != null) list.post(new Runnable() {
+                    @Override public void run() {
+                        if (active != null && ours != null) give(active);
+                    }
+                });
+            } catch (Throwable error) {
+                Diag.say("folders committed: " + error);
+            }
+        }
+
+        /** The name on a chat of the list, or null for what is not a chat. */
+        private static String chatName(Object wrapper) throws Exception {
+            if (model == null) model = field(wrapper.getClass(), "LIZ");
+            Object item = model.get(wrapper);
+            if (item == null) return null;
+            Class<?> kind = item.getClass();
+            java.lang.reflect.Field session;
+            if (sessions.containsKey(kind)) {
+                session = sessions.get(kind);
+            } else {
+                session = null;
+                for (Class<?> c = kind; c != null && session == null; c = c.getSuperclass()) {
+                    for (java.lang.reflect.Field one : c.getDeclaredFields()) {
+                        if (one.getType().getName().equals("X.0T89")) {
+                            one.setAccessible(true);
+                            session = one;
+                            break;
+                        }
+                    }
+                }
+                sessions.put(kind, session);
+            }
+            if (session == null) return null;
+            Object info = session.get(item);
+            if (info == null) return null;
+            if (nameField == null) nameField = field(info.getClass(), "LLJJJ");
+            Object name = nameField.get(info);
+            return name instanceof String ? (String) name : null;
+        }
+
+        /** The entries over the chats (activity, system notices) are not chats and stay out of a folder. */
+        private static boolean entrance(Object wrapper) throws Exception {
+            if (model == null) model = field(wrapper.getClass(), "LIZ");
+            Object item = model.get(wrapper);
+            if (item == null) return false;
+            String kind = item.getClass().getName();
+            return kind.equals("com.ss.android.ugc.aweme.inbox.widget.multi.InboxEntrancePod") || kind.equals("X.0mEZ");
+        }
+
+        private static void give(String id) {
+            try {
+                List<?> from = whole;
+                if (from == null) return;
+                List<Object> out = new ArrayList<Object>();
+                for (Object wrapper : from) {
+                    if (wrapper == null) continue;
+                    String name = chatName(wrapper);
+                    if (name == null ? !entrance(wrapper) : holds(id, name)) out.add(wrapper);
+                }
+                ours = out;
+                final ViewGroup list = shown.get();
+                submit.invoke(differ, out, new Runnable() {
+                    @Override public void run() {
+                        if (list != null) scrollTo(list, 0);
+                    }
+                });
+            } catch (Throwable error) {
+                Diag.say("folders give: " + android.util.Log.getStackTraceString(error));
+                restore();
+            }
+        }
+
+        /** The list is narrowed to the folder; false when TikTok's list is not of the kind known. */
+        static boolean narrow(ViewGroup list, String id) {
+            try {
+                if (!bind(list)) return false;
+                if (id == null) {
+                    restore();
+                    return true;
+                }
+                Object now = backing.get(differ);
+                if (now != null && now != ours) whole = (List<?>) now;
+                if (whole == null) return false;
+                ours = new ArrayList<Object>();
+                give(id);
+                return ours != null;
+            } catch (Throwable error) {
+                Diag.say("folders narrow: " + android.util.Log.getStackTraceString(error));
+                ours = null;
+                return false;
+            }
+        }
+
+        /** The whole list goes back. */
+        static void restore() {
+            List<?> back = whole;
+            boolean was = ours != null;
+            ours = null;
+            if (!was || back == null || differ == null) return;
+            try {
+                submit.invoke(differ, back, null);
+            } catch (Throwable error) {
+                Diag.say("folders restore: " + error);
+            }
+        }
     }
 
     // ------------------------------------------------------------ the chips
@@ -854,6 +1062,7 @@ final class ChatFolders {
 
     private static void leave() {
         active = null;
+        Narrowed.restore();
         ViewGroup list = inbox();
         if (list != null) sweep(list);
         poke();

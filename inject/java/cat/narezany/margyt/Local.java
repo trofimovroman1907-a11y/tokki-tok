@@ -33,6 +33,25 @@ final class Local {
     }
 
     static {
+        add("в сети", "в мережі", "online");
+        add("был(а) давно", "був(-ла) давно", "seen a while ago");
+        add("ты тут?", "ти тут?", "you there?");
+        add("Прочитано", "Прочитано", "Seen");
+        add("Отправлено", "Надіслано", "Sent");
+        add("Основные", "Основні", "Primary");
+        add("Друзья", "Друзі", "Friends");
+        add("Учёба", "Навчання", "School");
+        add("привет, это я", "привіт, це я", "hi, it’s me");
+        add("Репосты", "Репости", "Reposts");
+        add("Понятно", "Зрозуміло", "Got it");
+        add("Прячь, двигай и перекрашивай что угодно", "Ховай, рухай і перефарбовуй що завгодно", "Hide, move and recolour anything");
+        add("Буквы пружинят, пока печатаешь", "Літери пружинять, поки друкуєш", "Letters bounce as you type");
+        add("Удалить все репосты разом", "Видалити всі репости разом", "Remove all reposts at once");
+        add("Нажми на что угодно в TikTok, чтобы спрятать, сдвинуть или перекрасить", "Натисни на що завгодно в TikTok, щоб сховати, зсунути чи перефарбувати", "Tap anything in TikTok to hide, move or recolour it");
+        add("Работает в комментариях и сообщениях.", "Працює в коментарях і повідомленнях.", "Works in comments and messages.");
+        add("Все репосты пропадут из профиля", "Усі репости зникнуть із профілю", "Every repost leaves your profile");
+        add("Чтобы добавить чат в папку, зажми его и выбери «Добавить в папку».", "Щоб додати чат до папки, затисни його й вибери «Додати до папки».", "To put a chat in a folder, hold it and choose “Add to folder”.");
+        add("Никто не увидит, что ты в сети, читаешь или печатаешь, смотрел историю или профиль. «В сети» спрячется после перезапуска TikTok.", "Ніхто не побачить, що ти в мережі, читаєш чи друкуєш, дивився історію чи профіль. «В мережі» сховається після перезапуску TikTok.", "Nobody will see that you are online, reading or typing, or that you looked at their story or profile. Being online hides after TikTok restarts.");
         add("Все", "Усі", "All");
         add("ПОЗИЦИЯ", "ПОЗИЦІЯ", "POSITION");
         add("центр", "центр", "centre");

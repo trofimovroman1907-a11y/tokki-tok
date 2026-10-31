@@ -283,6 +283,19 @@ final class ShareFolders {
         return said != null && ChatFolders.holds(chosen, said.toString());
     }
 
+    /** The room the list's decorations leave left and right of a person. */
+    private static int[] gaps(View person) {
+        try {
+            Object list = person.getParent();
+            Object manager = list.getClass().getMethod("getLayoutManager").invoke(list);
+            int left = (Integer) manager.getClass().getMethod("getLeftDecorationWidth", View.class).invoke(manager, person);
+            int right = (Integer) manager.getClass().getMethod("getRightDecorationWidth", View.class).invoke(manager, person);
+            return new int[] {left, right};
+        } catch (Throwable unknown) {
+            return new int[] {0, 0};
+        }
+    }
+
     private static void shape(View person) {
         boolean hide = !wanted(person);
         ViewGroup.LayoutParams params = person.getLayoutParams();
@@ -293,10 +306,13 @@ final class ShareFolders {
             if (kept == null) {
                 person.setTag(TAG_KEPT, new int[] {margins.width, margins.leftMargin, margins.rightMargin, person.getVisibility()});
             }
-            if (margins.width != 0 || margins.leftMargin != 0 || margins.rightMargin != 0) {
+            // the gaps TikTok's list puts between people stay round a person taken down to nothing:
+            // margins as wide the other way take them back out
+            int[] gaps = gaps(person);
+            if (margins.width != 0 || margins.leftMargin != -gaps[0] || margins.rightMargin != -gaps[1]) {
                 margins.width = 0;
-                margins.leftMargin = 0;
-                margins.rightMargin = 0;
+                margins.leftMargin = -gaps[0];
+                margins.rightMargin = -gaps[1];
                 person.setLayoutParams(margins);
             }
             if (person.getVisibility() != View.INVISIBLE) person.setVisibility(View.INVISIBLE);

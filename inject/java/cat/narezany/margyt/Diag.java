@@ -21,10 +21,22 @@ final class Diag {
     static final boolean ON = true;
     private static int said;
 
-    static void say(String line) {
-        if (!ON || said > 600) return;
+    private static java.io.Writer file;
+
+    /** A line to logcat, and to Android/data/<app>/files/margyt-diag.txt, which a phone may keep out of logcat. */
+    static synchronized void say(String line) {
+        if (!ON || said > 800) return;
         said++;
         android.util.Log.e("MargyT", "diag " + line);
+        try {
+            if (file == null) {
+                java.io.File dir = Margy.context().getExternalFilesDir(null);
+                file = new java.io.OutputStreamWriter(new java.io.FileOutputStream(new java.io.File(dir, "margyt-diag.txt"), true), "UTF-8");
+            }
+            file.write(System.currentTimeMillis() + " " + line + "\n");
+            file.flush();
+        } catch (Throwable ignored) {
+        }
     }
 
     private static String id(View view) {
@@ -42,18 +54,82 @@ final class Diag {
     private static boolean adapterTold;
 
     /** What the inbox's adapter is, and what it keeps its chats in. */
-    static void adapter(ViewGroup list) {
+    static void adapter(final ViewGroup list) {
         if (!ON || adapterTold) return;
         adapterTold = true;
+        list.postDelayed(new Runnable() {
+            @Override public void run() {
+                adapterNow(list);
+            }
+        }, 1500L);
+    }
+
+    private static void adapterNow(ViewGroup list) {
         try {
             Object adapter = list.getClass().getMethod("getAdapter").invoke(list);
             if (adapter == null) { say("inbox adapter: none"); return; }
             StringBuilder chain = new StringBuilder();
             for (Class<?> c = adapter.getClass(); c != null && c != Object.class; c = c.getSuperclass()) chain.append(c.getName()).append(" < ");
             say("inbox adapter: " + chain);
-            describeFields(adapter, "adapter", 0);
+            items(adapter);
         } catch (Throwable error) {
             say("inbox adapter: " + error);
+        }
+    }
+
+    private static Object read(Object object, String name) throws Exception {
+        for (Class<?> c = object.getClass(); c != null; c = c.getSuperclass()) {
+            try {
+                Field field = c.getDeclaredField(name);
+                field.setAccessible(true);
+                return field.get(object);
+            } catch (NoSuchFieldException next) {
+            }
+        }
+        throw new NoSuchFieldException(name);
+    }
+
+    /** What the chats of the inbox's list are: each kind of item, how many, and what one of each is made of. */
+    private static void items(Object adapter) throws Exception {
+        List<?> list = (List<?>) read(read(adapter, "LL"), "LJFF");
+        java.util.LinkedHashMap<String, Object> first = new java.util.LinkedHashMap<String, Object>();
+        java.util.LinkedHashMap<String, Integer> many = new java.util.LinkedHashMap<String, Integer>();
+        for (Object wrapper : list) {
+            Object model = wrapper == null ? null : read(wrapper, "LIZ");
+            String kind = model == null ? "null" : model.getClass().getName();
+            Integer seen = many.get(kind);
+            many.put(kind, seen == null ? 1 : seen + 1);
+            if (!first.containsKey(kind)) first.put(kind, model);
+        }
+        say("inbox items " + list.size() + ": " + many);
+        for (java.util.Map.Entry<String, Object> one : first.entrySet()) {
+            if (one.getValue() == null) continue;
+            deep(one.getValue(), "item " + one.getKey(), 0);
+        }
+    }
+
+    private static void deep(Object object, String where, int depth) {
+        try {
+            for (Class<?> c = object.getClass(); c != null && c != Object.class; c = c.getSuperclass()) {
+                for (Field field : c.getDeclaredFields()) {
+                    if (Modifier.isStatic(field.getModifiers())) continue;
+                    field.setAccessible(true);
+                    Object value = field.get(object);
+                    String kind = value == null ? field.getType().getName() : value.getClass().getName();
+                    boolean plain = value == null || value instanceof CharSequence || value instanceof Number
+                            || value instanceof Boolean || value.getClass().isEnum() || value instanceof Character;
+                    String shown = value == null ? "null" : plain ? shortly(value).replace('\n', ' ')
+                            : value instanceof java.util.Collection ? "size " + ((java.util.Collection<?>) value).size() : "(object)";
+                    if (shown.length() > 160) shown = shown.substring(0, 160);
+                    say(where + " ." + field.getName() + " " + kind + " = " + shown);
+                    if (value != null && depth < 1 && !kind.startsWith("java.") && !kind.startsWith("android.")
+                            && !kind.startsWith("kotlin.") && !(value instanceof CharSequence) && !(value instanceof Number)
+                            && !(value instanceof Boolean) && !value.getClass().isEnum())
+                        deep(value, where + "." + field.getName(), depth + 1);
+                }
+            }
+        } catch (Throwable error) {
+            say(where + ": " + error);
         }
     }
 
