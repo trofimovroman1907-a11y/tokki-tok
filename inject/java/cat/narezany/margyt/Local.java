@@ -33,6 +33,11 @@ final class Local {
     }
 
     static {
+        add("Потяни красные края к началу и концу рекламы.", "Потягни червоні краї до початку й кінця реклами.", "Drag the red edges to where the advert starts and ends.");
+        add("Кадры не загрузились", "Кадри не завантажилися", "The frames did not load");
+        add("Загружаю кадры…", "Завантажую кадри…", "Loading frames…");
+        add("Начало", "Початок", "Start");
+        add("Конец", "Кінець", "End");
         add("Реклама", "Реклама", "Advert");
         add("Отметить рекламу", "Позначити рекламу", "Mark an advert");
         add("Где автор рекламирует что-то в видео", "Де автор щось рекламує у відео", "Where the author advertises something");

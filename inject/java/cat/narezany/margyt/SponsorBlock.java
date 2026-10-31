@@ -288,11 +288,12 @@ final class SponsorBlock {
     /** From the video's menu: mark where the advert is, or say a red part is no advert. */
     static void mark(final Context context, Object post) {
         final String aid = NativeRead.aid(post);
-        final Object manager = PlayerTools.manager();
-        if (aid.length() == 0 || manager == null || !aid.equals(PlayerTools.aid())) {
-            Screen.say(Local.of("Включи это видео и попробуй ещё раз"));
+        if (aid.length() == 0) {
+            Screen.say(Text.VIDEO_NOT_READY);
             return;
         }
+        // the player of this very video, when it is the one playing; without it the handles do not move the video
+        final Object manager = aid.equals(PlayerTools.aid()) ? PlayerTools.manager() : null;
         final String uid = Account.id();
         final String token = Mine.token();
         if (uid == null || token.length() == 0) {
@@ -301,15 +302,17 @@ final class SponsorBlock {
                     .primary(Local.of("Понятно"), null).show();
             return;
         }
-        final long length = PlayerTools.duration(manager);
-        long now = PlayerTools.position(manager);
+        long known = manager == null ? 0 : PlayerTools.duration(manager);
+        if (known <= 0) known = NativeRead.number(NativeRead.get(NativeRead.get(post, "getVideo"), "getDuration"));
+        final long length = known;
+        long now = manager == null ? 0 : Math.max(0, PlayerTools.position(manager));
         if (length <= 0) {
             Screen.say(Text.PLAYER_NOT_READY);
             return;
         }
-        final Range range = new Range(context, length, Math.max(0, now - 1000), Math.min(length, now + 9000), manager);
+        final Range range = new Range(context, length, Math.max(0, now - 1000), Math.min(length, now + 9000), manager, post);
         Panel panel = Panel.with(context, Skin.remembered(context), Local.of("Где реклама"));
-        panel.text(Local.of("Двигай ползунки к началу и концу рекламы. Видео перематывается за ними."));
+        panel.text(Local.of("Потяни красные края к началу и концу рекламы."));
         panel.view(range);
         long[][] parts = partsOf(aid);
         if (parts != null) {
@@ -358,58 +361,205 @@ final class SponsorBlock {
         });
     }
 
-    /** A bar of the whole video with two handles; moving one takes the video there. */
+    // ------------------------------------------------------------ the video's frames
+
+    /**
+     * The video's pictures for the marker: its smallest file is fetched into the cache and frames
+     * are read from it, one at a time on a thread of their own, the newest asked for first.
+     */
+    static final class Frames {
+        private final java.io.File file;
+        private android.media.MediaMetadataRetriever reader;
+        private final java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor();
+        private final android.util.LruCache<Long, android.graphics.Bitmap> kept = new android.util.LruCache<Long, android.graphics.Bitmap>(48);
+        volatile boolean ready, failed;
+        /** What is being read now, for the large frame and for the strip: a newer wish replaces an older one. */
+        private final long[] wanted = {-1, -1};
+        private final int width;
+
+        Frames(Context context, final Object post, final Runnable changed) {
+            String aid = NativeRead.aid(post);
+            file = new java.io.File(context.getCacheDir(), "margyt-sb-" + aid + ".mp4");
+            width = Math.round(context.getResources().getDisplayMetrics().density * 180);
+            worker.execute(() -> {
+                try {
+                    Object video = NativeRead.get(post, "getVideo");
+                    Object smallest = DownloadQuality.video(video, NativeRead.get(video, "getPlayAddr"), 2);
+                    boolean got = file.length() > 0;
+                    if (!got) {
+                        for (String address : DownloadQuality.all(smallest)) {
+                            if (Net.download(address, file, null)) { got = true; break; }
+                        }
+                    }
+                    if (!got) throw new java.io.IOException("no file");
+                    android.media.MediaMetadataRetriever opened = new android.media.MediaMetadataRetriever();
+                    opened.setDataSource(file.getAbsolutePath());
+                    reader = opened;
+                    ready = true;
+                } catch (Throwable error) {
+                    failed = true;
+                    Diary.note("sponsor frames: " + error);
+                }
+                main.post(changed);
+            });
+        }
+
+        /** The frame at a time if it is already read; asks for it otherwise. */
+        android.graphics.Bitmap at(final long ms, final boolean exact, final boolean strip, final Runnable changed) {
+            final long key = (ms / (exact ? 100 : 500)) * 2 + (exact ? 1 : 0);
+            final int lane = strip ? 1 : 0;
+            android.graphics.Bitmap known = kept.get(key);
+            if (known != null || !ready) return known;
+            if (wanted[lane] == key) return null;
+            wanted[lane] = key;
+            worker.execute(() -> {
+                if (wanted[lane] != key && !exact) return;
+                try {
+                    android.media.MediaMetadataRetriever r = reader;
+                    if (r == null) return;
+                    int option = exact ? android.media.MediaMetadataRetriever.OPTION_CLOSEST : android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC;
+                    android.graphics.Bitmap frame = android.os.Build.VERSION.SDK_INT >= 27
+                            ? r.getScaledFrameAtTime(ms * 1000L, option, width, width * 2)
+                            : r.getFrameAtTime(ms * 1000L, option);
+                    if (frame != null) kept.put(key, frame);
+                } catch (Throwable ignored) {
+                }
+                if (wanted[lane] == key) wanted[lane] = -1;
+                main.post(changed);
+            });
+            return null;
+        }
+
+        void close() {
+            worker.execute(() -> {
+                try {
+                    if (reader != null) reader.release();
+                } catch (Throwable ignored) {
+                }
+                reader = null;
+                file.delete();
+            });
+            worker.shutdown();
+        }
+    }
+
+    /**
+     * The marker: a strip of the video's frames along its whole length, the advert's part between two
+     * handles, and over it the frame where the handle being moved is, large, with its time. Moving a
+     * handle takes the video there too when it is the one playing.
+     */
     static final class Range extends View {
         final long length;
         long start, stop;
         private final Object manager;
-        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Frames frames;
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         private final Paint words = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final RectF box = new RectF();
+        private final android.graphics.Rect from = new android.graphics.Rect();
         private final float d;
-        private int held = -1;
+        private int held = -1, shownHandle = 0;
         private long lastSeek;
+        private final Runnable redraw = this::invalidate;
 
-        Range(Context context, long length, long start, long stop, Object manager) {
+        Range(Context context, long length, long start, long stop, Object manager, Object post) {
             super(context);
             this.length = length;
             this.start = start;
             this.stop = Math.max(start + 1000, stop);
             this.manager = manager;
             d = context.getResources().getDisplayMetrics().density;
-            words.setTextSize(13 * d);
             words.setTextAlign(Paint.Align.CENTER);
+            frames = new Frames(context, post, redraw);
+        }
+
+        @Override protected void onDetachedFromWindow() {
+            super.onDetachedFromWindow();
+            frames.close();
         }
 
         @Override protected void onMeasure(int w, int h) {
-            setMeasuredDimension(MeasureSpec.getSize(w), Math.round(76 * d));
+            setMeasuredDimension(MeasureSpec.getSize(w), Math.round(318 * d));
         }
 
-        private float left() { return 22 * d; }
+        private float left() { return 16 * d; }
 
-        private float right() { return getWidth() - 22 * d; }
+        private float right() { return getWidth() - 16 * d; }
 
         private float x(long ms) { return left() + (right() - left()) * ms / (float) length; }
 
         private long ms(float x) { return Math.max(0, Math.min(length, Math.round((x - left()) / (right() - left()) * length))); }
 
+        private void picture(Canvas canvas, android.graphics.Bitmap frame, RectF into, float radius) {
+            if (frame == null) {
+                paint.setColor(0x33808080);
+                canvas.drawRoundRect(into, radius, radius, paint);
+                return;
+            }
+            // filled and cut to the box, the middle of the frame kept
+            float scale = Math.max(into.width() / frame.getWidth(), into.height() / frame.getHeight());
+            float w = into.width() / scale, h = into.height() / scale;
+            int x0 = Math.round((frame.getWidth() - w) / 2f), y0 = Math.round((frame.getHeight() - h) / 2f);
+            from.set(x0, y0, Math.round(x0 + w), Math.round(y0 + h));
+            canvas.save();
+            android.graphics.Path clip = new android.graphics.Path();
+            clip.addRoundRect(into, radius, radius, android.graphics.Path.Direction.CW);
+            canvas.clipPath(clip);
+            paint.setColor(0xFFFFFFFF);
+            canvas.drawBitmap(frame, from, into, paint);
+            canvas.restore();
+        }
+
         @Override protected void onDraw(Canvas canvas) {
             Skin skin = Skin.remembered(getContext());
-            float y = 30 * d;
-            paint.setColor((skin.text & 0xFFFFFF) | 0x33000000);
-            box.set(left(), y - 3 * d, right(), y + 3 * d);
-            canvas.drawRoundRect(box, 3 * d, 3 * d, paint);
-            paint.setColor(0xFFFF3B3B);
-            box.set(x(start), y - 3 * d, x(stop), y + 3 * d);
-            canvas.drawRect(box, paint);
-            for (long at : new long[] {start, stop}) {
-                paint.setColor(0xFFFFFFFF);
-                canvas.drawCircle(x(at), y, 11 * d, paint);
-                paint.setColor(0xFFFF3B3B);
-                canvas.drawCircle(x(at), y, 7 * d, paint);
+            long at = shownHandle == 0 ? start : stop;
+            // the large frame
+            float ph = 200 * d, pw = ph * 9f / 16f;
+            box.set(getWidth() / 2f - pw / 2f, 4 * d, getWidth() / 2f + pw / 2f, 4 * d + ph);
+            android.graphics.Bitmap big = frames.at(at, held < 0, false, redraw);
+            if (big == null) big = frames.at(at, false, false, redraw);
+            picture(canvas, big, new RectF(box), 14 * d);
+            if (!frames.ready) {
+                words.setColor(skin.text);
+                words.setTextSize(13 * d);
+                canvas.drawText(frames.failed ? Local.of("Кадры не загрузились") : Local.of("Загружаю кадры…"),
+                        getWidth() / 2f, 4 * d + ph / 2f, words);
             }
             words.setColor(skin.text);
-            canvas.drawText(Local.of("с") + " " + time(start) + " " + Local.of("до") + " " + time(stop), getWidth() / 2f, 66 * d, words);
+            words.setTextSize(14 * d);
+            words.setFakeBoldText(true);
+            canvas.drawText((shownHandle == 0 ? Local.of("Начало") : Local.of("Конец")) + " · " + time(at), getWidth() / 2f, 4 * d + ph + 22 * d, words);
+            words.setFakeBoldText(false);
+
+            // the strip of frames
+            float top = 4 * d + ph + 36 * d, sh = 56 * d;
+            int many = Math.max(4, Math.round((right() - left()) / (34 * d)));
+            float each = (right() - left()) / many;
+            for (int i = 0; i < many; i++) {
+                long t = (long) ((i + 0.5f) * length / many);
+                RectF cell = new RectF(left() + i * each, top, left() + (i + 1) * each, top + sh);
+                picture(canvas, frames.at(t, false, true, redraw), cell, 0);
+            }
+            // outside the advert dimmed, the advert framed in red, a handle at each end
+            paint.setColor(0x99000000);
+            canvas.drawRect(left(), top, x(start), top + sh, paint);
+            canvas.drawRect(x(stop), top, right(), top + sh, paint);
+            paint.setColor(0xFFFF3B3B);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(3 * d);
+            canvas.drawRect(x(start), top + 1.5f * d, x(stop), top + sh - 1.5f * d, paint);
+            paint.setStyle(Paint.Style.FILL);
+            for (long edge : new long[] {start, stop}) {
+                box.set(x(edge) - 7 * d, top - 4 * d, x(edge) + 7 * d, top + sh + 4 * d);
+                canvas.drawRoundRect(box, 5 * d, 5 * d, paint);
+                paint.setColor(0xFFFFFFFF);
+                box.set(x(edge) - 1.5f * d, top + sh / 2f - 10 * d, x(edge) + 1.5f * d, top + sh / 2f + 10 * d);
+                canvas.drawRoundRect(box, 1.5f * d, 1.5f * d, paint);
+                paint.setColor(0xFFFF3B3B);
+            }
+            words.setColor(skin.muted());
+            words.setTextSize(13 * d);
+            canvas.drawText(Local.of("с") + " " + time(start) + " " + Local.of("до") + " " + time(stop), getWidth() / 2f, top + sh + 24 * d, words);
         }
 
         @Override public boolean onTouchEvent(MotionEvent event) {
@@ -417,6 +567,7 @@ final class SponsorBlock {
             switch (event.getActionMasked()) {
                 case MotionEvent.ACTION_DOWN:
                     held = Math.abs(x - x(start)) <= Math.abs(x - x(stop)) ? 0 : 1;
+                    shownHandle = held;
                     getParent().requestDisallowInterceptTouchEvent(true);
                     // falls through
                 case MotionEvent.ACTION_MOVE:
@@ -424,7 +575,7 @@ final class SponsorBlock {
                     if (held == 0) start = Math.min(at, stop - 1000);
                     else if (held == 1) stop = Math.max(at, start + 1000);
                     long now = android.os.SystemClock.uptimeMillis();
-                    if (now - lastSeek > 120) {
+                    if (now - lastSeek > 120 && manager != null) {
                         lastSeek = now;
                         PlayerTools.seekTo(manager, held == 0 ? start : stop, length);
                     }
@@ -432,8 +583,9 @@ final class SponsorBlock {
                     return true;
                 case MotionEvent.ACTION_UP:
                 case MotionEvent.ACTION_CANCEL:
-                    if (held >= 0) PlayerTools.seekTo(manager, held == 0 ? start : stop, length);
+                    if (held >= 0 && manager != null) PlayerTools.seekTo(manager, held == 0 ? start : stop, length);
                     held = -1;
+                    invalidate();
                     return true;
             }
             return super.onTouchEvent(event);
