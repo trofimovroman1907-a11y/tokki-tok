@@ -103,8 +103,7 @@ final class Text {
             "Signing in with Google does not work in MargyT Lite. Use your e-mail or phone number.");
     static final String APPEARANCE = pick("Внешний вид", "Зовнішній вигляд", "Appearance");
     static final String DESIGN = pick("Стиль интерфейса", "Стиль інтерфейсу", "Interface style");
-    static final String DESIGN_NOTE = pick("Меню, элементы управления и включённые экраны TikTok",
-            "Меню, елементи керування й увімкнені екрани TikTok", "Menus, controls and enabled TikTok screens");
+    static final String DESIGN_NOTE = pick("Как выглядят меню и экраны TikTok", "Як виглядають меню й екрани TikTok", "How TikTok’s menus and screens look");
     static final String PROFILE_PREVIEW = pick("Так значок будет выглядеть у ника",
             "Так значок виглядатиме біля імені", "Badge preview beside nickname");
     static final String PROFILE_PREVIEW_NICK = pick("@ваш_ник", "@ваше_ім’я", "@your_name");
@@ -208,13 +207,7 @@ final class Text {
 
     static final String HIDDEN = pick("Анти A/B", "Анти A/B", "Anti A/B");
 
-    static final String HIDDEN_NOTE = pick(
-            "Функции у TikTok уже написаны, но выдаются случайной части людей. "
-                    + "Здесь они включаются всем.",
-            "Функції в TikTok уже написані, але видаються випадковій частині людей. "
-                    + "Тут вони вмикаються всім.",
-            "TikTok has written these already and hands them to a random share of "
-                    + "people. Here they are switched on for everyone.");
+    static final String HIDDEN_NOTE = pick("Функции, которые TikTok пока даёт не всем. Здесь их можно включить.", "Функції, які TikTok поки дає не всім. Тут їх можна ввімкнути.", "Features TikTok has not given everyone yet. Turn them on here.");
 
     static final String CLOSE = pick("Понятно", "Зрозуміло", "Got it");
 
@@ -268,8 +261,7 @@ final class Text {
     static final String LOADING_SHAPES = pick(
             "Загрузка фигурами", "Завантаження фігурами", "Shapes while loading");
     static final String LOADING_INDICATOR = pick("Индикатор загрузки", "Індикатор завантаження", "Loading indicator");
-    static final String LOADING_STYLE_NOTE = pick("Индикатор в выбранном стиле интерфейса.",
-            "Індикатор у вибраному стилі інтерфейсу.", "Follows the selected interface style.");
+    static final String LOADING_STYLE_NOTE = pick("Значок загрузки в стиле интерфейса.", "Значок завантаження в стилі інтерфейсу.", "The loading sign in the interface’s style.");
 
     static final String LOADING_NOTE = pick("Фигуры Material 3 вместо двух кружков TikTok.", "Фігури Material 3 замість двох кружечків TikTok.", "Material 3 shapes instead of TikTok's two dots.");
 
@@ -605,13 +597,7 @@ final class Text {
                     + "your name and the link to the closed chat come with it.");
 
     static final String TIKTOK_FEATURES = pick("Функции TikTok", "Функції TikTok", "TikTok features");
-    static final String TIKTOK_FEATURES_NOTE = pick(
-            "Это функции самого TikTok, которые он пока включает не всем. Здесь их "
-                    + "можно включить себе. Что-то может работать не до конца.",
-            "Це функції самого TikTok, які він поки вмикає не всім. Тут їх можна "
-                    + "увімкнути собі. Щось може працювати не до кінця.",
-            "These are TikTok's own features that it has not switched on for everybody yet. "
-                    + "Here you can switch them on for yourself. Some may not fully work.");
+    static final String TIKTOK_FEATURES_NOTE = pick("Функции TikTok, которые он пока даёт не всем. Некоторые могут работать криво.", "Функції TikTok, які він поки дає не всім. Деякі можуть працювати криво.", "TikTok features not everyone has yet. Some may not work quite right.");
     static final String COMMENT_REPOST = pick("Репост комментариев", "Репост коментарів",
             "Repost comments");
     static final String COMMENT_PHOTOS = pick("Несколько фото в комментарии", "Кілька фото в коментарі", "Several photos in a comment");
@@ -685,13 +671,7 @@ final class Text {
     static final String DEP_PROVE = pick("Сначала подтвердите аккаунт", "Спочатку підтвердьте акаунт",
             "Prove the account is yours first");
     static final String DEP_PROVE_SHORT = pick("нужен аккаунт", "потрібен акаунт", "account needed");
-    static final String DEP_PROVE_WHY = pick(
-            "Деп коины и значок считает сервер, поэтому играть может только подтверждённый аккаунт: "
-                    + "так никто не проиграет чужие коины.",
-            "Деп коїни й значок рахує сервер, тому грати може лише підтверджений акаунт: "
-                    + "так ніхто не програє чужі коїни.",
-            "The server counts the dep coins and the badge, so only a proved account can play: "
-                    + "that way nobody can lose somebody else's coins.");
+    static final String DEP_PROVE_WHY = pick("Играть можно только с подтверждённым аккаунтом, чтобы никто не проиграл чужие коины.", "Грати можна лише з підтвердженим акаунтом, щоб ніхто не програв чужі коїни.", "Only a confirmed account can play, so nobody loses someone else’s coins.");
     static final String DEP_SLOW = pick("Слишком быстро", "Занадто швидко", "Too fast");
     static final String DEP_OWED_MOST = pick("Больше в долг не дают. Потолок:", "Більше в борг не дають. Стеля:",
             "No more loans. The ceiling is");
@@ -715,7 +695,7 @@ final class Text {
     static final String PAGE_AVARIYKA_NOTE = pick("Окна «срочно обновись в нашем телеграме», как в старых модах", "Вікна «терміново оновись у нашому телеграмі», як у старих модах", "\u201CUpdate now in our Telegram\u201D windows, like old mods had");
     static final String AVARIYKA_NOTE = pick("Иногда выскакивает фейковое «аварийное обновление», как в старых модах. Никуда не ведёт.", "Іноді вискакує фейкове «аварійне оновлення», як у старих модах. Нікуди не веде.", "Now and then a fake “emergency update” pops up, like in old mods. It leads nowhere.");
     static final String FUN_RUBBLE = pick("Рассыпать интерфейс", "Розсипати інтерфейс", "Shatter the interface");
-    static final String RUBBLE_NOTE = pick("Кнопки и надписи падают и катаются от наклона телефона. Выключается этим же переключателем или закрытием TikTok.", "Кнопки й написи падають і котяться від нахилу телефона. Вимикається цим самим перемикачем або закриттям TikTok.", "Buttons and labels fall and roll as you tilt the phone. This switch or closing TikTok turns it off.");
+    static final String RUBBLE_NOTE = pick("Кнопки и надписи падают и катаются, если наклонять телефон. Всё вернётся на место, если выключить или перезапустить TikTok.", "Кнопки й написи падають і котяться, якщо нахиляти телефон. Усе повернеться, якщо вимкнути або перезапустити TikTok.", "Buttons and labels fall and roll as you tilt the phone. Everything goes back when you turn it off or restart TikTok.");
     static final String UI_FILE_INSTALL = pick("Установить стиль .mtui", "Встановити стиль .mtui", "Install a .mtui style");
     static final String UI_FILE_INSTALL_NOTE = pick("Свой стиль интерфейса из файла", "Власний стиль інтерфейсу з файлу", "An interface style from a file");
     static final String UI_FILE_SAVE = pick("Сохранить стиль в файл", "Зберегти стиль у файл", "Save the style as a file");
@@ -743,9 +723,7 @@ final class Text {
     static final String UI_FILE_NO_BASE = pick("Поле \"base\" должно быть md3, glass или fluent.", "Поле \"base\" має бути md3, glass або fluent.", "\"base\" must be md3, glass or fluent.");
     static final String UI_FILE_BAD_VALUE = pick("Неверное значение:", "Неправильне значення:", "A wrong value:");
     static final String FUN_TILCAYO_RUN = pick("Бегающие тилкайо", "Бігаючі тілкайо", "Running tilcayos");
-    static final String TILCAYO_RUN_NOTE = pick("Внизу экрана бегают и прыгают толстые тилкайо, обнимаются, целуются и пускают салют. Нажмите на кота, чтобы погладить, подержите, чтобы почесать, два раза, чтобы покормить, много раз, чтобы пощекотать, или схватите и подкиньте. Мимо котов нажатия уходят в TikTok.",
-            "Унизу екрана бігають і стрибають товсті тілкайо, обіймаються, цілуються й пускають салют. Натисніть на кота, щоб погладити, потримайте, щоб почухати, двічі, щоб нагодувати, багато разів, щоб полоскотати, або схопіть і підкиньте. Повз котів натискання йдуть у TikTok.",
-            "Fat tilcayos run and jump along the bottom of the screen, hugging, kissing and setting off fireworks. Tap a cat to pet it, hold to stroke it, tap twice to feed it, tap a lot to tickle it, or grab and toss it. Taps beside the cats go to TikTok.");
+    static final String TILCAYO_RUN_NOTE = pick("Внизу экрана бегают толстые тилкайо. Нажми на кота, чтобы погладить, зажми, чтобы почесать, нажми два раза, чтобы покормить, много раз, чтобы пощекотать, или схвати и подкинь.", "Унизу екрана бігають товсті тілкайо. Натисни на кота, щоб погладити, затисни, щоб почухати, натисни двічі, щоб погодувати, багато разів, щоб полоскотати, або схопи й підкинь.", "Fat tilcayos run along the bottom of the screen. Tap one to pet it, hold to scratch, tap twice to feed, tap a lot to tickle, or grab and toss it.");
     static final String TILCAYO_PURR = pick("мур", "мур", "purr");
     static final String TILCAYO_NOM = pick("ням!", "ням!", "nom!");
     static final String TILCAYO_HEHE = pick("хи-хи", "хі-хі", "hehe");
@@ -965,13 +943,7 @@ final class Text {
             "Для другой версии TikTok", "Для іншої версії TikTok",
             "For a different TikTok");
 
-    static final String STORE_NOTE = pick(
-            "Плагины загружает владелец мода. Ставь только то, чему доверяешь: "
-                    + "плагин работает внутри тиктока с твоим аккаунтом.",
-            "Плагіни завантажує власник мода. Став лише те, чому довіряєш: "
-                    + "плагін працює всередині тіктока з твоїм акаунтом.",
-            "Plugins are put there by whoever runs the mod. Install what you trust: "
-                    + "a plugin runs inside TikTok with your account.");
+    static final String STORE_NOTE = pick("Ставь только те плагины, которым доверяешь: они работают в TikTok с твоим аккаунтом.", "Став лише ті плагіни, яким довіряєш: вони працюють у TikTok з твоїм акаунтом.", "Install only plugins you trust: they run inside TikTok with your account.");
 
     static final String SAVE = pick("Сохранить", "Зберегти", "Save");
 
@@ -997,7 +969,7 @@ final class Text {
 
     static final String BACKUP = pick("Резервная копия", "Резервна копія", "Backup");
     static final String BACKUP_EXPORT = pick("Экспортировать настройки", "Експортувати налаштування", "Export settings");
-    static final String BACKUP_EXPORT_NOTE = pick("JSON без аккаунта, токенов и кэша", "JSON без акаунта, токенів і кешу", "JSON without account, tokens or cache");
+    static final String BACKUP_EXPORT_NOTE = pick("Файл с настройками, без данных аккаунта", "Файл із налаштуваннями, без даних акаунта", "A file of the settings, with nothing of your account");
     static final String BACKUP_IMPORT = pick("Импортировать настройки", "Імпортувати налаштування", "Import settings");
     static final String BACKUP_IMPORT_NOTE = pick("Сначала покажем, сколько параметров будет изменено", "Спочатку покажемо, скільки параметрів буде змінено", "Shows how many settings will change first");
     static final String BACKUP_APPLY = pick("Применить", "Застосувати", "Apply");

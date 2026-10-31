@@ -659,7 +659,7 @@ final class ChatFolders {
         static List<?> whole, ours;
         static WeakReference<ViewGroup> shown = new WeakReference<ViewGroup>(null);
         private static final Map<Class<?>, java.lang.reflect.Field> sessions = new java.util.HashMap<Class<?>, java.lang.reflect.Field>();
-        private static java.lang.reflect.Field model, nameField;
+        private static java.lang.reflect.Field model;
 
         static boolean on() {
             return ours != null && differ != null;
@@ -740,14 +740,21 @@ final class ChatFolders {
             if (sessions.containsKey(kind)) {
                 session = sessions.get(kind);
             } else {
+                // a person's chat keeps its card in an X.0T89, a group's in an X.0T8A: both have the
+                // name written in LLJJJ
                 session = null;
                 for (Class<?> c = kind; c != null && session == null; c = c.getSuperclass()) {
                     for (java.lang.reflect.Field one : c.getDeclaredFields()) {
-                        if (one.getType().getName().equals("X.0T89")) {
-                            one.setAccessible(true);
-                            session = one;
-                            break;
+                        if (java.lang.reflect.Modifier.isStatic(one.getModifiers()) || one.getType().isPrimitive()) continue;
+                        if (!one.getType().getName().startsWith("X.")) continue;
+                        try {
+                            if (field(one.getType(), "LLJJJ").getType() != String.class) continue;
+                        } catch (NoSuchFieldException none) {
+                            continue;
                         }
+                        one.setAccessible(true);
+                        session = one;
+                        break;
                     }
                 }
                 sessions.put(kind, session);
@@ -755,18 +762,20 @@ final class ChatFolders {
             if (session == null) return null;
             Object info = session.get(item);
             if (info == null) return null;
-            if (nameField == null) nameField = field(info.getClass(), "LLJJJ");
-            Object name = nameField.get(info);
+            Object name = field(info.getClass(), "LLJJJ").get(info);
             return name instanceof String ? (String) name : null;
         }
 
-        /** The entries over the chats (activity, system notices) are not chats and stay out of a folder. */
-        private static boolean entrance(Object wrapper) throws Exception {
+        /**
+         * What stays over a folder's chats: the strip of stories and the chips. Everything else that is
+         * not a chat (activity, system notices, TikTok Shop, the spinner of the next page) stays out.
+         */
+        private static boolean header(Object wrapper) throws Exception {
             if (model == null) model = field(wrapper.getClass(), "LIZ");
             Object item = model.get(wrapper);
             if (item == null) return false;
             String kind = item.getClass().getName();
-            return kind.equals("com.ss.android.ugc.aweme.inbox.widget.multi.InboxEntrancePod") || kind.equals("X.0mEZ");
+            return kind.equals("com.ss.android.ugc.aweme.inbox.widget.multi.InboxHorizontalTopListCombinePod") || kind.equals("X.0TD7");
         }
 
         private static void give(String id) {
@@ -777,7 +786,7 @@ final class ChatFolders {
                 for (Object wrapper : from) {
                     if (wrapper == null) continue;
                     String name = chatName(wrapper);
-                    if (name == null ? !entrance(wrapper) : holds(id, name)) out.add(wrapper);
+                    if (name == null ? header(wrapper) : holds(id, name)) out.add(wrapper);
                 }
                 ours = out;
                 final ViewGroup list = shown.get();

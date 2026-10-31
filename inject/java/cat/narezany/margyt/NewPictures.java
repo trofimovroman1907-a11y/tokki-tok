@@ -159,9 +159,15 @@ final class NewPictures {
 
     // ============================================================ the typing animation
 
-    /** A word being typed: with the animation, each letter springs in and the cursor glides after it. */
+    /**
+     * A word typed and deleted again, with what is chosen on the page: how letters come in (blur, rise,
+     * spring, tilt), how they go (fly off or vanish), the cursor (gliding or jumping), the speed and the
+     * curve. It is drawn with the functions the typing animation itself uses.
+     */
     static final class Typing extends SettingsPictures.Art {
         private final SettingsPictures.Eased on;
+        private float cursorX = -1;
+        private long last;
 
         Typing(Context context, Skin skin, boolean on) {
             super(context, skin, 96);
@@ -174,39 +180,58 @@ final class NewPictures {
 
         @Override
         protected void onDraw(Canvas canvas) {
-            float a = on.value, t = clock();
+            boolean animated = on.value > 0.5f;
+            boolean ghost = animated && TypingAnim.on(TypingAnim.GHOST);
+            boolean glide = animated && TypingAnim.on(TypingAnim.CURSOR);
+            TypingAnim.Look look = animated ? TypingAnim.Look.now() : new TypingAnim.Look();
             String word = Local.of("привет, это я");
-            float step = 0.16f, cycle = word.length() * step + 1.6f;
-            float local = t % cycle;
+            int n = word.length();
+            float typeStep = 0.14f, deleteStep = 0.09f;
+            float typed = n * typeStep, hold = 1.1f;
+            float coming = TypingAnim.duration() / 1000f, going = TypingAnim.leaving() / 1000f;
+            float cycle = typed + coming + hold + n * deleteStep + going + 0.5f;
+            float local = (clock() % cycle);
+            float deleteFrom = typed + coming + hold;
+
             float left = 22 * d, top = 22 * d, right = getWidth() - 22 * d;
             paint.setColor(surface(0.08f));
             box.set(left, top, right, top + 48 * d);
             canvas.drawRoundRect(box, 24 * d, 24 * d, paint);
-            text.setTextSize(16 * d);
+
+            float size = 16 * d;
+            text.setTextSize(size);
             text.setTypeface(android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.NORMAL));
             text.setTextAlign(Paint.Align.LEFT);
-            float x = left + 20 * d, base = top + 30 * d;
-            float cursorAt = x;
-            for (int i = 0; i < word.length(); i++) {
-                float since = local - i * step;
-                if (since < 0) break;
+            text.setColor(skin.text);
+            text.setMaskFilter(null);
+            float x0 = left + 20 * d, base = top + 30 * d;
+            float goal = x0;
+            float at = x0;
+            for (int i = 0; i < n; i++) {
                 String letter = word.substring(i, i + 1);
                 float w = text.measureText(letter);
-                float grow = a > 0.5f ? spring(since / 0.45f) : 1f;
-                float rise = a > 0.5f ? (1f - ease(since / 0.3f)) * 10 * d : 0f;
-                canvas.save();
-                canvas.translate(x + w / 2f, base + rise);
-                canvas.scale(grow, grow);
-                text.setColor(faint(skin.text, Math.min(1f, a > 0.5f ? since / 0.15f : 1f)));
-                canvas.drawText(letter, -w / 2f, 0, text);
-                canvas.restore();
-                x += w;
-                cursorAt = a > 0.5f ? cursorAt + (x - cursorAt) * Math.min(1f, since / 0.2f) : x;
+                float shown = local - i * typeStep;
+                float gone = local - (deleteFrom + (n - 1 - i) * deleteStep);
+                if (shown >= 0 && gone < 0) {
+                    float t = animated ? Math.min(1f, shown / coming) : 1f;
+                    TypingAnim.arrive(canvas, text, letter, at + w / 2f, base, size, t, (i % 2 == 0 ? 1f : -1f) * 9f, look, 255);
+                    goal = at + w;
+                } else if (gone >= 0 && ghost && gone < going) {
+                    TypingAnim.depart(canvas, text, letter, at + w / 2f, base, size, gone / going, look, 255);
+                }
+                at += w;
             }
-            boolean blink = a > 0.5f || (t % 1f) < 0.5f;
+            long now = android.os.SystemClock.uptimeMillis();
+            long dt = Math.max(1L, Math.min(50L, now - last));
+            last = now;
+            if (cursorX < 0 || !glide) cursorX = goal;
+            else cursorX += (goal - cursorX) * (1f - (float) Math.exp(-dt / TypingAnim.glide()));
+            boolean moving = Math.abs(goal - cursorX) > 0.3f;
+            boolean typing = local < deleteFrom + n * deleteStep;
+            boolean blink = moving || (typing && local > 0.1f && local < typed + 0.2f) || (clock() % 1f) < 0.5f;
             if (blink) {
-                paint.setColor(Accent.colour());
-                box.set(cursorAt + 1 * d, base - 16 * d, cursorAt + 3 * d, base + 4 * d);
+                paint.setColor(glide ? Accent.colour() : skin.text);
+                box.set(cursorX + 1 * d, base - 16 * d, cursorX + 3 * d, base + 4 * d);
                 canvas.drawRoundRect(box, 1 * d, 1 * d, paint);
             }
             again();
