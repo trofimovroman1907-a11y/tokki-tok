@@ -19,7 +19,7 @@ public final class Ghost {
     private static final Runnable tick = new Runnable() {
         @Override
         public void run() {
-            if (shown == null) return;
+            if (shown == null || !on(KEY)) return;
             apply();
             main.postDelayed(this, 1000L);
         }
@@ -56,7 +56,8 @@ public final class Ghost {
         shown = activity;
         main.removeCallbacks(tick);
         apply();
-        main.postDelayed(tick, 1000L);
+        // once a second only while the ghost is on: off, nothing needs keeping up
+        if (on(KEY)) main.postDelayed(tick, 1000L);
     }
 
     static void paused(Activity activity) {

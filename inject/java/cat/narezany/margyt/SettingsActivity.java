@@ -139,7 +139,6 @@ public class SettingsActivity extends Activity {
             new Shelf(1, "md3", "view_compact", Text.MD3_TIKTOK, Text.PAGE_MD3_NOTE, Text.MD3_TIKTOK),
             new Shelf(1, "theme", "contrast", Text.THEME, Text.PAGE_THEME_NOTE, Text.THEME),
             new Shelf(1, "font", "text_fields", Text.FONT, Text.PAGE_FONT_NOTE, Text.FONT),
-            new Shelf(1, "editor", "tune", EDITOR, EDITOR_NOTE, EDITOR),
             new Shelf(1, "typing", "edit", TYPING, TYPING_NOTE, TYPING),
             new Shelf(2, "badges", "verified", Text.BADGES, Text.PAGE_BADGES_NOTE, Text.BADGES),
             new Shelf(2, "gradient", "palette", Text.GRADIENT, Text.PAGE_GRADIENT_NOTE, Text.GRADIENT),
@@ -931,6 +930,9 @@ public class SettingsActivity extends Activity {
         diagnostics.addView(quiet(Local.of("Технический стек сбоя, без сообщений и аккаунта.")));
         diagnostics.addView(quiet(Diagnostics.report()));
         diagnostics.addView(line());
+        diagnostics.addView(liveToggleRow("timeline", Local.of("Записывать подвисания"), Lag.wanted(), on -> Lag.setWanted(on)));
+        diagnostics.addView(quiet(Local.of("Нужно, только если присылаешь отчёт о лагах. Пока включено, немного тратит батарею.")));
+        diagnostics.addView(line());
         diagnostics.addView(actionRow("article", Text.COPY_DIAGNOSTICS, null,
                 () -> copy("MargyT diagnostics", DevMode.isOn()
                         ? Diagnostics.fullReport() : Diagnostics.report())));
@@ -1015,7 +1017,8 @@ public class SettingsActivity extends Activity {
         column.addView(fatCat());
 
         // from LotusTok (@saintcursed), with the ghost and long comments from the TT Extras plugin
-        column.addView(section(EDITOR));
+        // the interface editor is held back until it is reliable: built, not shown
+        if (EDITOR_READY) column.addView(section(EDITOR));
         LinearLayout editor = card();
         editor.addView(new NewPictures.Editor(this, skin));
         editor.addView(actionRow("tune", Local.of("Открыть редактор"), Local.of("Нажми на что угодно в TikTok, чтобы спрятать, сдвинуть или перекрасить"), () -> {
@@ -1028,7 +1031,7 @@ public class SettingsActivity extends Activity {
             ViewEditor.resetAll();
             rebuild();
         }));
-        column.addView(wrap(editor));
+        if (EDITOR_READY) column.addView(wrap(editor));
 
         column.addView(section(TYPING));
         LinearLayout typing = card();
@@ -1055,15 +1058,13 @@ public class SettingsActivity extends Activity {
                 typing.addView(liveToggleRow(motion[1], motion[2], TypingAnim.on(key), on -> TypingAnim.set(key, on)));
             }
             typing.addView(line());
-            typing.addView(actionRow("speed", Local.of("Скорость"), TypingAnim.speedName(), () -> {
-                TypingAnim.nextSpeed();
-                rebuild();
-            }));
-            typing.addView(line());
-            typing.addView(actionRow("tune", Local.of("Кривая"), TypingAnim.curveName(), () -> {
-                TypingAnim.nextCurve();
-                rebuild();
-            }));
+            // all the choices in sight, the chosen one filled: the picture above shows each at once
+            typing.addView(heading(Local.of("Скорость")));
+            typing.addView(segmented(new String[] {Local.of("быстро"), Local.of("плавно"), Local.of("медленно")},
+                    TypingAnim.speed(), TypingAnim::setSpeed));
+            typing.addView(heading(Local.of("Как буквы появляются")));
+            typing.addView(segmented(new String[] {Local.of("мягко"), Local.of("пружина"), Local.of("резко"), Local.of("выскок")},
+                    TypingAnim.curve(), TypingAnim::setCurve));
         }
         column.addView(wrap(typing));
 
@@ -2568,6 +2569,17 @@ public class SettingsActivity extends Activity {
     // ---------------------------------------------------------- the icon
 
     // ------------------------------------------------------------ choosing
+
+    /** A small name over a choice inside a card. */
+    private View heading(String words) {
+        TextView view = new TextView(this);
+        view.setText(words);
+        view.setTextColor(skin.muted());
+        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        view.setPadding(edge() + dp(4), dp(12), edge(), 0);
+        return view;
+    }
 
     /** Told which of several was picked. */
     private interface Picked { void picked(int index); }
@@ -4648,6 +4660,7 @@ public class SettingsActivity extends Activity {
     }
 
     private static final String BURN = Local.of("Защита экрана");
+    private static final boolean EDITOR_READY = false;
     private static final String EDITOR = Local.of("Редактор интерфейса"),
             EDITOR_NOTE = Local.of("Прячь, двигай и перекрашивай что угодно"),
             TYPING = Local.of("Анимация набора текста"),

@@ -105,6 +105,17 @@ final class SponsorBlock {
 
     private static synchronized void keep(String aid, long[][] parts) {
         known.put(aid, parts);
+        if (parts.length > 0) wake();
+    }
+
+    /** Parts came for a video: the watcher, asleep while there was nothing to skip, looks again. */
+    private static void wake() {
+        main.post(() -> {
+            if (!ticking && enabled()) {
+                ticking = true;
+                main.post(tick);
+            }
+        });
     }
 
     /** A video began to play. */
@@ -163,17 +174,24 @@ final class SponsorBlock {
                 next = look();
             } catch (Throwable ignored) {
             }
+            // nothing to skip in the video playing, or the app put away: stop until a video plays again
+            if (next < 0) {
+                ticking = false;
+                return;
+            }
             main.postDelayed(this, next);
         }
     };
 
     /** Looks where the video is; returns how soon to look again. */
     private static long look() {
-        if (!enabled() || !skipOn() || Watch.here() == null) return 1000L;
+        if (!enabled() || !skipOn() || Watch.here() == null) return -1;
         Object manager = PlayerTools.manager();
         String aid = PlayerTools.aid();
         long[][] parts = partsOf(aid);
-        if (manager == null || parts == null || parts.length == 0) return 600L;
+        // still being asked for, or heard: look again soon; none at all: sleep
+        if (parts == null) return 600L;
+        if (manager == null || parts.length == 0) return -1;
         long position = PlayerTools.position(manager), length = PlayerTools.duration(manager);
         if (position < 0 || length <= 0) return 300L;
         for (long[] part : parts) {
@@ -408,6 +426,7 @@ final class SponsorBlock {
                     }
                     known.put(aid, all.toArray(new long[0][]));
                 }
+                wake();
                 Diary.note("sponsor: heard " + found.size() + " advert(s) in " + aid);
             } catch (Throwable error) {
                 Diary.note("sponsor listen: " + error);

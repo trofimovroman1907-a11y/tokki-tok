@@ -68,6 +68,16 @@ public final class TypingAnim {
         return number(SPEED, 1, DURATIONS.length);
     }
 
+    static void setSpeed(int at) {
+        SharedPreferences prefs = prefs();
+        if (prefs != null) prefs.edit().putInt(SPEED, Math.max(0, Math.min(DURATIONS.length - 1, at))).apply();
+    }
+
+    static void setCurve(int at) {
+        SharedPreferences prefs = prefs();
+        if (prefs != null) prefs.edit().putInt(CURVE, Math.max(0, Math.min(3, at))).apply();
+    }
+
     static void nextSpeed() {
         SharedPreferences prefs = prefs();
         if (prefs != null) prefs.edit().putInt(SPEED, (speed() + 1) % DURATIONS.length).apply();
