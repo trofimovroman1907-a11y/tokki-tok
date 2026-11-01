@@ -430,6 +430,14 @@ final class SponsorBlock {
 
     // ------------------------------------------------------------ marking
 
+    /** A post of photos, which has no advert read out to skip. */
+    static boolean photos(Object post) {
+        if (post == null) return false;
+        if (NativeRead.get(post, "getPhotoModeImageInfo") != null) return true;
+        Object images = NativeRead.get(post, "getImageInfos");
+        return images instanceof java.util.List && !((java.util.List<?>) images).isEmpty();
+    }
+
     /** From the video's menu: mark where the advert is, or say a red part is no advert. */
     static void mark(final Context context, final Object post) {
         final String aid = NativeRead.aid(post);

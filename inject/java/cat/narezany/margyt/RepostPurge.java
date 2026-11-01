@@ -129,11 +129,12 @@ final class RepostPurge {
     /**
      * Every repost of the account, a page after a page.
      *
-     * The next page starts where what came back ends, so a page the server cut short
-     * -- a video that is gone, one that is private -- is read again from its end and
-     * cannot leave a gap; a repost seen twice is kept once. The server's own word
-     * that there is no more is not taken for it: the count ends on a page with
-     * nothing in it, or when pages stop bringing anything new.
+     * The next page starts a whole page further on, whatever came back: the server leaves
+     * out of a page the videos that are gone or private, so a page of twenty may bring four,
+     * and TikTok's own repost tab moves on by twenty all the same (RepostListViewModel: the
+     * offset plus the count asked for). Moving on by what came back asked for the same
+     * reposts again and stopped at the first short page. The count ends when the server says
+     * there is no more; a repost seen twice is kept once.
      */
     private static List<Entry> list(String uid, final Activity activity, final Waiting waiting) throws Throwable {
         final Object service = Class.forName("com.ss.android.ugc.aweme.upvote.service.UpvoteServiceImpl")
@@ -153,13 +154,12 @@ final class RepostPurge {
                 break;
             }
             pages++;
-            if (page.posts == null || page.posts.isEmpty()) break;
             int before = out.size();
             take(out, page);
-            offset += page.posts.size();
+            offset += PAGE;
             barren = out.size() == before ? barren + 1 : 0;
-            if (barren >= 3) break;
             shown(activity, waiting, out.size());
+            if (!page.more || barren >= 6) break;
         }
         Diary.note("repost purge: " + out.size() + " reposts found in " + pages + " pages");
         return new ArrayList<Entry>(out.values());

@@ -352,7 +352,7 @@ public final class TypingAnim {
             if (layout == null || text.length() == 0 || at < 0 || at > view.length()) return;
             int line = layout.getLineForOffset(at);
             float gx = layout.getPrimaryHorizontal(at) + view.getCompoundPaddingLeft() - view.getScrollX();
-            float gy = layout.getLineBaseline(line) + view.getExtendedPaddingTop() - view.getScrollY();
+            float gy = layout.getLineBaseline(line) + view.getTotalPaddingTop() - view.getScrollY();
             float width = view.getPaint().measureText(text);
             gone.add(new Gone(text, gx + width / 2f, gy, view.getTextSize()));
             if (gone.size() > 40) gone.remove(0);
@@ -390,7 +390,7 @@ public final class TypingAnim {
                     String letter = text.subSequence(from, to).toString();
                     float width = paint.measureText(letter);
                     float lx = layout.getPrimaryHorizontal(from) + view.getCompoundPaddingLeft() - view.getScrollX();
-                    float ly = layout.getLineBaseline(line) + view.getExtendedPaddingTop() - view.getScrollY();
+                    float ly = layout.getLineBaseline(line) + view.getTotalPaddingTop() - view.getScrollY();
                     arrive(canvas, paint, letter, lx + width / 2f, ly, view.getTextSize(), t, pop.tilt, look, alpha);
                 }
             }
@@ -425,7 +425,7 @@ public final class TypingAnim {
             if (to < 0 || from != to) return false;
             int line = layout.getLineForOffset(to);
             float goalX = layout.getPrimaryHorizontal(to) + view.getCompoundPaddingLeft() - view.getScrollX();
-            float goalY = layout.getLineTop(line) + view.getExtendedPaddingTop() - view.getScrollY();
+            float goalY = layout.getLineTop(line) + view.getTotalPaddingTop() - view.getScrollY();
             float goalH = layout.getLineBottom(line) - layout.getLineTop(line);
             long dt = Math.max(1L, Math.min(50L, now - last));
             last = now;
