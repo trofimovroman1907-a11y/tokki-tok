@@ -1059,12 +1059,10 @@ public class SettingsActivity extends Activity {
             }
             typing.addView(line());
             // all the choices in sight, the chosen one filled: the picture above shows each at once
-            typing.addView(heading(Local.of("Скорость")));
-            typing.addView(segmented(new String[] {Local.of("быстро"), Local.of("плавно"), Local.of("медленно")},
-                    TypingAnim.speed(), TypingAnim::setSpeed));
-            typing.addView(heading(Local.of("Как буквы появляются")));
-            typing.addView(segmented(new String[] {Local.of("мягко"), Local.of("пружина"), Local.of("резко"), Local.of("выскок")},
-                    TypingAnim.curve(), TypingAnim::setCurve));
+            typing.addView(labeled(Local.of("Скорость"), segmented(new String[] {Local.of("быстро"), Local.of("плавно"), Local.of("медленно")},
+                    TypingAnim.speed(), TypingAnim::setSpeed)));
+            typing.addView(labeled(Local.of("Как буквы появляются"), segmented(new String[] {Local.of("мягко"), Local.of("пружина"), Local.of("резко"), Local.of("выскок")},
+                    TypingAnim.curve(), TypingAnim::setCurve)));
         }
         column.addView(wrap(typing));
 
@@ -2570,15 +2568,19 @@ public class SettingsActivity extends Activity {
 
     // ------------------------------------------------------------ choosing
 
-    /** A small name over a choice inside a card. */
-    private View heading(String words) {
-        TextView view = new TextView(this);
-        view.setText(words);
-        view.setTextColor(skin.muted());
-        view.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
-        view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        view.setPadding(edge() + dp(4), dp(12), edge(), 0);
-        return view;
+    /** A choice with its name over it, as one tile of the card: the name is not a tile of its own. */
+    private View labeled(String words, View control) {
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        TextView name = new TextView(this);
+        name.setText(words);
+        name.setTextColor(skin.muted());
+        name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        name.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+        name.setPadding(edge() + dp(4), dp(14), edge(), 0);
+        tile.addView(name);
+        tile.addView(control);
+        return tile;
     }
 
     /** Told which of several was picked. */
