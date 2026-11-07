@@ -25,6 +25,36 @@
    },
    "releases": [
     {
+     "version": "2.2.1",
+     "beta": false,
+     "base": {
+      "name": "TikTok 47.2.41",
+      "sha256": "4bcad2a15ac82da68d373629a9520f855781c3ec46f0e2937e605040285ba75c",
+      "size": 346017026,
+      "sources": [
+       {
+        "name": "margy.narez.xyz",
+        "url": "https://margy.narez.xyz/original/tiktok-47-2-41.apk",
+        "direct": true
+       }
+      ]
+     },
+     "patch": {
+      "url": "https://git.narez.xyz/narezany/MargyT/releases/download/v2.2.1/margyt-2.2.1.mpatch",
+      "sha256": "70fabfaee9ad567d4355e331a4ccaf71e2c0c55dcede931e8dc8ad49a8d8009f",
+      "size": 74855976
+     },
+     "result": {
+      "sha256": "b25ab5ea03417af3aa24a1adc446d17942d6bccc271df40aa60ac7d557ffe9fa",
+      "size": 396474350
+     },
+     "notes": {
+      "ru": "Fun Update. Рамки профиля: у поддержавших ангельское свечение, оно повторяет форму аватарки. У бегающих тилкайо 11 скинов, семь из них прислали вы, и значок тем, чей тилкайо попал в мод. Форму аватарок можно вращать: крутится только маска, кольцо историй и рамка вместе с ней. Удалённые чужие сообщения остаются видны, у даты флаг страны, значки разделены на «Мои» и «Получить», вернулась упрощённая лента.",
+      "uk": "Fun Update. Рамки профілю: у тих, хто підтримав, янгольське сяйво, воно повторює форму аватарки. У тилкайо, що бігають, 11 скінів, сім із них надіслали ви, і значок тим, чий тилкайо потрапив у мод. Форму аватарок можна обертати: крутиться лише маска, кільце історій і рамка разом із нею. Видалені чужі повідомлення залишаються видимими, біля дати прапор країни, значки поділено на «Мої» та «Отримати», повернулася спрощена стрічка.",
+      "en": "Fun Update. Profile frames: supporters get an angel's glow that follows the avatar's shape. The running tilcayo has 11 skins, seven of them sent in by you, and a badge for those whose tilcayo made it in. The avatar shape can turn: only the mask moves, with the story ring and the frame. Messages others take back stay readable, a country flag sits by the date, badges are split into mine and to get, and the simple feed is back."
+     }
+    },
+    {
      "version": "2.2.0",
      "beta": false,
      "base": {

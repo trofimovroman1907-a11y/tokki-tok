@@ -1,8 +1,9 @@
 {
   "_comment": "What the app checks to know whether it is out of date. It reads this from the project's own git server at startup and every five minutes; the badges come from the same box.",
-  "version": "2.2.0",
-  "url": "https://git.narez.xyz/narezany/MargyT/releases/download/v2.2.0/margyt.apk",
-  "notes": "Sponsor block: adverts read out by authors are skipped, and the same advert is known again by its sound. Ghost mode, chat folders, a cleaner inbox, removing every repost, the typing animation and long comments. The mod uses less battery.",
-  "notes_ru": "Спонсор-блок: реклама, которую читают авторы, пропускается сама, а одинаковую мод узнаёт по звуку. Режим призрака, папки чатов, чистка «Входящих», удаление всех репостов, анимация набора текста и длинные комментарии. Мод тратит меньше батареи.",
-  "notes_uk": "Спонсор-блок: реклама, яку читають автори, пропускається сама, а однакову мод упізнає за звуком. Режим привида, папки чатів, чистка «Вхідних», видалення всіх репостів, анімація набору тексту й довгі коментарі. Мод витрачає менше батареї."
+  "version": "2.2.1",
+  "title": "Fun Update",
+  "url": "https://git.narez.xyz/narezany/MargyT/releases/download/v2.2.1/margyt.apk",
+  "notes": "Fun Update. Profile frames: supporters get an angel's glow that follows the avatar's shape. The running tilcayo has 11 skins, seven of them sent in by you, and a badge for those whose tilcayo made it in. The avatar shape can turn: only the mask moves, with the story ring and the frame. Messages others take back stay readable, a country flag sits by the date, badges are split into mine and to get, and the simple feed is back.",
+  "notes_ru": "Fun Update. Рамки профиля: у поддержавших ангельское свечение, оно повторяет форму аватарки. У бегающих тилкайо 11 скинов, семь из них прислали вы, и значок тем, чей тилкайо попал в мод. Форму аватарок можно вращать: крутится только маска, кольцо историй и рамка вместе с ней. Удалённые чужие сообщения остаются видны, у даты флаг страны, значки разделены на «Мои» и «Получить», вернулась упрощённая лента.",
+  "notes_uk": "Fun Update. Рамки профілю: у тих, хто підтримав, янгольське сяйво, воно повторює форму аватарки. У тилкайо, що бігають, 11 скінів, сім із них надіслали ви, і значок тим, чий тилкайо потрапив у мод. Форму аватарок можна обертати: крутиться лише маска, кільце історій і рамка разом із нею. Видалені чужі повідомлення залишаються видимими, біля дати прапор країни, значки поділено на «Мої» та «Отримати», повернулася спрощена стрічка."
 }
