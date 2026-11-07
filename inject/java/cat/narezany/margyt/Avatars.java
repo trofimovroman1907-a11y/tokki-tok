@@ -73,6 +73,13 @@ public static final String KEY = "save_avatars";
         return remember(user, user == null ? null : user.getAvatarMedium());
     }
 
+    /** The small one, for lists. Not worth saving, so it doesn't count as the last one seen; a frame wants it, though. */
+    public static UrlModel getAvatarThumb(User user) {
+        UrlModel url = user == null ? null : user.getAvatarThumb();
+        if (user != null) Frames.saw(user.getUid(), url);
+        return url;
+    }
+
     /** Capture the signed-in person's real avatar as soon as TikTok exposes it. */
     public static void rememberCurrent(User user) {
         if (user == null) return;
@@ -88,6 +95,7 @@ public static final String KEY = "save_avatars";
 
     private static UrlModel remember(User user, UrlModel url) {
         if (url == null) return null;
+        if (user != null) Frames.saw(user.getUid(), url);
         try {
             if (usable(url)) {
                 latest = url;

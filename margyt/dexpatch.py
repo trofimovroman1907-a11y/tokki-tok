@@ -229,6 +229,7 @@ CLASS_ANCHORED_SOURCES = {
     "Lcom/ss/android/ugc/aweme/commentv2/commentlist/powercell/BaseCommentCell;",
 }
 
+
 # TikTok 47.2.41's feed touch listener. The callback below is inserted only in
 # this one method after the multi-touch early return; no global touch dispatch
 # is rewritten.
@@ -321,6 +322,7 @@ MODEL_SOURCES: List[Tuple[str, str, str, str, str]] = [
     (USER, "getAvatarLarger", "()%s" % URL_MODEL, "(%s)%s" % (USER, URL_MODEL), AVATARS),
     (USER, "getAvatar300", "()%s" % URL_MODEL, "(%s)%s" % (USER, URL_MODEL), AVATARS),
     (USER, "getAvatarMedium", "()%s" % URL_MODEL, "(%s)%s" % (USER, URL_MODEL), AVATARS),
+    (USER, "getAvatarThumb", "()%s" % URL_MODEL, "(%s)%s" % (USER, URL_MODEL), AVATARS),
     # the typeface, wherever TikTok chooses one for itself. Most views never
     # do -- they inherit it -- and those are reached on the way text goes in,
     # which the mod is already standing in for the badges
@@ -381,6 +383,10 @@ MODEL_SOURCES: List[Tuple[str, str, str, str, str]] = [
 # Statics of TikTok's own, which is how the flags are actually read: there is
 # no receiver, so the instruction keeps its shape and only the class it lands
 # in changes -- and the mod calls the original back by the same static.
+# Preserve native JSON results/exceptions; only numeric account-screen errors are observed.
+MODEL_SOURCES += [
+]
+
 MODEL_STATICS: List[Tuple[str, str, str, str, str]] = [
     (SETTINGS_MANAGER, (name, "flag"), "(%s)%s" % (args, kind),
      "(%s)%s" % (args, kind), FLAGS)
@@ -424,6 +430,25 @@ for anchor in ROUND_DRAWABLES:
         "(FFFLandroid/graphics/Path$Direction;)V",
         "(Landroid/graphics/Path;FFFLandroid/graphics/Path$Direction;)V", AVATAR_SHAPE))
     CLASS_ANCHORED_SOURCES.add(anchor)
+
+# The shape can turn. The paths above are built once and drawn many times, so
+# it turns where they are drawn: the drawables' fills, strokes and clips go to
+# the mod, which draws the shape turned and the picture still. Emptying a path
+# goes there too, so a path that stops being an avatar stops turning. Each of
+# those calls -- and the story rings' arcs -- says first who is drawing, so the
+# mod can draw it again on the next frame.
+ROUND_DRAWERS = ("LX/1Fnu;", "LX/0HEe;", "LX/0GvU;")
+for anchor in ROUND_DRAWERS:
+    ANCHORED_SOURCES.append((anchor, "Landroid/graphics/Canvas;", "drawPath",
+        "(Landroid/graphics/Path;Landroid/graphics/Paint;)V",
+        "(Landroid/graphics/Canvas;Landroid/graphics/Path;Landroid/graphics/Paint;)V", AVATAR_SHAPE))
+    CLASS_ANCHORED_SOURCES.add(anchor)
+ANCHORED_SOURCES.append(("LX/0HEe;", "Landroid/graphics/Canvas;", "clipPath",
+    "(Landroid/graphics/Path;)Z", "(Landroid/graphics/Canvas;Landroid/graphics/Path;)Z", AVATAR_SHAPE))
+for anchor in ROUND_DRAWABLES:
+    ANCHORED_SOURCES.append((anchor, "Landroid/graphics/Path;", "reset", "()V",
+        "(Landroid/graphics/Path;)V", AVATAR_SHAPE))
+SPIN_LABEL = "native avatar spin owner"
 
 # A story ring is neither a picture nor anything cut out of a path: it is a
 # view laid over the avatar that strokes an arc round an oval -- whole for one
@@ -907,6 +932,16 @@ def anchored_rules() -> List[Tuple[str, str, "re.Pattern[str]", str]]:
             re.compile(r"invoke-%s(/range)? (\{[^}]*\}), %s->%s%s"
                        % ("static" if owner=="LX/0oir;" else "virtual", re.escape(owner), name, re.escape(original))),
             r"invoke-static\1 \2, %s->%s%s" % (target, name, replacement),
+        ))
+    # who draws, said just before the call: the register is given as a range,
+    # which takes p0 however many registers the method has
+    owner = "    invoke-static/range {p0 .. p0}, %s->owner(Ljava/lang/Object;)V\n" % AVATAR_SHAPE
+    for anchor in ROUND_DRAWERS + STORY_RINGS:
+        out.append((
+            anchor, SPIN_LABEL,
+            re.compile(r"(?m)^(?:%s)?(    invoke-(?:virtual|static)(?:/range)? \{[^}]*\}, (?:Landroid/graphics/Canvas;|%s)->(?:drawPath|clipPath|drawArc)\()"
+                       % (re.escape(owner), re.escape(AVATAR_SHAPE))),
+            owner.replace("\\", "\\\\") + r"\1",
         ))
     return out
 
@@ -1869,6 +1904,67 @@ def rewrite_cards(root: str) -> Dict[str, int]:
     return counts
 
 
+# ---- 2.2.1: messages taken back, frames on avatars
+
+# The updater that handles the server's "recall" command has one call that marks the message. It
+# goes through the mod, which decides whether the mark goes on at all.
+RECALL_UPDATER = "LX/0RdK;"
+RECALL_CALL = re.compile(r"invoke-interface \{([^}]*)\}, LX/0RiV;->LLJJIJI\(LX/0RoP;Ljava/lang/String;Lkotlin/jvm/internal/AwS5S0201100_11;\)V")
+RECALL_TARGET = "Lcat/narezany/margyt/Recalled;->arrived(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V"
+RECALL_LABEL = "native recall"
+
+FRAMES = "Lcat/narezany/margyt/Frames;"
+IMAGE_LOADER = "Lcom/bytedance/lighten/loader/FrescoImageLoaderImpl;"
+IMAGE_DISPLAY = ".method public display(LX/1FSL;)V"
+FRAME_LABEL = "native avatar frame"
+FRAME_HOOK = "    invoke-static {p1}, %s->display(Ljava/lang/Object;)V\n" % FRAMES
+
+# A contact in the messages has its avatar on a model of its own, read through these owners.
+for owner in ("Lcom/ss/android/ugc/aweme/im/contacts/api/model/IMUser;",
+              "Lcom/ss/android/ugc/aweme/im/contacts/api/model/IMContact;",
+              "Lcom/ss/android/ugc/aweme/im/common/model/BaseContact;"):
+    MODEL_SOURCES.append((owner, ("getAvatarThumb", "contact"), "()%s" % URL_MODEL,
+                          "(Ljava/lang/Object;)%s" % URL_MODEL, FRAMES))
+
+
+def rewrite_recall(root: str, dex: Optional[bytes] = None) -> Dict[str, int]:
+    """Send the recall updater's one call that marks a message to the mod."""
+    if dex is not None and not defines(dex, RECALL_UPDATER):
+        return {}
+    path = _class_file(root, RECALL_UPDATER)
+    if not path or not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as handle:
+        text = handle.read()
+    changed, hits = RECALL_CALL.subn(lambda m: "invoke-static {%s}, %s" % (m.group(1), RECALL_TARGET), text)
+    if hits:
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(changed)
+    return {RECALL_LABEL: hits} if hits else {}
+
+
+def rewrite_frames(root: str, dex: Optional[bytes] = None) -> Dict[str, int]:
+    """Show the mod every picture the image loader is about to put in a view."""
+    if dex is not None and not defines(dex, IMAGE_LOADER):
+        return {}
+    path = _class_file(root, IMAGE_LOADER)
+    if not path or not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as handle:
+        text = handle.read()
+    at = text.find(IMAGE_DISPLAY)
+    if at < 0 or FRAMES in text:
+        return {}
+    registers = re.compile(r"(?m)^    \.(registers|locals) \d+\n")
+    found = registers.search(text, at)
+    if not found:
+        return {}
+    changed = text[:found.end()] + "\n" + FRAME_HOOK + text[found.end():]
+    with open(path, "w", encoding="utf-8") as handle:
+        handle.write(changed)
+    return {FRAME_LABEL: 1}
+
+
 def touches_a_model(dex: bytes) -> bool:
     """Whether a dex names one of TikTok's models and something we want on it."""
     for owner, name, _original, _replacement, _target in MODEL_SOURCES + MODEL_STATICS:
@@ -2047,7 +2143,7 @@ def interesting(dex: bytes, literals: Optional[Dict[str, str]] = None) -> bool:
         if ("L%s;" % class_name).encode() in dex:
             return True
     if (defines(dex, PLAYER_CONFIG) or defines(dex, SETTINGS_ROWS) or defines(dex, SETTINGS_GROUP)
-            or defines(dex, STARTER)):
+            or defines(dex, STARTER) or defines(dex, RECALL_UPDATER) or defines(dex, IMAGE_LOADER)):
         return True
     if opens_the_menu(dex) or defines(dex, URL_DISPATCHER):
         return True
@@ -2159,6 +2255,8 @@ def dex_format(dex: bytes) -> str:
 def rewrite_targets() -> List[str]:
     """Every static the rewrites point at, as `Lowner;->name(descriptor)`."""
     out = ["%s->accent()I" % ACCENT]
+    out.append(RECALL_TARGET)
+    out.append("%s->display(Ljava/lang/Object;)V" % FRAMES)
     out.append("%s->setAnimation(Ljava/lang/Object;Ljava/lang/String;)V" % ACCENT)
     for name, _original, replacement in TARGETS:
         out.append("%s->%s%s" % (REGION, name, replacement))
@@ -2376,6 +2474,8 @@ def rewrite_everything(root: str, literals: Optional[Dict[str, str]] = None,
     if dex is None or draws_the_loader(dex):
         counts.update(rewrite_loading(root))
     counts.update(rewrite_cards(root))
+    counts.update(rewrite_recall(root, dex))
+    counts.update(rewrite_frames(root, dex))
     return counts
 
 

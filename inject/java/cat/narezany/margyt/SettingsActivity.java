@@ -141,15 +141,16 @@ public class SettingsActivity extends Activity {
             new Shelf(1, "font", "text_fields", Text.FONT, Text.PAGE_FONT_NOTE, Text.FONT),
             new Shelf(1, "typing", "edit", TYPING, TYPING_NOTE, TYPING),
             new Shelf(2, "badges", "verified", Text.BADGES, Text.PAGE_BADGES_NOTE, Text.BADGES),
+            new Shelf(2, "frames", "account_circle", FRAMES, FRAMES_NOTE, FRAMES),
             new Shelf(2, "gradient", "palette", Text.GRADIENT, Text.PAGE_GRADIENT_NOTE, Text.GRADIENT),
             new Shelf(2, "look", "account_circle", Text.PROFILE_VIEW, Text.PAGE_LOOK_NOTE, Text.PROFILE_VIEW),
             new Shelf(2, "account", "fingerprint", Text.ACCOUNT, Text.PAGE_ACCOUNT_NOTE, Text.ACCOUNT),
             new Shelf(2, "reposts", "repeat", REPOSTS, REPOSTS_NOTE, REPOSTS),
-            new Shelf(3, "feed", "view_compact", Text.FEED, Text.PAGE_FEED_NOTE, Text.FEED, Text.DATE_FILTER, Text.TAGS),
+            new Shelf(3, "feed", "view_compact", Text.FEED, Text.PAGE_FEED_NOTE, Text.FEED, Text.SIMPLE_FEED, Text.DATE_FILTER, Text.TAGS),
             new Shelf(3, "video", "play_circle", Text.VIDEO, Text.PAGE_VIDEO_NOTE, Text.RAIL, Text.VIDEO, Text.FPS),
-            new Shelf(3, "comments", "chat", Text.COMMENTS, Text.PAGE_COMMENTS_NOTE, Text.COMMENTS),
             new Shelf(3, "sponsor", "fast_forward", SPONSOR, SPONSOR_NOTE, SPONSOR),
             new Shelf(3, "burn", "eye_open", BURN, Text.PAGE_BURN_NOTE, BURN),
+            new Shelf(3, "motion", "animation", MOTION, MOTION_NOTE, MOTION),
             new Shelf(3, "region", "public", Text.REGION, Text.PAGE_REGION_NOTE, Text.REGION, Text.COUNTRY),
             new Shelf(4, "downloads", "download", Text.DOWNLOADS, Text.PAGE_DOWNLOADS_NOTE, Text.DOWNLOADS),
             new Shelf(4, "backup", "restore", Text.BACKUP, Text.PAGE_BACKUP_NOTE, Text.BACKUP),
@@ -497,26 +498,34 @@ public class SettingsActivity extends Activity {
         fonts.addView(fontCarousels());
         column.addView(wrap(fonts));
 
+        column.addView(section(FRAMES));
+        column.addView(wrap(framesCard()));
+
         column.addView(section(Text.GRADIENT));
         column.addView(wrap(gradientCard()));
 
         column.addView(section(Text.BADGES));
-        LinearLayout badges = card();
-        final SettingsPictures.Badged badged = new SettingsPictures.Badged(this, skin, Badges.isEnabled());
-        badges.addView(badged);
-        badges.addView(toggleRow("favorite_border", Text.BADGES_ON, Badges.isEnabled(), on -> {
-            Badges.setEnabled(on);
-            badged.set(on);
-        }));
-        badges.addView(line());
-        badges.addView(mineHead());
-        if (mineOpen) badges.addView(appear(mineRows()));
-        if (AdminPanel.owner()) {
-            // the owner's alone: which phones may use the admin inside TikTok
+        column.addView(badgeTabs());
+        if (badgesTab == 1) {
+            badgesToGet();
+        } else {
+            LinearLayout badges = card();
+            final SettingsPictures.Badged badged = new SettingsPictures.Badged(this, skin, Badges.isEnabled());
+            badges.addView(badged);
+            badges.addView(toggleRow("favorite_border", Text.BADGES_ON, Badges.isEnabled(), on -> {
+                Badges.setEnabled(on);
+                badged.set(on);
+            }));
             badges.addView(line());
-            badges.addView(actionRow("fingerprint", Text.ADMIN_DEVICES, null, () -> AdminPanel.devices(this)));
+            badges.addView(mineHead());
+            if (mineOpen) badges.addView(appear(mineRows()));
+            if (AdminPanel.owner()) {
+                // the owner's alone: which phones may use the admin inside TikTok
+                badges.addView(line());
+                badges.addView(actionRow("fingerprint", Text.ADMIN_DEVICES, null, () -> AdminPanel.devices(this)));
+            }
+            column.addView(wrap(badges));
         }
-        column.addView(wrap(badges));
 
         column.addView(section(Text.ACCOUNT));
         LinearLayout account = card();
@@ -755,16 +764,12 @@ public class SettingsActivity extends Activity {
         if (!Rate.reachable(this)) fps.addView(quiet(Text.FPS_UNSUPPORTED));
         column.addView(wrap(fps));
 
-        column.addView(section(Text.COMMENTS));
-        LinearLayout comments = card();
-        final SettingsPictures.Copying copying = new SettingsPictures.Copying(this, skin, Comments.isCopyEnabled());
-        comments.addView(copying);
-        comments.addView(liveToggleRow("article", Text.COMMENT_COPY_ON, Comments.isCopyEnabled(), on -> {
-            Comments.setCopyEnabled(on);
-            copying.set(on);
-        }));
-        comments.addView(quiet(Text.COMMENT_COPY_NOTE));
-        column.addView(wrap(comments));
+        // copying part of a comment and links in comments are simply on: whoever doesn't want them doesn't use them
+        column.addView(section(MOTION));
+        LinearLayout cues = card();
+        cues.addView(liveToggleRow("animation", MOTION, MotionCues.enabled(), on -> MotionCues.setEnabled(this, on)));
+        cues.addView(quiet(Local.of("Точки по краям экрана двигаются вместе с машиной, как на iPhone. Глазам становится понятно, что ты едешь, и меньше укачивает. Когда телефон не двигается, точки исчезают.")));
+        column.addView(wrap(cues));
 
         column.addView(section(BURN));
         LinearLayout burn = card();
@@ -834,6 +839,18 @@ public class SettingsActivity extends Activity {
         column.addView(section(Text.PLUGINS));
         LinearLayout plugins = card();
         plugins.addView(actionRow("add", Local.of("Добавить плагин"), null, this::showPluginAdd));
+        plugins.addView(line());
+        if (DevLink.linked(this)) {
+            plugins.addView(actionRow("extension", Local.of("MargyCode подключён"), Local.of("Его агент пишет и ставит плагины. Нажми, чтобы отключить"), () -> {
+                DevLink.unlink(this);
+                rebuild();
+            }));
+        } else {
+            plugins.addView(actionRow("extension", Local.of("Писать плагины через ИИ"), Local.of("Установи MargyCode и подключи MargyT в его настройках. Агент сам напишет плагин и проверит его прямо на телефоне"), () -> {
+                android.content.Intent code = getPackageManager().getLaunchIntentForPackage(DevLink.MARGYCODE);
+                if (code != null) startActivity(code); else Screen.say(Local.of("MargyCode не установлен, он есть в Margy Store"));
+            }));
+        }
         List<Plugins.Info> installed = Plugins.list();
         List<ScriptPlugins.Program> commands=ScriptPlugins.list(this);
         if(installed.isEmpty()&&commands.isEmpty())plugins.addView(quiet(Local.of("Пока нет установленных плагинов")));
@@ -1004,6 +1021,8 @@ public class SettingsActivity extends Activity {
                 new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(130)));
         runway.addView(liveToggleRow("animation", Text.FUN_TILCAYO_RUN, TilcayoRun.isOn(this), on -> TilcayoRun.set(this, on)));
         runway.addView(quiet(Text.TILCAYO_RUN_NOTE));
+        runway.addView(line());
+        runway.addView(labeled(Text.TILCAYO_SKINS, tilcayoSkins()));
         column.addView(wrap(runway));
 
         column.addView(section(Text.FUN_AVARIYKA));
@@ -1112,6 +1131,9 @@ public class SettingsActivity extends Activity {
             foldersArt.set(on);
         }));
         messages.addView(quiet(Local.of("Чтобы добавить чат в папку, зажми его и выбери «Добавить в папку».")));
+        messages.addView(line());
+        messages.addView(liveToggleRow("chat", Local.of("Сохранять удалённые сообщения"), Recalled.enabled(), Recalled::setEnabled));
+        messages.addView(quiet(Local.of("Если собеседник удалит сообщение, у тебя оно останется, только станет полупрозрачным. Только те, что успели дойти до телефона.")));
         column.addView(wrap(messages));
 
         // what stands in the inbox besides the chats, each piece on its own
@@ -1480,6 +1502,66 @@ public class SettingsActivity extends Activity {
         if (needsProof(ok, trouble)) return;
         Screen.say(ok ? Text.FREE_BADGE_GOT : Text.MINE_TOO_OFTEN);
         rebuild();
+    }
+
+    /**
+     * The frames this account holds, in rows like its badges. One can be on at a time: turning one on
+     * takes the others off, and turning it off leaves none. Saved as it's switched, like the rest of
+     * these settings, and only with the account proved, like the badges.
+     */
+    private View framesCard() {
+        LinearLayout card = card();
+        final java.util.List<String> held = Frames.mine();
+        final int ground = (skin.muted() & 0xFFFFFF) | 0x33000000;
+        final Frames.Preview large = new Frames.Preview(this, ground);
+        large.set(Frames.byId(Frames.mineWorn()));
+        LinearLayout.LayoutParams tall = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(190));
+        tall.topMargin = dp(12);
+        tall.bottomMargin = dp(8);
+        card.addView(large, tall);
+        card.addView(proveRow());
+        if (held.isEmpty()) {
+            card.addView(quiet(Local.of("Пока рамок нет. Рамка приходит вместе со значком: золотая за значок поддержавшего.")));
+            return card;
+        }
+        final java.util.List<M3Switch> toggles = new java.util.ArrayList<>();
+        for (final String id : held) {
+            Frames.Frame frame = Frames.byId(id);
+            if (frame == null) continue;
+            card.addView(line());
+            LinearLayout row = row();
+            row.setPadding(edge(), dp(8), edge(), dp(8));
+            Frames.Preview small = new Frames.Preview(this, ground);
+            small.set(frame);
+            LinearLayout.LayoutParams picture = new LinearLayout.LayoutParams(dp(60), dp(60));
+            picture.rightMargin = dp(12);
+            row.addView(small, picture);
+            LinearLayout words = new LinearLayout(this);
+            words.setOrientation(LinearLayout.VERTICAL);
+            words.addView(label(frame.title));
+            if (frame.text.length() > 0) words.addView(detail(frame.text));
+            row.addView(words, grow());
+            final M3Switch toggle = new M3Switch(this);
+            toggle.colours(Accent.colour(), skin.muted(), skin.card);
+            toggle.setChecked(id.equals(Frames.mineWorn()), false);
+            toggle.setOnChanged(checked -> {
+                if (checked) for (M3Switch other : toggles) if (other != toggle) other.setChecked(false, true);
+                String now = checked ? id : "";
+                large.set(Frames.byId(now));
+                Frames.wear(now, (ok, trouble) -> {
+                    if (needsProof(ok, trouble)) return;
+                    if (!ok) { Screen.say(Text.MINE_TOO_OFTEN); Mine.ask(this::rebuild); }
+                });
+            });
+            toggles.add(toggle);
+            LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(dp(52), dp(32));
+            size.leftMargin = dp(10);
+            row.addView(toggle, size);
+            row.setOnClickListener(v -> toggle.performClick());
+            card.addView(row);
+        }
+        card.addView(quiet(Local.of("Рамка одна: включишь другую, эта снимется. Её видят все, у кого MargyT 2.2.1 или новее.")));
+        return card;
     }
 
     /**
@@ -1883,6 +1965,125 @@ public class SettingsActivity extends Activity {
     }
 
     // ------------------------------------------------------------ own badges
+
+    /** Which of the badges' tabs is open: 0 the ones you have, 1 the ones you could get. */
+    private int badgesTab;
+
+    /** Two tabs over the badges, like a browser's: the open one is the colour of the card under it. */
+    private View badgeTabs() {
+        LinearLayout strip = new LinearLayout(this);
+        strip.setOrientation(LinearLayout.HORIZONTAL);
+        strip.setPadding(edge(), 0, edge(), 0);
+        String[] names = {Local.of("Мои значки"), Local.of("Получить")};
+        for (int i = 0; i < names.length; i++) {
+            final int which = i;
+            boolean on = badgesTab == i;
+            TextView tab = new TextView(this);
+            tab.setText(names[i]);
+            M3Type.line(tab, 14, 0.1f);
+            tab.setTextColor(on ? skin.text : skin.muted());
+            tab.setTypeface(android.graphics.Typeface.create(tab.getTypeface(), on ? android.graphics.Typeface.BOLD : android.graphics.Typeface.NORMAL));
+            tab.setGravity(Gravity.CENTER);
+            tab.setPadding(dp(18), 0, dp(18), 0);
+            GradientDrawable back = new GradientDrawable();
+            float round = dp(14);
+            back.setCornerRadii(new float[] {round, round, round, round, 0, 0, 0, 0});
+            back.setColor(on ? skin.card : Expressive.mix(skin.page, skin.card, 0.45f));
+            tab.setBackground(back);
+            LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, dp(42));
+            size.rightMargin = dp(4);
+            strip.addView(tab, size);
+            tab.setOnClickListener(v -> {
+                if (badgesTab == which) return;
+                badgesTab = which;
+                if (which == 1) Mine.ask(this::rebuild);
+                rebuild();
+            });
+            Motion.press(tab);
+        }
+        return strip;
+    }
+
+    /** The badges anybody can still get, each with what it takes and the button that starts on it. */
+    private void badgesToGet() {
+        if (!Proof.proved()) {
+            LinearLayout prove = card();
+            prove.addView(proveRow());
+            column.addView(wrap(prove));
+        }
+        column.addView(wrap(getCard(Tester.SUPPORTER,
+                Local.of("Поддержать разработку MargyT. Вместе со значком даётся золотая рамка на аватарку и градиент ника."),
+                Local.of("Поддержать"), this::showDonations)));
+        String coins = DepGame.balance >= 0 ? Local.of("Сейчас у тебя монет: ") + String.format(java.util.Locale.ROOT, "%,d", DepGame.balance).replace(',', ' ') : "";
+        column.addView(wrap(getCard("calculator",
+                Local.of("Накопить 75 000 монет в Деп калькуляторе и купить на них значок.") + (coins.length() > 0 ? "\n" + coins : ""),
+                Local.of("Открыть калькулятор"), this::openDep)));
+        column.addView(wrap(getCard("margychat",
+                Local.of("Зарегистрироваться в Margy Chat, худшей соцсети на свете, и заработать там 30 💎 за посты. Потом взять код в настройках аккаунта Margy Chat и ввести его здесь. Только для личных аккаунтов, не каналов и не ботов."),
+                Local.of("Ввести код"), this::askChatCode)));
+    }
+
+    private LinearLayout getCard(String id, String how, String act, Runnable action) {
+        LinearLayout card = card();
+        Badges.Badge badge = Badges.byId(id);
+        boolean have = Mine.holds(id);
+        LinearLayout row = row();
+        row.setPadding(edge(), dp(14), edge(), dp(6));
+        row.addView(badgeDot(badge));
+        LinearLayout words = new LinearLayout(this);
+        words.setOrientation(LinearLayout.VERTICAL);
+        words.addView(label(badge == null ? id : named(badge)));
+        if (have) words.addView(detail(Local.of("Уже у тебя")));
+        row.addView(words, grow());
+        card.addView(row);
+        card.addView(quiet(how));
+        if (!have) card.addView(button(act, action));
+        if ("margychat".equals(id)) {
+            card.addView(line());
+            card.addView(actionRow("chat", Local.of("Открыть Margy Chat"), "chat.narez.xyz", () -> open("https://chat.narez.xyz/settings/account")));
+        }
+        return card;
+    }
+
+    /** The code Margy Chat shows, typed in here; what Margy Chat says back is said here as it is. */
+    private void askChatCode() {
+        if (!Proof.proved()) {
+            proveAccount();
+            return;
+        }
+        final Panel panel = Panel.with(this, skin, Local.of("Код из Margy Chat"));
+        panel.text(Local.of("Его показывает Margy Chat в настройках, в разделе «Аккаунт»: «Привязать MargyT». Код живёт 15 минут."));
+        final android.widget.EditText code = panel.field("ABC123");
+        code.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        code.setFilters(new android.text.InputFilter[] {new android.text.InputFilter.LengthFilter(6), new android.text.InputFilter.AllCaps()});
+        panel.primaryKeepOpen(Local.of("Получить значок"), new Panel.Click() {
+            @Override public void on() {
+                String typed = code.getText().toString().trim();
+                if (typed.length() != 6) {
+                    code.setError(Local.of("В коде 6 букв и цифр"));
+                    return;
+                }
+                Mine.takeChatBadge(typed, (ok, trouble) -> {
+                    if (isFinishing() || isDestroyed()) return;
+                    if (ok) {
+                        panel.close();
+                        Screen.say(Local.of("Значок «Выжил в Margy Chat» твой"));
+                        ordering = null;
+                        badgesTab = 0;
+                        rebuild();
+                        return;
+                    }
+                    if (Mine.PROVE.equals(trouble)) {
+                        panel.close();
+                        proveAccount();
+                        return;
+                    }
+                    code.setError(trouble.length() > 0 ? trouble : Local.of("Не получилось, попробуй ещё раз"));
+                });
+            }
+        });
+        panel.quiet(Local.of("Отмена"), null).show();
+    }
 
     private View mineHead() {
         LinearLayout row = row();
@@ -2583,6 +2784,70 @@ public class SettingsActivity extends Activity {
         return tile;
     }
 
+    /**
+     * The tilcayo's skins as tiles to scroll through: the picture, its name and who drew it, the one
+     * worn ringed. Gold is for supporters: for anybody else it is shown dimmed and says so.
+     */
+    private View tilcayoSkins() {
+        android.widget.HorizontalScrollView scroll = new android.widget.HorizontalScrollView(this);
+        scroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout strip = new LinearLayout(this);
+        strip.setOrientation(LinearLayout.HORIZONTAL);
+        strip.setPadding(edge(), dp(8), edge(), dp(14));
+        scroll.addView(strip);
+        fillTilcayoSkins(strip);
+        return scroll;
+    }
+
+    private void fillTilcayoSkins(LinearLayout strip) {
+        strip.removeAllViews();
+        String worn = TilcayoRun.skin(this);
+        boolean supporter = Mine.holds(Tester.SUPPORTER);
+        for (int i = 0; i < TilcayoRun.SKINS.length; i++) {
+            final String id = TilcayoRun.SKINS[i];
+            boolean locked = TilcayoRun.GOLD.equals(id) && !supporter;
+            LinearLayout tile = new LinearLayout(this);
+            tile.setOrientation(LinearLayout.VERTICAL);
+            tile.setGravity(Gravity.CENTER_HORIZONTAL);
+            tile.setPadding(dp(10), dp(10), dp(10), dp(10));
+            GradientDrawable back = new GradientDrawable();
+            back.setCornerRadius(dp(20));
+            back.setColor(Expressive.mix(skin.card, Accent.colour(), id.equals(worn) ? 0.22f : 0.06f));
+            if (id.equals(worn)) back.setStroke(dp(2), Accent.colour());
+            tile.setBackground(back);
+            android.widget.ImageView picture = new android.widget.ImageView(this);
+            picture.setImageBitmap(TilcayoRun.picture(this, id));
+            picture.setScaleType(android.widget.ImageView.ScaleType.FIT_CENTER);
+            if (locked) picture.setAlpha(0.35f);
+            tile.addView(picture, new LinearLayout.LayoutParams(dp(76), dp(80)));
+            TextView name = new TextView(this);
+            name.setText(Text.TILCAYO_SKIN_NAMES[i] + (locked ? " 🔒" : ""));
+            name.setTextColor(skin.text);
+            name.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);
+            name.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            name.setGravity(Gravity.CENTER);
+            tile.addView(name);
+            TextView author = new TextView(this);
+            String who = TilcayoRun.AUTHORS[i];
+            author.setText(who.length() > 0 ? String.format(Text.TILCAYO_SKIN_AUTHOR, who) : " ");
+            author.setTextColor(skin.muted());
+            author.setTextSize(TypedValue.COMPLEX_UNIT_SP, 11);
+            author.setGravity(Gravity.CENTER);
+            tile.addView(author);
+            tile.setOnClickListener(v -> {
+                if (locked) {
+                    Toast.makeText(this, Text.TILCAYO_SKIN_LOCKED, Toast.LENGTH_LONG).show();
+                    return;
+                }
+                TilcayoRun.setSkin(this, id);
+                fillTilcayoSkins(strip);
+            });
+            LinearLayout.LayoutParams place = new LinearLayout.LayoutParams(dp(112), LinearLayout.LayoutParams.WRAP_CONTENT);
+            place.setMarginEnd(dp(10));
+            strip.addView(tile, place);
+        }
+    }
+
     /** Told which of several was picked. */
     private interface Picked { void picked(int index); }
 
@@ -2877,6 +3142,10 @@ public class SettingsActivity extends Activity {
         android.widget.HorizontalScrollView scroll = carousel(strip);
         box.addView(scroll);
         centre(scroll, chosen);
+        box.addView(liveToggleRow("animation", Text.AVATAR_SPIN, AvatarShape.spins(), on -> {
+            AvatarShape.setSpin(this, on);
+            art.invalidate();
+        }));
         return box;
     }
 
@@ -3291,7 +3560,9 @@ public class SettingsActivity extends Activity {
         // the author and the licence live here as well: the licence asks that
         // a fork keep this line and the card that asks for support, rather
         // than moving the name into print nobody reads
-        view.setText((Version.LITE ? "MargyT Lite " : "MargyT ") + Version.MOD
+        // a named update reads "MargyT Fun Update (2.2.1)": a name is easier to remember than numbers
+        String mod = Version.NAME.length() > 0 ? Version.NAME + " (" + Version.MOD + ")" : Version.MOD;
+        view.setText((Version.LITE ? "MargyT Lite " : "MargyT ") + mod
                 + (Version.LITE ? " beta  ·  TikTok Lite " : "  ·  TikTok ") + Version.TIKTOK
                 + "\n" + Text.MADE_BY);
         view.setTextColor(skin.muted());
@@ -3675,6 +3946,7 @@ public class SettingsActivity extends Activity {
         rows.addView(person("someone's mf", Text.THANKS_TTCUZ, TTCUZ));
         rows.addView(person("@saintcursed", Local.of("Автор LotusTok: призрак, папки, редактор интерфейса, анимация набора и другое"), LOTUSTOK));
         rows.addView(person("TT Extras", Local.of("Плагин для MargyT: из него призрак и длинные комментарии"), null));
+        rows.addView(person("Санек :3", Local.of("Часть дизайна MargyT"), SANEK));
 
         rows.addView(line());
 
@@ -4437,7 +4709,6 @@ public class SettingsActivity extends Activity {
         found+=searchControl(results,Text.DOWNLOADS,Text.NO_WATERMARK,Download.isEnabled());
         found+=searchControl(results,Text.VIDEO,Text.ALWAYS_DATE,Dates.isEnabled());
         found+=searchControl(results,BURN,Text.DIM,Dim.isConfigured());
-        found+=searchControl(results,Text.COMMENTS,Text.COMMENT_COPY_ON,Comments.isCopyEnabled());
         found+=searchControl(results,Text.VIDEO,Text.OWN_BRIGHTNESS,Brightness.isEnabled());
         found+=searchControl(results,Text.BADGES,Text.BADGES_ON,Badges.isEnabled());
         found+=searchControl(results,Text.PROFILE_VIEW,Text.NEW_PROFILE,Flags.isOn(Flags.KEY_NEW_PROFILE));
@@ -4460,7 +4731,6 @@ public class SettingsActivity extends Activity {
                 () -> { themeColoursOpen = true; });
         found += searchHit(results, Text.FEED, Text.SEARCH_FEED, () -> { });
         found += searchHit(results, Text.VIDEO, Text.SEARCH_VIDEO, () -> { });
-        found += searchHit(results, Text.COMMENTS, Text.SEARCH_COMMENTS, () -> { });
         found += searchHit(results, Text.DOWNLOADS, Text.SEARCH_DOWNLOADS, () -> { });
         found += searchHit(results, Text.BACKUP, Text.SEARCH_BACKUP, () -> { });
         found += searchHit(results, Text.FONT, Text.SEARCH_FONT,
@@ -4662,6 +4932,10 @@ public class SettingsActivity extends Activity {
     }
 
     private static final String BURN = Local.of("Защита экрана");
+    private static final String FRAMES = Local.of("Рамки аватарки"),
+            FRAMES_NOTE = Local.of("Рамка вокруг аватарки, её видят все с модом"),
+            MOTION = Local.of("Защита от укачивания"),
+            MOTION_NOTE = Local.of("Точки на экране, чтобы не тошнило в дороге");
     private static final boolean EDITOR_READY = false;
     private static final String EDITOR = Local.of("Редактор интерфейса"),
             EDITOR_NOTE = Local.of("Прячь, двигай и перекрашивай что угодно"),
@@ -4675,6 +4949,7 @@ public class SettingsActivity extends Activity {
             GHOST = Local.of("Режим призрака"),
             GHOST_NOTE = Local.of("Без «в сети», «прочитано» и «печатает»");
     private static final String LOTUSTOK = "https://github.com/pikmis/lotustok";
+    private static final String SANEK = "https://t.me/cahecheck";
     private static final String SPONSOR = Local.of("Реклама в видео"),
             SPONSOR_NOTE = Local.of("Пропуск рекламы, которую читают авторы");
 

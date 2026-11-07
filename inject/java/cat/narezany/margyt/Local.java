@@ -33,6 +33,43 @@ final class Local {
     }
 
     static {
+        add("Мои значки", "Мої значки", "My badges");
+        add("Получить", "Отримати", "Get");
+        add("Уже у тебя", "Вже в тебе", "Already yours");
+        add("Поддержать разработку MargyT. Вместе со значком даётся золотая рамка на аватарку и градиент ника.", "Підтримати розробку MargyT. Разом зі значком дається золота рамка на аватарку й градієнт ніка.", "Support the making of MargyT. The badge comes with a golden frame for your avatar and a gradient nick.");
+        add("Поддержать", "Підтримати", "Support");
+        add("Сейчас у тебя монет: ", "Зараз у тебе монет: ", "Your coins now: ");
+        add("Накопить 75 000 монет в Деп калькуляторе и купить на них значок.", "Накопичити 75 000 монет у Деп калькуляторі й купити за них значок.", "Save up 75,000 coins in the Dep Calculator and buy the badge with them.");
+        add("Открыть калькулятор", "Відкрити калькулятор", "Open the calculator");
+        add("Зарегистрироваться в Margy Chat, худшей соцсети на свете, и заработать там 30 💎 за посты. Потом взять код в настройках аккаунта Margy Chat и ввести его здесь. Только для личных аккаунтов, не каналов и не ботов.", "Зареєструватися в Margy Chat, найгіршій соцмережі на світі, і заробити там 30 💎 за пости. Потім узяти код у налаштуваннях акаунта Margy Chat і ввести його тут. Лише для особистих акаунтів, не каналів і не ботів.", "Sign up to Margy Chat, the worst social network in the world, and earn 30 💎 there with your posts. Then take the code from your Margy Chat account settings and type it in here. Personal accounts only, not channels or bots.");
+        add("Ввести код", "Ввести код", "Enter the code");
+        add("Открыть Margy Chat", "Відкрити Margy Chat", "Open Margy Chat");
+        add("Код из Margy Chat", "Код із Margy Chat", "The code from Margy Chat");
+        add("Его показывает Margy Chat в настройках, в разделе «Аккаунт»: «Привязать MargyT». Код живёт 15 минут.", "Його показує Margy Chat у налаштуваннях, у розділі «Акаунт»: «Прив'язати MargyT». Код живе 15 хвилин.", "Margy Chat shows it in its settings, under Account: Link MargyT. A code lasts 15 minutes.");
+        add("Получить значок", "Отримати значок", "Get the badge");
+        add("В коде 6 букв и цифр", "У коді 6 літер і цифр", "The code is 6 letters and digits");
+        add("Значок «Выжил в Margy Chat» твой", "Значок «Вижив у Margy Chat» твій", "The Survived Margy Chat badge is yours");
+        add("Не получилось, попробуй ещё раз", "Не вийшло, спробуй ще раз", "That didn't work, try again");
+        add("Ссылки в комментариях", "Посилання в коментарях", "Links in comments");
+        add("Адреса в комментариях становятся голубыми, и по ним можно нажать.", "Адреси в коментарях стають блакитними, і на них можна натиснути.", "Addresses in comments turn blue, and you can tap them.");
+        add("Нечем открыть ссылку", "Немає чим відкрити посилання", "Nothing can open this link");
+        add("Подключить MargyCode?", "Підключити MargyCode?", "Connect MargyCode?");
+        add("Агент MargyCode сможет ставить плагины в TikTok, смотреть экраны, нажимать и читать журнал, чтобы писать плагины за тебя.\n\nПлагин работает внутри TikTok со всеми его правами, в том числе с твоим аккаунтом, поэтому подключай, только если доверяешь модели, с которой работаешь. Отключить можно в настройках мода, в разделе «Плагины».", "Агент MargyCode зможе ставити плагіни в TikTok, дивитися екрани, натискати й читати журнал, щоб писати плагіни за тебе.\n\nПлагін працює всередині TikTok з усіма його правами, зокрема з твоїм акаунтом, тому підключай, лише якщо довіряєш моделі, з якою працюєш. Вимкнути можна в налаштуваннях мода, у розділі «Плагіни».", "MargyCode's agent will be able to install plugins in TikTok, look at screens, tap and read the log, to write plugins for you.\n\nA plugin runs inside TikTok with all its rights, your account included, so connect only if you trust the model you work with. You can disconnect in the mod's settings, under Plugins.");
+        add("Подключить", "Підключити", "Connect");
+        add("MargyCode подключён", "MargyCode підключено", "MargyCode is connected");
+        add("Его агент пишет и ставит плагины. Нажми, чтобы отключить", "Його агент пише й ставить плагіни. Натисни, щоб вимкнути", "Its agent writes and installs plugins. Tap to disconnect");
+        add("Писать плагины через ИИ", "Писати плагіни через ШІ", "Write plugins with AI");
+        add("Установи MargyCode и подключи MargyT в его настройках. Агент сам напишет плагин и проверит его прямо на телефоне", "Встанови MargyCode і підключи MargyT у його налаштуваннях. Агент сам напише плагін і перевірить його прямо на телефоні", "Install MargyCode and connect MargyT in its settings. The agent writes the plugin and tests it right on the phone");
+        add("MargyCode не установлен, он есть в Margy Store", "MargyCode не встановлено, він є в Margy Store", "MargyCode isn't installed. It's in Margy Store");
+        add("Рамки аватарки", "Рамки аватарки", "Avatar frames");
+        add("Рамка вокруг аватарки, её видят все с модом", "Рамка навколо аватарки, її бачать усі з модом", "A frame round your avatar, for everyone with the mod");
+        add("Точки на экране, чтобы не тошнило в дороге", "Крапки на екрані, щоб не нудило в дорозі", "Dots on the screen so you don't get sick on the road");
+        add("Пока рамок нет. Рамка приходит вместе со значком: золотая за значок поддержавшего.", "Поки рамок немає. Рамка приходить разом зі значком: золота за значок того, хто підтримав.", "No frames yet. A frame comes with a badge: the golden one with the supporter badge.");
+        add("Рамка одна: включишь другую, эта снимется. Её видят все, у кого MargyT 2.2.1 или новее.", "Рамка одна: увімкнеш іншу, ця зніметься. Її бачать усі, у кого MargyT 2.2.1 або новіший.", "One frame at a time: turn on another and this one comes off. Everyone with MargyT 2.2.1 or later sees it.");
+        add("Сохранять удалённые сообщения", "Зберігати видалені повідомлення", "Keep deleted messages");
+        add("Если собеседник удалит сообщение, у тебя оно останется, только станет полупрозрачным. Только те, что успели дойти до телефона.", "Якщо співрозмовник видалить повідомлення, у тебе воно залишиться, тільки стане напівпрозорим. Лише ті, що встигли дійти до телефона.", "If someone deletes a message, you keep it, just see-through. Only those that reached the phone first.");
+        add("Защита от укачивания", "Захист від заколисування", "Motion sickness protection");
+        add("Точки по краям экрана двигаются вместе с машиной, как на iPhone. Глазам становится понятно, что ты едешь, и меньше укачивает. Когда телефон не двигается, точки исчезают.", "Крапки по краях екрана рухаються разом з машиною, як на iPhone. Очам стає зрозуміло, що ти їдеш, і менше заколисує. Коли телефон не рухається, крапки зникають.", "Dots on the screen's edges move with the car, as on an iPhone. Your eyes can tell you're moving, and it makes you less sick. When the phone is still, they go.");
         add("Записывать подвисания", "Записувати підвисання", "Record stutters");
         add("Нужно, только если присылаешь отчёт о лагах. Пока включено, немного тратит батарею.", "Потрібно, лише якщо надсилаєш звіт про лаги. Поки ввімкнено, трохи витрачає батарею.", "Only needed when you send a lag report. While on, it costs a little battery.");
         add("Как буквы появляются", "Як літери з'являються", "How letters appear");
@@ -175,6 +212,7 @@ final class Local {
         add("Добавить чат в папку: долгое нажатие на чат, «Добавить в папку».", "Додати чат до папки: довге натискання на чат, «Додати до папки».", "To put a chat in a folder: long-press it, then “Add to folder”.");
         add("Автор LotusTok: призрак, папки, редактор интерфейса, анимация набора и другое", "Автор LotusTok: привид, папки, редактор інтерфейсу, анімація набору та інше", "Made LotusTok: the ghost, folders, the interface editor, the typing animation and more");
         add("Плагин для MargyT: из него призрак и длинные комментарии", "Плагін для MargyT: з нього привид і довгі коментарі", "A MargyT plugin: the ghost and long comments come from it");
+        add("Часть дизайна MargyT", "Частина дизайну MargyT", "Some of the MargyT design");
         add("Код плагина не удалось разобрать: ",
                 "Код плагіна не вдалося розібрати: ",
                 "The plugin's code could not be read: ");

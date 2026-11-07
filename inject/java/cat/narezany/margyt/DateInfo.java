@@ -34,9 +34,10 @@ final class DateInfo {
     /** Everything the sheet needs, copied out of the post so that no model object is kept alive. */
     static final class Data {
         final long seconds;
-        final String aid, author, handle;
+        final String aid, author, handle, region;
 
-        Data(long seconds, String aid, String author, String handle) {
+        Data(long seconds, String aid, String author, String handle, String region) {
+            this.region = region == null ? "" : region;
             this.seconds = seconds;
             this.aid = aid == null ? "" : aid;
             this.author = author == null ? "" : author;
@@ -51,7 +52,8 @@ final class DateInfo {
             Object user = NativeRead.get(post, "getAuthor");
             return new Data(time, NativeRead.aid(post),
                     NativeRead.string(NativeRead.get(user, "getNickname")),
-                    NativeRead.string(NativeRead.get(user, "getUniqueId")));
+                    NativeRead.string(NativeRead.get(user, "getUniqueId")),
+                    Dates.region(post));
         }
     }
 
@@ -104,6 +106,12 @@ final class DateInfo {
                 .info("timeline", weekday, pick("День недели", "День тижня", "Day of the week"), copy(context, weekday))
                 .info("language", offset + " · " + zone.getID(), pick("Часовой пояс", "Часовий пояс", "Time zone"), copy(context, offset + " " + zone.getID()))
                 .info("public", utc, pick("По Гринвичу", "За Грінвічем", "In UTC"), copy(context, utc));
+
+        if (data.region.length() > 0) {
+            String country = Dates.flag(data.region) + " " + new Locale("", data.region).getDisplayCountry();
+            panel.section(pick("Откуда выложено", "Звідки викладено", "Posted from"))
+                    .info("public", country, pick("Страна", "Країна", "Country"), copy(context, country));
+        }
 
         panel.section(pick("Технические данные", "Технічні дані", "Technical"))
                 .info("update", String.valueOf(data.seconds), "Unix timestamp", copy(context, String.valueOf(data.seconds)));

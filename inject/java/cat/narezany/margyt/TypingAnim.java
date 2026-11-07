@@ -361,8 +361,8 @@ public final class TypingAnim {
             Layout layout = view.getLayout();
             if (layout == null || text.length() == 0 || at < 0 || at > view.length()) return;
             int line = layout.getLineForOffset(at);
-            float gx = layout.getPrimaryHorizontal(at) + view.getCompoundPaddingLeft() - view.getScrollX();
-            float gy = layout.getLineBaseline(line) + view.getTotalPaddingTop() - view.getScrollY();
+            float gx = layout.getPrimaryHorizontal(at) + view.getCompoundPaddingLeft();
+            float gy = layout.getLineBaseline(line) + view.getTotalPaddingTop();
             float width = view.getPaint().measureText(text);
             gone.add(new Gone(text, gx + width / 2f, gy, view.getTextSize()));
             if (gone.size() > 40) gone.remove(0);
@@ -399,8 +399,8 @@ public final class TypingAnim {
                     int line = layout.getLineForOffset(from);
                     String letter = text.subSequence(from, to).toString();
                     float width = paint.measureText(letter);
-                    float lx = layout.getPrimaryHorizontal(from) + view.getCompoundPaddingLeft() - view.getScrollX();
-                    float ly = layout.getLineBaseline(line) + view.getTotalPaddingTop() - view.getScrollY();
+                    float lx = layout.getPrimaryHorizontal(from) + view.getCompoundPaddingLeft();
+                    float ly = layout.getLineBaseline(line) + view.getTotalPaddingTop();
                     arrive(canvas, paint, letter, lx + width / 2f, ly, view.getTextSize(), t, pop.tilt, look, alpha);
                 }
             }
@@ -429,13 +429,15 @@ public final class TypingAnim {
             if (again) view.postInvalidateOnAnimation();
         }
 
-        /** Draws the gliding cursor; true while it is still on its way. */
+        /** Draws the gliding cursor; true while it is still on its way.
+         *  Everything here is in the text's own coordinates: an overlay is drawn already moved with the view's scrolling,
+         *  so taking getScrollY() off again sent the cursor up as soon as a long text began to scroll. */
         private boolean cursor(Canvas canvas, long now, Layout layout) {
             int from = view.getSelectionStart(), to = view.getSelectionEnd();
             if (to < 0 || from != to) return false;
             int line = layout.getLineForOffset(to);
-            float goalX = layout.getPrimaryHorizontal(to) + view.getCompoundPaddingLeft() - view.getScrollX();
-            float goalY = layout.getLineTop(line) + view.getTotalPaddingTop() - view.getScrollY();
+            float goalX = layout.getPrimaryHorizontal(to) + view.getCompoundPaddingLeft();
+            float goalY = layout.getLineTop(line) + view.getTotalPaddingTop();
             float goalH = layout.getLineBottom(line) - layout.getLineTop(line);
             long dt = Math.max(1L, Math.min(50L, now - last));
             last = now;

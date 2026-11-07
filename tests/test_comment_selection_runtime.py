@@ -20,6 +20,7 @@ class CommentSelectionTest(unittest.TestCase):
   sources={
    'cat/narezany/margyt/NativeRead.java':(ROOT/'inject/java/cat/narezany/margyt/NativeRead.java').read_text(encoding='utf-8'),
    'kotlin/jvm/functions/Function0.java':'package kotlin.jvm.functions;public interface Function0<R>{R invoke();}',
+   'cat/narezany/margyt/CommentLinks.java':'package cat.narezany.margyt;final class CommentLinks{static void bind(Object cell){}}',
    'X/NativeAction.java':'package X;public class NativeAction{public String LIZIZ,LIZLLL;public Integer LIZJ;public kotlin.jvm.functions.Function0 LJ;}',
    'cat/narezany/margyt/CommentSelection.java':(ROOT/'inject/java/cat/narezany/margyt/CommentSelection.java').read_text(encoding='utf-8'),
    'android/content/Context.java':'''package android.content;public class Context {public static final String CLIPBOARD_SERVICE="clipboard";public ClipboardManager clipboard=new ClipboardManager();public Object getSystemService(String s){return clipboard;}public Resources getResources(){return new Resources();}public static class Resources{public Metrics getDisplayMetrics(){return new Metrics();}}public static class Metrics{public float density=1;}}''',

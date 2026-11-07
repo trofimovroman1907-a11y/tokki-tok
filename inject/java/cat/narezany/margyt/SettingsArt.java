@@ -733,6 +733,10 @@ final class SettingsArt {
             matrix.reset();
             matrix.setScale(r * scale, r * scale);
             matrix.postTranslate(cx, cy);
+            if (AvatarShape.spins() && index > 0) {
+                matrix.postRotate(AvatarShape.angle(), cx, cy);
+                postInvalidateOnAnimation();
+            }
             clip.reset();
             AvatarShape.unit(index).transform(matrix, clip);
             BitmapShader shader = new BitmapShader(avatar, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);

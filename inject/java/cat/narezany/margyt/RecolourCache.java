@@ -59,13 +59,10 @@ final class RecolourCache {
         try {
             File dir = new File(context.getFilesDir(), "margyt/recolour-cache");
             if (!dir.isDirectory() && !dir.mkdirs()) return null;
-            // A different TikTok build means different source art.
-            long updated = 0;
-            try {
-                updated = context.getPackageManager()
-                        .getPackageInfo(context.getPackageName(), 0).lastUpdateTime;
-            } catch (Throwable ignored) { }
-            stamp = VERSION + "|" + updated;
+            // A different TikTok means different source art. A new build of the mod on the same TikTok
+            // doesn't: this used to go by the time of the last update, so every update of the mod threw
+            // all of it away and everybody spent their first minutes after it recolouring everything again.
+            stamp = VERSION + "|" + Version.TIKTOK;
             File mark = new File(dir, "stamp");
             String saved = readText(mark);
             if (!stamp.equals(saved)) {
@@ -147,6 +144,21 @@ final class RecolourCache {
         try {
             writer.execute(new Runnable() {
                 @Override public void run() { if (generation == epoch && !clearing) write(key, copy); }
+            });
+        } catch (Throwable ignored) { }
+    }
+
+    /** The same with a picture, made into a file on the writer's thread: PNG takes milliseconds, and frames don't have them. */
+    static void putLater(final String key, final Bitmap picture) {
+        if (clearing) return;
+        final long generation = epoch;
+        try {
+            writer.execute(new Runnable() {
+                @Override public void run() {
+                    if (generation != epoch || clearing || picture.isRecycled()) return;
+                    byte[] encoded = png(picture);
+                    if (encoded != null) write(key, encoded);
+                }
             });
         } catch (Throwable ignored) { }
     }

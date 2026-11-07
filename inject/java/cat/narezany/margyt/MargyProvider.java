@@ -69,6 +69,11 @@ public final class MargyProvider extends ContentProvider {
             Diary.note("updates failed to start: " + error);
         }
         try {
+            DevLink.start(context);
+        } catch (Throwable error) {
+            Diary.note("devlink failed to start: " + error);
+        }
+        try {
             Plugins.startAll(context);
         } catch (Throwable error) {
             Diary.note("plugins failed to start: " + error);

@@ -52,11 +52,13 @@ public final class Account {
     public static String getCurUserId(IAccountUserService service) {
         if (service == null) return null;
         String answer = service.getCurUserId();
-        // asked on every cell the feed binds; the same answer as last time changes nothing
-        if (answer != null && answer.equals(activeId)) return answer;
-        activeId=numeric(answer) ? answer : null;
-        if(activeId==null)AccountAppearance.select(null);
-        remember(KEY_ID, answer);
+        // Observing identity must never turn a successful native read into a login failure.
+        try {
+            if (answer != null && answer.equals(activeId)) return answer;
+            activeId=numeric(answer) ? answer : null;
+            if(activeId==null)AccountAppearance.select(null);
+            remember(KEY_ID, answer);
+        } catch (Throwable error) { observationFailed(error); }
         return answer;
     }
 
@@ -79,8 +81,8 @@ public final class Account {
     public static User getCurUser(IAccountUserService service) {
         if (service == null) return null;
         User user = service.getCurUser();
-        if (user == null) {activeId=null;lookedUid=null;AccountAppearance.select(null);return null;}
         try {
+            if (user == null) {activeId=null;lookedUid=null;AccountAppearance.select(null);return null;}
             String uid = user.getUid();
             long now = android.os.SystemClock.uptimeMillis();
             // TikTok asks who is signed in many times a second, from the main
@@ -101,7 +103,7 @@ public final class Account {
                 Avatars.rememberCurrent(user);
             }
         } catch (Throwable error) {
-            Diary.note("current profile: " + error);
+            observationFailed(error);
         }
         return user;
     }
@@ -109,8 +111,15 @@ public final class Account {
     public static String getCurSecUserId(IAccountUserService service) {
         if (service == null) return null;
         String answer = service.getCurSecUserId();
-        remember(KEY_SEC_ID, answer);
+        try { remember(KEY_SEC_ID, answer); }
+        catch (Throwable error) { observationFailed(error); }
         return answer;
+    }
+
+    private static void observationFailed(Throwable error) {
+        // Even an unavailable diagnostic store must not escape into TikTok's account service.
+        try { Diary.note("account observation failed: " + error.getClass().getSimpleName()); }
+        catch (Throwable ignored) { }
     }
 
     private static void remember(String key, String value) {

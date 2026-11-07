@@ -43,7 +43,7 @@ public final class Backup {
             Download.KEY, Download.KEY_ALWAYS, Avatars.KEY, Stickers.KEY,
             Comments.KEY_COPY,
             Flags.KEY_VOICE, Flags.KEY_BANNER, Flags.KEY_SPEED_LOCK,
-            Flags.KEY_COMMENT_REPOST, Flags.KEY_SELF_REPOST, Flags.KEY_NEW_PROFILE, AvatarShape.KEY,
+            Flags.KEY_COMMENT_REPOST, Flags.KEY_SELF_REPOST, Flags.KEY_NEW_PROFILE, AvatarShape.KEY, AvatarShape.SPIN_KEY,
             Screamer.KEY, Screamer.KEY_SOUND, DepGame.KEY_FLOAT,
             Streaks.KEY_ON, Streaks.KEY_MODE, Streaks.KEY_TEXT,
             Updater.KEY_REMIND
@@ -194,7 +194,7 @@ public final class Backup {
                 Themes.KEY_TEXT + "_dark", Themes.KEY_TEXT + "_light",
                 Themes.KEY_BACKGROUND + "_dark", Themes.KEY_BACKGROUND + "_light",
                 Fonts.KEY, Fonts.KEY_EMOJI,
-                Flags.KEY_NEW_PROFILE, AvatarShape.KEY,
+                Flags.KEY_NEW_PROFILE, AvatarShape.KEY, AvatarShape.SPIN_KEY,
                 "profile_layout"
         };
         else if (group == 2) keys = new String[] {
