@@ -245,13 +245,15 @@ class Build:
             self.detail("%s declared, reached from TikTok's own settings" % SETTINGS_ACTIVITY)
         manifest_module.add_activity(manifest, STORE_ACTIVITY, SETTINGS_LABEL, theme)
         manifest_module.add_activity(manifest, PACKAGE + ".PluginEditorActivity", SETTINGS_LABEL, theme)
+        # where MargyCode asks to be let in: a window over whatever's on screen, 0x01030010 is Theme.Translucent.NoTitleBar
+        manifest_module.add_activity(manifest, PACKAGE + ".DevLinkActivity", SETTINGS_LABEL, 0x01030010)
         # a .mtp opened from a file manager comes to the mod (Theme.NoDisplay: it only hands the file on)
         manifest_module.add_file_opener(manifest, PACKAGE + ".PluginOpenActivity", "Плагин MargyT", 0x01030055, "mtp", ["application/octet-stream", "application/zip", "application/x-zip-compressed"])
         # and a .mtui, an interface style somebody made (UiStyle)
         manifest_module.add_file_opener(manifest, PACKAGE + ".StyleOpenActivity", "Стиль MargyT", 0x01030055, "mtui", ["application/octet-stream", "application/json", "text/plain"])
         # Margy Store under its new name and its old one: without this Android 11
         # and later will not tell the mod whether the store is there at all
-        manifest_module.add_queries(manifest, ["cat.narezany.store", "cat.narezany.patcher"])
+        manifest_module.add_queries(manifest, ["cat.narezany.store", "cat.narezany.patcher", "cat.narezany.margycode"])
         self.detail("%s declared, the plugin store" % STORE_ACTIVITY)
 
         if not self.lite and not manifest_module.has_activity(manifest, TIKTOK_SETTINGS):
@@ -466,9 +468,18 @@ class Build:
         with open(path, encoding="utf-8") as handle:
             return handle.read().strip()
 
+    def mod_name(self) -> str:
+        """What this update is called, from VERSION-NAME: "Fun Update" is easier to remember than 2.2.1. Lite has none."""
+        path = os.path.join(self.root, "VERSION-NAME")
+        if self.lite or not os.path.exists(path):
+            return ""
+        with open(path, encoding="utf-8") as handle:
+            return handle.read().strip().replace("\\", "").replace('"', "")
+
     def write_version(self, tiktok: str, test: bool = False) -> None:
         """Both versions, so the app can say what it is and what it patched."""
         mod = self.mod_version()
+        name = self.mod_name()
 
         out = os.path.join(self.root, "inject", "java", "cat", "narezany", "margyt",
                            "Version.java")
@@ -491,14 +502,16 @@ class Build:
                 "final class Version {\n\n"
                 "    private Version() {}\n\n"
                 "    static final String MOD = \"%s\";\n"
+                "    /** What the update is called, from VERSION-NAME; empty when it has no name. */\n"
+                "    static final String NAME = \"%s\";\n"
                 "    static final String TIKTOK = \"%s\";\n"
                 "    static final boolean TEST = %s;\n"
                 "    /** Built into TikTok Lite: only what does not need TikTok's own classes runs. */\n"
                 "    static final boolean LITE = %s;\n"
-                "}\n" % (mod, tiktok, "true" if test else "false", "true" if self.lite else "false")
+                "}\n" % (mod, name, tiktok, "true" if test else "false", "true" if self.lite else "false")
             )
-        self.detail("MargyT %s%s on TikTok %s%s"
-                    % ("Lite " if self.lite else "", mod, tiktok, ", a test build" if test else ""))
+        self.detail("MargyT %s%s%s on TikTok %s%s"
+                    % ("Lite " if self.lite else "", mod, " «%s»" % name if name else "", tiktok, ", a test build" if test else ""))
 
     def write_theme(self, arsc: Arsc) -> None:
         """The colours TikTok repaints when its own theme changes."""
@@ -576,6 +589,10 @@ class Build:
             entries.append(("assets/margyt/" + eye, os.path.join(asset_root, eye)))
         # the fat tilcayo cut out of its background, for the running cats (TilcayoRun)
         entries.append(("assets/margyt/tilcayo_run.png", os.path.join(asset_root, "tilcayo_run.png")))
+        # its skins: alien, gold for supporters and crowned (assets/make_tilcayo_skins.py), and the
+        # ones people sent in, cut out of their photos
+        for skin in ("alien", "gold", "crown", "anime", "taco", "watermelon", "sausage", "santa", "rapper", "snow"):
+            entries.append(("assets/margyt/tilcayo_run_%s.png" % skin, os.path.join(asset_root, "tilcayo_run_%s.png" % skin)))
         for destination, path in entries:
             with open(path, "rb") as handle:
                 raw = handle.read()
@@ -829,6 +846,7 @@ class Build:
         feature_hits[dexpatch.FLAG_LABEL]=0
         feature_hits["native avatar shape"]=0
         feature_hits["native avatar ring"]=0
+        feature_hits["native avatar spin"]=0
         feature_hits[dexpatch.HDR_LABEL]=0
         feature_hits[dexpatch.START_LABEL]=0
         feature_hits["native missing string"]=0
@@ -879,6 +897,7 @@ class Build:
             feature_hits["native window brightness"] += sum(v for key,v in counts.items() if key.startswith(dexpatch.WINDOW_LABEL))
             feature_hits["native avatar ring"] += sum(v for key,v in counts.items() if key.startswith("Canvas->drawArc") and any(ring in key for ring in dexpatch.STORY_RINGS))
             feature_hits["native avatar shape"] += sum(v for key,v in counts.items() if key.startswith("Path->addCircle"))
+            feature_hits["native avatar spin"] += sum(v for key,v in counts.items() if key.startswith(("Canvas->drawPath","Canvas->clipPath")) and any(d in key for d in dexpatch.ROUND_DRAWERS))
             feature_hits["native card corners"] += counts.get("native card corners",0)
             feature_hits["native right-area slots"] += counts.get("native right-area slots",0)
             feature_hits["native player resume"] += counts.get("native player resume",0)

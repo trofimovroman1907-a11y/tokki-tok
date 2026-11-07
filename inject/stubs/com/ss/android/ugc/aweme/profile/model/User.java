@@ -23,6 +23,10 @@ public class User {
         throw new UnsupportedOperationException("stub");
     }
 
+    public com.ss.android.ugc.aweme.base.model.UrlModel getAvatarThumb() {
+        return null;
+    }
+
     public com.ss.android.ugc.aweme.base.model.UrlModel getAvatarMedium() {
         throw new UnsupportedOperationException("stub");
     }

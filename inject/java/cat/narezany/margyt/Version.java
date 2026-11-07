@@ -17,7 +17,9 @@ final class Version {
 
     private Version() {}
 
-    static final String MOD = "2.1.0";
+    static final String MOD = "2.2.1";
+    /** What the update is called, from VERSION-NAME; empty when it has no name. */
+    static final String NAME = "Fun Update";
     static final String TIKTOK = "47.2.41";
     static final boolean TEST = false;
     /** Built into TikTok Lite: only what does not need TikTok's own classes runs. */

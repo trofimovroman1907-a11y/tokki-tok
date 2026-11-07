@@ -223,7 +223,29 @@ def when(stamp):
     return "%d дн назад" % (gone // 86400)
 
 
-def main_page(badges, plugins, gradients=(), said="", crashes=(), verdicts=()):
+def frames_block(frames):
+    """Frames round an avatar: most come with a badge, and any can be given by hand."""
+    rows = []
+    options = []
+    for frame in frames:
+        rows.append("<tr><td><img class=dot src='/icon/%s'></td><td><b>%s</b></td><td class=dim>#%s</td>"
+                    "<td class=dim>%s</td><td class=dim>%d по значку, %d вручную</td></tr>"
+                    % (html.escape(frame["image"]), html.escape(frame["title"]), html.escape(frame["id"]), html.escape(frame["text"]),
+                       frame["by_badge"], frame["by_hand"]))
+        options.append("<option value='%s'>%s</option>" % (html.escape(frame["id"]), html.escape(frame["title"])))
+    return """
+        <h2>Рамки аватарки</h2>
+        <p class=dim>Рамка с привязкой к значку приходит сама, вместе со значком. Любую можно выдать и вручную.</p>
+        <table>%s</table>
+        <form class=card method=post action="/admin/frame/give">
+          <p><select name=id>%s</select></p>
+          <p><textarea name=uids rows=2 placeholder="id аккаунтов через пробел"></textarea></p>
+          <p><button>Выдать</button> <button formaction="/admin/frame/take">Забрать</button></p>
+        </form>
+    """ % ("".join(rows), "".join(options))
+
+
+def main_page(badges, plugins, gradients=(), said="", crashes=(), verdicts=(), frames=()):
     rows = []
     for badge in badges:
         rows.append(
@@ -308,6 +330,8 @@ def main_page(badges, plugins, gradients=(), said="", crashes=(), verdicts=()):
           <p><button>Создать</button></p>
         </form>
 
+        %s
+
         <h2>Градиенты ников</h2>
         <div class=card><table>
           <tr><th>айди</th><th>цвета</th><th></th></tr>
@@ -366,6 +390,7 @@ def main_page(badges, plugins, gradients=(), said="", crashes=(), verdicts=()):
         <p><a class='button quiet' href="/admin/devices">Устройства админки</a>
            <a class='button quiet' href="/admin/out">Выйти</a></p>
         """ % ("".join(rows) or "<tr><td class=dim>пока пусто</td></tr>",
+               frames_block(frames) if frames else "",
                "".join(painted) or "<tr><td class=dim>пока пусто</td></tr>",
                "".join(marked) or "<tr><td class=dim>пока пусто</td></tr>",
                "".join(packs) or "<tr><td class=dim>пока пусто</td></tr>",

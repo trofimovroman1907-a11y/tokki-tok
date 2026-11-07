@@ -561,9 +561,9 @@ final class Text {
             "Значок за поддержку", "Значок за підтримку", "A badge for supporting");
 
     static final String DONATE_BANNER_TEXT = pick(
-            "От 250 ₽ или 300 ⭐: значок, градиент на ник, закрытый чат и Minecraft-сервер.",
-            "Від 250 ₽ або 300 ⭐: значок, градієнт на нік, закритий чат і Minecraft-сервер.",
-            "From 250 ₽ or 300 ⭐: a badge, a gradient name, the private chat and a Minecraft server.");
+            "От 250 ₽ или 300 ⭐: значок, рамка профиля только для поддержавших, градиент на ник и закрытый чат.",
+            "Від 250 ₽ або 300 ⭐: значок, рамка профілю лише для тих, хто підтримав, градієнт на нік і закритий чат.",
+            "From 250 ₽ or 300 ⭐: a badge, a profile frame only supporters have, a gradient name and the private chat.");
 
     static final String DONATE_BANNER_BUTTON = pick(
             "Поддержать", "Підтримати", "Support");
@@ -589,12 +589,12 @@ final class Text {
             "Пришлите чек и ID", "Надішліть чек і ID", "Send the receipt and the ID");
 
     static final String DONATE_AFTER = pick(
-            "Значок выдаётся вручную, обычно в течение дня. Градиент на ник и "
+            "Значок выдаётся вручную, обычно в течение дня. Золотая рамка профиля, градиент на ник и "
                     + "ссылка в закрытый чат придут вместе с ним.",
-            "Значок видається вручну, зазвичай протягом дня. Градієнт на нік і "
+            "Значок видається вручну, зазвичай протягом дня. Золота рамка профілю, градієнт на нік і "
                     + "посилання в закритий чат прийдуть разом із ним.",
-            "The badge is given by hand, usually within a day. The gradient on "
-                    + "your name and the link to the closed chat come with it.");
+            "The badge is given by hand, usually within a day. The golden profile frame, the gradient "
+                    + "on your name and the link to the closed chat come with it.");
 
     static final String TIKTOK_FEATURES = pick("Функции TikTok", "Функції TikTok", "TikTok features");
     static final String TIKTOK_FEATURES_NOTE = pick("Функции TikTok, которые он пока даёт не всем. Некоторые могут работать криво.", "Функції TikTok, які він поки дає не всім. Деякі можуть працювати криво.", "TikTok features not everyone has yet. Some may not work quite right.");
@@ -632,6 +632,7 @@ final class Text {
     static final String TAB_UNREAD_BACK_YES = pick("Вернуть", "Повернути", "Bring it back");
 
     static final String AVATAR_SHAPE = pick("Форма аватарок", "Форма аватарок", "Avatar shape");
+    static final String AVATAR_SPIN = pick("Вращать форму", "Обертати форму", "Spin the shape");
     static final String SHAPE_CIRCLE = pick("Круг", "Коло", "Circle");
     static final String SHAPE_ROUNDED = pick("Скруглённый", "Заокруглений", "Rounded");
     static final String SHAPE_SQUARE = pick("Квадрат", "Квадрат", "Square");
@@ -724,6 +725,14 @@ final class Text {
     static final String UI_FILE_BAD_VALUE = pick("Неверное значение:", "Неправильне значення:", "A wrong value:");
     static final String FUN_TILCAYO_RUN = pick("Бегающие тилкайо", "Бігаючі тілкайо", "Running tilcayos");
     static final String TILCAYO_RUN_NOTE = pick("Внизу экрана бегают толстые тилкайо. Нажми на кота, чтобы погладить, зажми, чтобы почесать, нажми два раза, чтобы покормить, много раз, чтобы пощекотать, или схвати и подкинь.", "Унизу екрана бігають товсті тілкайо. Натисни на кота, щоб погладити, затисни, щоб почухати, натисни двічі, щоб погодувати, багато разів, щоб полоскотати, або схопи й підкинь.", "Fat tilcayos run along the bottom of the screen. Tap one to pet it, hold to scratch, tap twice to feed, tap a lot to tickle, or grab and toss it.");
+    static final String TILCAYO_SKINS = pick("Скин тилкайо", "Скін тілкайо", "Tilcayo skin");
+    static final String[] TILCAYO_SKIN_NAMES = {pick("Обычный", "Звичайний", "Classic"), pick("Инопланетянин", "Іншопланетянин", "Alien"),
+            pick("Золотой", "Золотий", "Gold"), pick("Королевский", "Королівський", "Royal"), pick("Флоулесс", "Флоулес", "Flawless"),
+            pick("Тако", "Тако", "Taco"), pick("Арбуз", "Кавун", "Watermelon"), pick("Колбаса", "Ковбаса", "Sausage"),
+            pick("Санта", "Санта", "Santa"), pick("Рэпер", "Репер", "Rapper"), pick("Снежный", "Сніжний", "Snowy")};
+    static final String TILCAYO_SKIN_AUTHOR = pick("автор: %s", "автор: %s", "by %s");
+    static final String TILCAYO_SKIN_LOCKED = pick("Золотой тилкайо только у тех, кто поддержал MargyT", "Золотий тілкайо лише в тих, хто підтримав MargyT",
+            "The gold tilcayo is for those who supported MargyT");
     static final String TILCAYO_PURR = pick("мур", "мур", "purr");
     static final String TILCAYO_NOM = pick("ням!", "ням!", "nom!");
     static final String TILCAYO_HEHE = pick("хи-хи", "хі-хі", "hehe");
@@ -782,12 +791,12 @@ final class Text {
             "Нравится MargyT?", "Подобається MargyT?", "Enjoying MargyT?");
 
     static final String REMIND_TEXT = pick(
-            "Поддержи разработку — значок рядом с ником, градиент на ник "
-                    + "и закрытый чат.",
-            "Підтримай розробку — значок поруч із ніком, градієнт на нік "
-                    + "і закритий чат.",
-            "Support the making of it: a badge beside your name, a gradient on "
-                    + "the name and the private chat.");
+            "Поддержи разработку: значок рядом с ником, рамка профиля только для поддержавших, "
+                    + "градиент на ник и закрытый чат.",
+            "Підтримай розробку: значок поруч із ніком, рамка профілю лише для тих, хто підтримав, "
+                    + "градієнт на нік і закритий чат.",
+            "Support the making of it: a badge beside your name, a profile frame only supporters "
+                    + "have, a gradient on the name and the private chat.");
 
     static final String REMIND_MORE = pick("Подробнее", "Докладніше", "Tell me more");
 

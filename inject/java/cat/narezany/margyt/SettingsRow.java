@@ -58,6 +58,7 @@ public final class SettingsRow implements Application.ActivityLifecycleCallbacks
         FlagGuard.shown();
         Rubble.resumed(activity);
         TilcayoRun.resumed(activity);
+        MotionCues.resumed(activity);
         SimpleFeed.attach(activity);
         WavySeek.attach(activity);
         Avariyka.resumed(activity);
@@ -169,6 +170,7 @@ public final class SettingsRow implements Application.ActivityLifecycleCallbacks
     @Override
     public void onActivityPaused(Activity activity) {
         Plugins.onActivityPaused(activity);
+        MotionCues.paused(activity);
         Tutorial.paused(activity);
         Screen.gone(activity);
     }

@@ -49,7 +49,6 @@ import java.util.Set;
  * exactly what TikTok asked for.
  */
 public final class Comments {
-    static void reloadSettings(){copyEnabled=null;}
 
     private Comments() {}
     public static void mark(View cell) {
@@ -66,7 +65,6 @@ public final class Comments {
 
     /** Whether a long press on a comment offers local text actions. */
     public static final String KEY_COPY = "comment_copy";
-    private static volatile Boolean copyEnabled;
 
     /** The rendering the server stamps, and the one it does not. */
     private static final String STAMPED = "-image-origin.";
@@ -74,29 +72,9 @@ public final class Comments {
 
     private static final Set<String> told = new HashSet<String>();
 
+    /** Always on since 2.2.1: there's no switch any more, and an old "off" left behind would have no way back. */
     public static boolean isCopyEnabled() {
-        Boolean known = copyEnabled;
-        if (known != null) return known.booleanValue();
-        try {
-            Context context = Margy.context();
-            if (context == null) return true;
-            boolean on = context.getSharedPreferences(Margy.PREFS, Context.MODE_PRIVATE)
-                    .getBoolean(KEY_COPY, true);
-            copyEnabled = Boolean.valueOf(on);
-            return on;
-        } catch (Throwable ignored) {
-            return true;
-        }
-    }
-
-    public static void setCopyEnabled(boolean enabled) {
-        copyEnabled = Boolean.valueOf(enabled);
-        try {
-            Context context = Margy.context();
-            if (context != null) context.getSharedPreferences(Margy.PREFS,
-                    Context.MODE_PRIVATE).edit().putBoolean(KEY_COPY, enabled).apply();
-        } catch (Throwable ignored) {
-        }
+        return true;
     }
 
     /**
@@ -262,6 +240,7 @@ public final class Comments {
     }
     /** Bind the actual body after recycling; retain native taps on reactions and authors. */
     public static void bindCell(Object cell){
+        CommentLinks.bind(cell);
         try{View root=(View)cell.getClass().getField("itemView").get(cell);if(root==null)return;mark(root);if(!isCopyEnabled())return;
             String body=CommentText.from(cell);if(TextUtils.isEmpty(body))return;
             View.OnLongClickListener listener=v->{if(openNativeActions(cell))return true;nativeMenu.set(Boolean.TRUE);try{cell.getClass().getMethod("k8").invoke(cell);return true;}catch(Throwable ignored){return false;}finally{nativeMenu.remove();}};root.setOnLongClickListener(listener);

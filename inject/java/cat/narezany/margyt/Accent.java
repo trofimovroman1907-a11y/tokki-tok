@@ -294,8 +294,13 @@ public final class Accent {
 
     public static void setBackgroundResource(View view, int id) {
         try {
+            int target = colour();
+            if (target != TIKTOK && PlainArt.has(view.getResources(), id, target)) {
+                view.setBackgroundResource(id);
+                return;
+            }
             Drawable drawable = view.getContext().getDrawable(id);
-            Drawable out = moved(drawable);
+            Drawable out = movedById(view.getResources(), id, drawable);
             if (out != drawable) {
                 view.setBackground(out);
                 return;
@@ -432,8 +437,7 @@ public final class Accent {
             out.setDensity(source.getDensity());
             recolouredBitmaps.put(source, out);
             if (diskKey != null) {
-                byte[] encoded = RecolourCache.png(out);
-                if (encoded != null) RecolourCache.put(diskKey, encoded);
+                RecolourCache.putLater(diskKey, out);
             }
             return new android.graphics.drawable.BitmapDrawable(resources, out);
         } catch (Throwable ignored) {
@@ -511,8 +515,7 @@ public final class Accent {
             out.setPixels(pixels, 0, width, 0, 0, width, height);
             if (state != null) recolouredVectors.put(state, out);
             if (diskKey != null) {
-                byte[] encoded = RecolourCache.png(out);
-                if (encoded != null) RecolourCache.put(diskKey, encoded);
+                RecolourCache.putLater(diskKey, out);
             }
             return new android.graphics.drawable.BitmapDrawable(resources, out);
         } catch (Throwable ignored) {
@@ -898,24 +901,39 @@ public final class Accent {
      * so the check has to be, and is, a flag and a lookup.
      */
     public static Drawable getDrawable(Context context, int id) {
-        return moved(context.getDrawable(id));
+        return movedById(context.getResources(), id, context.getDrawable(id));
     }
 
     public static Drawable getDrawable(Resources resources, int id) {
-        return moved(resources.getDrawable(id));
+        return movedById(resources, id, resources.getDrawable(id));
     }
 
     public static Drawable getDrawable(Resources resources, int id, Resources.Theme theme) {
-        return moved(resources.getDrawable(id, theme));
+        return movedById(resources, id, resources.getDrawable(id, theme));
+    }
+
+    /** The same as `moved`, skipping the pixels of a picture already known to have no red in it. */
+    private static Drawable movedById(Resources resources, int id, Drawable drawable) {
+        if (drawable == null) return null;
+        int target = colour();
+        if (target == TIKTOK) return moved(drawable);
+        boolean picture = drawable instanceof android.graphics.drawable.VectorDrawable
+                || drawable instanceof android.graphics.drawable.BitmapDrawable;
+        if (picture && PlainArt.has(resources, id, target)) return drawable;
+        Drawable out = moved(drawable);
+        if (picture && out == drawable) PlainArt.add(resources, id, target);
+        return out;
     }
 
     public static void setImageResource(ImageView view, int id) {
         {
             Drawable out = null;
-            if (colour() != TIKTOK) {
+            // one known to have no red isn't even loaded here: this used to load every picture twice,
+            // once to look at it and once when the view asked for it itself
+            if (colour() != TIKTOK && !PlainArt.has(view.getResources(), id, colour())) {
                 try {
                     Drawable original = view.getContext().getDrawable(id);
-                    Drawable changed = moved(original);
+                    Drawable changed = movedById(view.getResources(), id, original);
                     if (changed != original) out = changed;
                 } catch (Throwable ignored) { }
             }
@@ -1548,7 +1566,8 @@ public final class Accent {
         });
         }};
         pendingLikePrewarm = launch;
-        likeHandler.postDelayed(launch, 300L);
+        // at the app's start nobody is waiting for these, and TikTok has enough to do without them
+        likeHandler.postDelayed(launch, then == null ? 8000L : 300L);
     }
 
     private static boolean isFeedLikeAnimation(String name) {

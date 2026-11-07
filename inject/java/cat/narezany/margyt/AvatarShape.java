@@ -8,6 +8,14 @@ import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.drawable.Drawable;
+import android.os.Looper;
+import android.view.Choreographer;
+import android.view.View;
+import android.view.animation.AnimationUtils;
+
+import java.util.ArrayList;
+import java.util.WeakHashMap;
 
 /**
  * The shape a round picture is cut to.
@@ -54,6 +62,7 @@ public final class AvatarShape {
 
     static void reloadSettings() {
         chosen = -1;
+        spin = -1;
     }
 
     private static int index() {
@@ -82,6 +91,9 @@ public final class AvatarShape {
                     PLACE.postTranslate(x, y);
                     path.addPath(unit, PLACE);
                 }
+                synchronized (SHAPED) {
+                    SHAPED.put(path, new float[]{x, y, radius});
+                }
                 return;
             } catch (Throwable error) {
                 // a shape that cannot be drawn is a circle
@@ -108,6 +120,7 @@ public final class AvatarShape {
      */
     public static void drawArc(Canvas canvas, RectF oval, float start, float sweep,
                                boolean useCentre, Paint paint) {
+        Object who = takeOwner();
         int shape = index();
         if (shape > 0 && !useCentre && oval != null && sweep != 0) {
             try {
@@ -116,6 +129,14 @@ public final class AvatarShape {
                     RING_PLACE.setScale(oval.width() / 2f, oval.height() / 2f);
                     RING_PLACE.postTranslate(oval.centerX(), oval.centerY());
                     RING.addPath(unit(shape), RING_PLACE);
+                    // the ring turns with the avatar, so the two stay one shape
+                    float turn = 0;
+                    if (spins()) {
+                        turn = angle();
+                        RING_PLACE.setRotate(turn, oval.centerX(), oval.centerY());
+                        RING.transform(RING_PLACE);
+                        again(who);
+                    }
                     if (Math.abs(sweep) >= 359.5f) {
                         canvas.drawPath(RING, paint);
                         return;
@@ -124,7 +145,7 @@ public final class AvatarShape {
                     // An arc is measured from three o'clock; the outlines here begin at the top.
                     android.graphics.PathMeasure measure = new android.graphics.PathMeasure(RING, true);
                     float length = measure.getLength();
-                    float from = start + (sweep < 0 ? sweep : 0) + 90f;
+                    float from = start + (sweep < 0 ? sweep : 0) + 90f - turn;
                     from = ((from % 360f) + 360f) % 360f / 360f * length;
                     float span = Math.min(Math.abs(sweep), 360f) / 360f * length;
                     PART.rewind();
@@ -143,6 +164,187 @@ public final class AvatarShape {
         }
         canvas.drawArc(oval, start, sweep, useCentre, paint);
     }
+
+    // ------------------------------------------------------------ the spin
+
+    static final String SPIN_KEY = "avatar_spin";
+    /** One turn of the shape takes this long. */
+    private static final long TURN = 9000;
+
+    /** -1 until the setting has been read. */
+    private static volatile int spin = -1;
+
+    /**
+     * Paths the loader asked for a circle in, and where: the centre and the
+     * radius. Only these turn -- a thumbnail cut with rounded corners is in
+     * the same drawables and must stay as it is. The loader empties a path
+     * before it builds it again, and that call comes here too, so a path
+     * that is not a shape any more is forgotten.
+     */
+    private static final WeakHashMap<Path, float[]> SHAPED = new WeakHashMap<>();
+
+    static boolean spins() {
+        int known = spin;
+        if (known < 0) {
+            Context context = Margy.context();
+            if (context == null) return false;
+            try {
+                known = context.getSharedPreferences(Margy.PREFS, Context.MODE_PRIVATE)
+                        .getBoolean(SPIN_KEY, false) ? 1 : 0;
+            } catch (Throwable error) {
+                known = 0;
+            }
+            spin = known;
+        }
+        return known == 1;
+    }
+
+    static void setSpin(Context context, boolean on) {
+        spin = on ? 1 : 0;
+        context.getSharedPreferences(Margy.PREFS, Context.MODE_PRIVATE).edit()
+                .putBoolean(SPIN_KEY, on).apply();
+    }
+
+    /** How far round the shape is now, in degrees. Every avatar on the screen is at the same place. */
+    static float angle() {
+        return (AnimationUtils.currentAnimationTimeMillis() % TURN) * 360f / TURN;
+    }
+
+    /** Whether there is anything to turn: a circle turned is the same circle. */
+    static boolean turning() {
+        return index() > 0 && spins();
+    }
+
+    /** What the image loader calls where it used to empty a path. */
+    public static void reset(Path path) {
+        synchronized (SHAPED) {
+            SHAPED.remove(path);
+        }
+        path.reset();
+    }
+
+    private static Object owner;
+
+    /**
+     * Who is about to draw: called just before each of the calls below, by
+     * the drawable or the view that makes it. A turned shape has to be drawn
+     * again on the next frame, and the call itself has no way to say whose
+     * it is.
+     */
+    public static void owner(Object who) {
+        owner = who;
+    }
+
+    private static Object takeOwner() {
+        Object who = owner;
+        owner = null;
+        return who;
+    }
+
+    private static final Path TURNED = new Path();
+    private static final Path PLACED = new Path();
+    private static final Matrix TURN_PLACE = new Matrix();
+    private static final RectF WHOLE = new RectF();
+    private static final RectF SHAPE = new RectF();
+
+    /**
+     * The path as it is to be drawn now: the same path, or a copy with the
+     * shape in it turned round its centre. Only the outline turns. The
+     * picture is the paint's, laid on the canvas, so it stays still and the
+     * shape moves over it.
+     */
+    private static Path turned(Path path) {
+        if (!turning()) return path;
+        float[] at;
+        synchronized (SHAPED) {
+            at = SHAPED.get(path);
+        }
+        if (at == null) return path;
+        TURN_PLACE.setScale(at[2], at[2]);
+        TURN_PLACE.postTranslate(at[0], at[1]);
+        PLACED.rewind();
+        PLACED.addPath(unit(index()), TURN_PLACE);
+        TURN_PLACE.setRotate(angle(), at[0], at[1]);
+        path.computeBounds(WHOLE, true);
+        PLACED.computeBounds(SHAPE, true);
+        TURNED.set(path);
+        if (Math.abs(WHOLE.left - SHAPE.left) < 1 && Math.abs(WHOLE.top - SHAPE.top) < 1
+                && Math.abs(WHOLE.right - SHAPE.right) < 1 && Math.abs(WHOLE.bottom - SHAPE.bottom) < 1) {
+            TURNED.transform(TURN_PLACE);
+        } else {
+            // the shape cut out of something larger, for a colour laid round
+            // it: take the shape out where it was and put it back turned
+            TURNED.op(PLACED, Path.Op.XOR);
+            PLACED.transform(TURN_PLACE);
+            TURNED.op(PLACED, Path.Op.XOR);
+        }
+        return TURNED;
+    }
+
+    /** What the image loader calls where it used to fill or stroke its path. */
+    public static void drawPath(Canvas canvas, Path path, Paint paint) {
+        Object who = takeOwner();
+        synchronized (TURNED) {
+            Path drawn = path;
+            try {
+                drawn = turned(path);
+            } catch (Throwable error) {
+                // a shape that cannot turn is drawn standing
+            }
+            canvas.drawPath(drawn, paint);
+            if (drawn != path) again(who);
+        }
+    }
+
+    /** The same, for the loader that cuts the picture by clipping to the path. */
+    public static boolean clipPath(Canvas canvas, Path path) {
+        Object who = takeOwner();
+        synchronized (TURNED) {
+            Path drawn = path;
+            try {
+                drawn = turned(path);
+            } catch (Throwable error) {
+                // a shape that cannot turn is drawn standing
+            }
+            boolean left = canvas.clipPath(drawn);
+            if (drawn != path) again(who);
+            return left;
+        }
+    }
+
+    private static final WeakHashMap<Object, Boolean> WAITING = new WeakHashMap<>();
+    private static boolean posted;
+
+    /**
+     * Something with a turned shape is to be drawn again on the next frame.
+     * Whatever was not drawn this frame -- scrolled away, closed -- is not
+     * asked again, so the turning stops by itself once nothing is on screen.
+     */
+    static void again(Object who) {
+        if (who == null || Looper.myLooper() != Looper.getMainLooper()) return;
+        WAITING.put(who, Boolean.TRUE);
+        if (posted) return;
+        posted = true;
+        Choreographer.getInstance().postFrameCallback(TICK);
+    }
+
+    private static final Choreographer.FrameCallback TICK = new Choreographer.FrameCallback() {
+        @Override public void doFrame(long frameTimeNanos) {
+            posted = false;
+            if (!turning()) {
+                WAITING.clear();
+                return;
+            }
+            ArrayList<Object> due = new ArrayList<>(WAITING.keySet());
+            WAITING.clear();
+            for (Object who : due) {
+                try {
+                    if (who instanceof View) ((View) who).invalidate();
+                    else if (who instanceof Drawable) ((Drawable) who).invalidateSelf();
+                } catch (Throwable ignored) { }
+            }
+        }
+    };
 
     /** The shape avatars are in at the moment, in a square two across. */
     static Path chosenUnit() {

@@ -744,6 +744,15 @@ public final class Popup {
         ask(context,title,message,yes,onYes,no,onNo,tick,onTick,false);
     }
 
+    private static Dialog lastAsked;
+
+    /** For a screen that exists only to ask: what to do when the question goes away, however it went. */
+    static void afterLast(final Runnable then) {
+        Dialog dialog = lastAsked;
+        lastAsked = null;
+        if (dialog != null) dialog.setOnDismissListener(gone -> new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(then, 400));
+    }
+
     public static void askUpdate(Context context,String title,String message,
                                  String yes,Runnable onYes,String no,Runnable onNo,
                                  String tick,Ticked onTick) {
@@ -756,6 +765,7 @@ public final class Popup {
         try {
             Skin skin = Skin.remembered(context);
             final Dialog dialog = new SheetDialog(context);
+            lastAsked = dialog;
             Window window = dialog.getWindow();
             if (window != null) {
                 dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);

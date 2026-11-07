@@ -62,6 +62,7 @@ public final class Diary {
             new SimpleDateFormat("HH:mm:ss", Locale.US);
 
     public static void note(String line) {
+        DevLink.heard(line);
         if (flooding(line)) return;
         if (Version.TEST || Version.LITE) android.util.Log.i("MargyT", "diary: " + line);
         String stamped = stamp() + "  " + line;

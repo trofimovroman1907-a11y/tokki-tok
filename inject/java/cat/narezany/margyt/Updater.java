@@ -47,6 +47,8 @@ public final class Updater {
     private static volatile String latest;
     private static volatile String where;
     private static volatile String notes;
+    /** Updates have names now: what this one is called, if it is called anything. */
+    private static volatile String title;
 
     /** Refused in this run of the app, so it is not asked again until a restart. */
     private static volatile boolean refused;
@@ -95,6 +97,7 @@ public final class Updater {
                     latest = root.optString("version", "");
                     where = root.optString("url", "");
                     notes = localised(root, "notes");
+                    title = localised(root, "title");
                 } catch (Throwable error) {
                     Diary.note("update: " + error);
                     if (byHand) Screen.say(Text.UPDATE_NO_ANSWER);
@@ -185,7 +188,8 @@ public final class Updater {
                 // patches in Margy Store, which builds the mod on the phone. The window is the
                 // same; its button opens the store on MargyT's page, or fetches the store first.
                 final boolean store = storeInstalled(activity);
-                String message = Text.UPDATE_THERE_IS + " " + latest + ". " + Text.UPDATE_IN_STORE
+                String named = title == null || title.length() == 0 ? "" : " «" + title + "»";
+                String message = Text.UPDATE_THERE_IS + " " + latest + named + ". " + Text.UPDATE_IN_STORE
                         + (store ? "" : " " + Text.UPDATE_GET_STORE)
                         + (notes == null || notes.length() == 0 ? "" : "\n\n" + notes);
                 Popup.askUpdate(activity, Text.UPDATE, message,

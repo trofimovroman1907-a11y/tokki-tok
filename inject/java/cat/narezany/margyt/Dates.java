@@ -26,7 +26,7 @@ public final class Dates {
         android.view.View view=(android.view.View)content;
         new android.os.Handler(android.os.Looper.getMainLooper()).post(()->{
             view.setTag(0x7e0d0334,aid);view.setTag(DateInfo.CELL_TAG,DateInfo.Data.of(post));authorRows.put(aid,new java.lang.ref.WeakReference<>(view));while(authorRows.size()>32)authorRows.remove(authorRows.keySet().iterator().next());
-            String publication=label(NativeRead.number(NativeRead.get(post,"getCreateTime")),System.currentTimeMillis()/1000L);
+            String publication=flagged(post,label(NativeRead.number(NativeRead.get(post,"getCreateTime")),System.currentTimeMillis()/1000L));
             DateOverlay.register(view,publication);
             if(aid.equals(selectedAid) && view.isShown())DateOverlay.bind(view,publication);
         });
@@ -66,7 +66,7 @@ public final class Dates {
         try {
             final android.view.View view=(android.view.View)holder.getClass().getMethod("getContentView").invoke(holder);
             long time=post==null?0:((Number)post.getClass().getMethod("getCreateTime").invoke(post)).longValue();
-            final String date=label(time,System.currentTimeMillis()/1000L);
+            final String date=flagged(post,label(time,System.currentTimeMillis()/1000L));
             String name=null;try{Object user=post.getClass().getMethod("getAuthor").invoke(post);if(user!=null)name=(String)user.getClass().getMethod("getNickname").invoke(user);}catch(Throwable ignored){}
             final String author=name;
             final String aid=NativeRead.aid(post);
@@ -75,6 +75,27 @@ public final class Dates {
                 DateOverlay.bind(row!=null && aid.equals(row.getTag(0x7e0d0334)) && row.isAttachedToWindow() && row.isShown()?row:view,date,author);
             });
         }catch(Throwable error){Diary.note("visible date: "+error);}
+    }
+
+    private static final java.util.Set<String> COUNTRIES=new java.util.HashSet<>(java.util.Arrays.asList(java.util.Locale.getISOCountries()));
+
+    /** The two letters of the country a video was posted from, which TikTok sends with every post, or nothing. */
+    static String region(Object post){
+        String code=NativeRead.string(NativeRead.get(post,"getRegion")).toUpperCase(java.util.Locale.ROOT);
+        return COUNTRIES.contains(code)?code:"";
+    }
+
+    /** A country's flag is its two letters in the emoji's own alphabet. */
+    static String flag(String code){
+        if(code==null||code.length()!=2)return "";
+        return new String(Character.toChars(0x1F1E6+code.charAt(0)-'A'))+new String(Character.toChars(0x1F1E6+code.charAt(1)-'A'));
+    }
+
+    /** "🇷🇺 06.10.2026": the flag goes in front of the date under the author. */
+    private static String flagged(Object post,String date){
+        if(date==null)return null;
+        String flag=flag(region(post));
+        return flag.isEmpty()?date:flag+" "+date;
     }
 
     static String label(long seconds,long now) {

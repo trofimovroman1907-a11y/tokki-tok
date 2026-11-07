@@ -379,6 +379,7 @@ public static final String KEY = "badges_on";
             }
 
             Looks.learn(root);
+            Frames.learn(root);
 
             Map<String, java.util.List<Badge>> built =
                     new HashMap<String, java.util.List<Badge>>();

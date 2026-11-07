@@ -278,3 +278,11 @@ Additive API; old plugins do not need recompilation. Use `min_api: 4` if your pl
 ```
 
 Registered setting rows still use `prefs()` for backward compatibility. A plugin may use `accountPrefs()` for its own account-specific interface and state.
+
+## Letting an agent write one
+
+[MargyCode](https://margy.narez.xyz/app/109), an AI client for the same phone, can write plugins and try them on the running app. Connect the two in **MargyCode → Settings → Plugins for MargyT**; MargyT asks whether to let it in, and shows what that means. It's undone with one row under **Plugins** in the mod's settings.
+
+Once they're paired, a small server runs inside TikTok on 127.0.0.1, answering only to the key handed over when pairing. Through it the agent installs a plugin and starts it, reads the diary, looks at the views on the screen, searches TikTok's classes and taps. The building happens on the MargyCode side: ecj and d8 run on the phone, with no computer involved.
+
+The agent gets what a plugin gets, which is everything TikTok has. Connect it only if you trust the model you work with.

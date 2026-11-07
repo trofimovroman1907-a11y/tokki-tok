@@ -139,6 +139,7 @@ public final class Mine {
     }
 
     static void read(JSONObject answer) {
+        Frames.readMine(answer);
         JSONArray list = answer.optJSONArray("badges");
         if (list == null) return;
         List<Held> built = new ArrayList<Held>();
@@ -237,6 +238,43 @@ public final class Mine {
                     }
                 } catch (Throwable error) {
                     Diary.note("badges: free -- " + error);
+                }
+                answer(then, ok, trouble);
+            }
+        });
+    }
+
+    /**
+     * The badge given with Margy Chat, for a code from there. A no comes back with Margy Chat's own reason,
+     * which says what's missing: the code is old, the account is a channel, too few diamonds.
+     */
+    public static void takeChatBadge(final String code, final Said then) {
+        final String uid = Account.id();
+        final String token = token();
+        if (uid == null || token.length() == 0) {
+            if (then != null) then.said(false, PROVE);
+            return;
+        }
+        Net.away("badges: margy chat", new Runnable() {
+            @Override
+            public void run() {
+                boolean ok = false;
+                String trouble = "";
+                try {
+                    Net.Said said = Net.talk(Badges.SERVER + "/margychat",
+                            new JSONObject().put("uid", uid).put("token", token).put("code", code).toString());
+                    if (said.ok()) {
+                        read(new JSONObject(said.body));
+                        ok = true;
+                    } else if (asksForProof(said)) {
+                        trouble = PROVE;
+                    } else if (said.code == 429) {
+                        trouble = Text.MINE_TOO_OFTEN;
+                    } else {
+                        trouble = new JSONObject(said.body).optString("error", "");
+                    }
+                } catch (Throwable error) {
+                    Diary.note("badges: margy chat -- " + error);
                 }
                 answer(then, ok, trouble);
             }

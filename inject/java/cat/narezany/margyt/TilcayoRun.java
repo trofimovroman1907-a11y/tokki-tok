@@ -44,6 +44,23 @@ final class TilcayoRun {
     private TilcayoRun() {}
 
     static final String KEY = "fun_tilcayo_run";
+    static final String SKIN_KEY = "fun_tilcayo_skin";
+    /** The skins (assets/make_tilcayo_skins.py), all by narezany; gold only for those who supported MargyT. */
+    static final String[] SKINS = {"classic", "alien", "gold", "crown", "anime", "taco", "watermelon", "sausage", "santa", "rapper", "snow"};
+    /** Who made each skin, "" for nobody in particular; shown under it in the settings. */
+    static final String[] AUTHORS = {"narezany", "narezany", "narezany", "narezany", "квукато^^", "alowka812", "", "Losos", "sh_krytoi", "Рэп", "k1chigey"};
+    /** Where the cheeks are in each picture, as parts of its width (left, right) and height. */
+    private static final float[][] CHEEKS = {
+            {0.69f, 0.955f, 0.585f}, {0.69f, 0.955f, 0.585f}, {0.69f, 0.955f, 0.585f}, {0.69f, 0.955f, 0.585f},
+            {0.64f, 0.90f, 0.56f}, {0.67f, 0.92f, 0.59f}, {0.58f, 0.80f, 0.55f}, {0.62f, 0.82f, 0.54f},
+            {0.63f, 0.88f, 0.52f}, {0.56f, 0.80f, 0.50f}, {0.62f, 0.86f, 0.56f}};
+
+    static float[] cheeks() {
+        String worn = spriteSkin;
+        for (int i = 0; i < SKINS.length; i++) if (SKINS[i].equals(worn)) return CHEEKS[i];
+        return CHEEKS[0];
+    }
+    static final String GOLD = "gold";
     private static final int TAG = 0x7e0c033e;
     private static final Handler MAIN = new Handler(Looper.getMainLooper());
     private static volatile Bitmap sprite;
@@ -101,16 +118,42 @@ final class TilcayoRun {
         }
     }
 
-    /** The picture, once: a fat tilcayo cut out of its background. */
-    static Bitmap sprite(Context context) {
-        Bitmap known = sprite;
-        if (known != null) return known;
-        try (java.io.InputStream in = context.getAssets().open("margyt/tilcayo_run.png")) {
-            known = BitmapFactory.decodeStream(in);
+    /** The skin it wears: the one chosen, unless it is gold and the account isn't a supporter's. */
+    static String skin(Context context) {
+        SharedPreferences prefs = prefs(context);
+        String chosen = prefs == null ? SKINS[0] : prefs.getString(SKIN_KEY, SKINS[0]);
+        if (GOLD.equals(chosen) && !Mine.holds(Tester.SUPPORTER)) return SKINS[0];
+        for (String one : SKINS) if (one.equals(chosen)) return one;
+        return SKINS[0];
+    }
+
+    static void setSkin(Context context, String skin) {
+        SharedPreferences prefs = prefs(context);
+        if (prefs != null) prefs.edit().putString(SKIN_KEY, skin).apply();
+    }
+
+    private static volatile String spriteSkin;
+
+    /** The picture of a skin, once: a fat tilcayo cut out of its background. */
+    static Bitmap picture(Context context, String skin) {
+        String file = "classic".equals(skin) ? "margyt/tilcayo_run.png" : "margyt/tilcayo_run_" + skin + ".png";
+        try (java.io.InputStream in = context.getAssets().open(file)) {
+            return BitmapFactory.decodeStream(in);
         } catch (Throwable error) {
-            Diary.note("tilcayo run picture: " + error);
+            Diary.note("tilcayo run picture " + skin + ": " + error);
+            return null;
         }
+    }
+
+    /** The picture of the skin worn now; the cats on screen pick up a change at their next frame. */
+    static Bitmap sprite(Context context) {
+        String skin = skin(context);
+        Bitmap known = sprite;
+        if (known != null && skin.equals(spriteSkin)) return known;
+        known = picture(context, skin);
+        if (known == null && !"classic".equals(skin)) known = picture(context, "classic");
         sprite = known;
+        spriteSkin = skin;
         return known;
     }
 
@@ -173,8 +216,9 @@ final class TilcayoRun {
      */
     static final class Runway extends View {
         private final boolean overTikTok;
-        private final Bitmap picture;
-        private final float aspect, dp1, amp, wave;
+        private Bitmap picture;
+        private final float dp1, amp, wave;
+        private float aspect;
         private final Random random = new Random();
         private final List<Cat> cats = new ArrayList<>();
         private final ArrayList<Part> parts = new ArrayList<>();
@@ -816,7 +860,9 @@ final class TilcayoRun {
         }
 
         @Override protected void onDraw(Canvas canvas) {
+            picture = sprite(getContext());   // a new skin, at once, with its own proportions
             if (picture == null || getWidth() == 0) return;
+            aspect = picture.getWidth() / (float) picture.getHeight();
             long now = System.nanoTime();
             float dt = last == 0L ? 0f : Math.min(0.1f, (now - last) / 1e9f);
             last = now;
@@ -892,8 +938,9 @@ final class TilcayoRun {
                 // the cheeks either side of the nose, where the picture has them
                 cheek.setAlpha(Math.round(150 * Math.min(1f, cat.blush)));
                 float r = cat.h * 0.055f;
-                cheekAt(canvas, -w / 2 + w * 0.69f, -cat.h / 2 + cat.h * 0.585f, r);
-                cheekAt(canvas, -w / 2 + w * 0.955f, -cat.h / 2 + cat.h * 0.585f, r);
+                float[] where = cheeks();
+                cheekAt(canvas, -w / 2 + w * where[0], -cat.h / 2 + cat.h * where[2], r);
+                cheekAt(canvas, -w / 2 + w * where[1], -cat.h / 2 + cat.h * where[2], r);
             }
             canvas.restore();
             int reach = (int) (Math.max(w, cat.h) * 0.8f);

@@ -33,6 +33,7 @@ sys.path.insert(0, HERE)
 
 import badges as service
 import chatter
+import margyai
 import patcher
 import mc
 import tiktok
@@ -46,6 +47,7 @@ SITE = "https://margy.narez.xyz"
 OWNER = 7826361017
 
 API = "https://api.telegram.org/bot%s/%s"
+AI = None
 
 BROWSER = ("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
            " (KHTML, like Gecko) Chrome/124.0 Safari/537.36")
@@ -59,11 +61,15 @@ def token():
 # ---------------------------------------------------------------- the store
 
 def prepare():
+    global AI
     service.prepare()
     chatter.prepare()
     db = service.connect()
     db.commit()
     db.close()
+    AI = margyai.Assistant(OWNER, call, myself, lambda chat: chatter.switch(chat, False),
+                          image_loader=lambda ref: margyai.telegram_image(ref, call, token))
+    AI.start()
 
 
 def badges_of(uid):
@@ -446,6 +452,8 @@ HELP = (
     "<b>иконка</b> — пришли картинку документом и свой айди, попадёт владельцу\n"
     "<b>/mc</b> &lt;ник&gt; — привязать ник в Minecraft для сервера MargyCraft\n"
     "<b>/chatter</b> — болталка для групп: запоминает слова чата и иногда встревает, включают админы\n\n"
+    "<b>/margyai</b> — ИИ-помощник Margy. Настройки только для Нарезанного: "
+    "<code>/setchat</code> выбирает группу, <code>/margyai on</code> включает, <code>/margyai off</code> выключает.\n\n"
     "В любом чате можно написать <code>@%s ник</code> — покажет то же самое."
 )
 
@@ -469,12 +477,18 @@ def handle(update):
     from_who = message.get("from") or {}
     text = (message.get("text") or message.get("caption") or "").strip()
     low = text.lower()
+    if AI is not None and AI.command(message, text):
+        return
 
     # A picture is an offered icon only where it can be nothing else: in a
     # private chat, or with the word in the caption. In a group every photo
     # anybody posts is not an offer, and answering each one with instructions
     # is the bot being in the way.
     if message.get("document") or message.get("photo"):
+        icon_caption = low.startswith(("иконка", "icon")) or (
+            message["chat"].get("type") == "private" and re.fullmatch(r"\d{6,24}", text))
+        if AI is not None and not icon_caption and AI.hear(message):
+            return
         private = (message["chat"].get("type") == "private")
         if private or low.startswith("иконка") or low.startswith("icon"):
             return offered(message, chat, from_who, text)
@@ -535,6 +549,12 @@ def handle(update):
     group = message["chat"].get("type") in ("group", "supergroup")
     if group and low and low.split()[0].split("@")[0] == "/chatter":
         return chatter_command(message, chat, from_who, text)
+
+    # Keep the short legacy lookup/icon shortcuts, but send ordinary questions
+    # (including a bug described as "профиль в Margy Chat ...") to the AI.
+    shortcut = low.startswith("иконка") or (low.startswith("профиль") and len(text.split()) <= 2)
+    if AI is not None and not shortcut and AI.hear(message):
+        return
 
     if low in ("/start", "/help", "помощь"):
         me = call("getMe").get("result", {}).get("username", "margyt_bot")
@@ -607,6 +627,9 @@ def chatter_command(message, chat, from_who, text):
     if not admin(chat, message, from_who):
         return say(chat, "Включать и настраивать болталку могут только админы чата.", message["message_id"])
     if what in ("on", "вкл"):
+        if AI is not None and AI.active_for(chat):
+            return say(chat, "Здесь включён Margy AI. Сначала Нарезанный должен выключить его "
+                             "командой <code>/margyai off</code>.", message["message_id"])
         chatter.switch(chat, True)
         note = ""
         # with privacy mode on and no admin rights a bot sees only commands and replies to it

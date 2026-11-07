@@ -76,7 +76,7 @@ final class ProfileVerdict {
     }
 
     /** Whether a view is the plate, so nothing else rearranges it. */
-    static boolean plate(View view) { return view != null && view.getTag(PLATE) != null; }
+    static boolean plate(View view) { return view != null && (view.getTag(PLATE) != null || Frames.isPlate(view)); }
 
     static void apply(View view) {
         try {
@@ -88,6 +88,7 @@ final class ProfileVerdict {
             String uid = uid(component);
             Badges.Verdict verdict = Badges.verdict(uid);
             ground = Md3.behind(block);
+            Frames.profile(block, uid, ink());
             View plate = find(block);
             if (plate != null) recolour(plate);
             boolean marking = uid != null && AdminPanel.owner() && !uid.equals(Account.id());
@@ -145,7 +146,8 @@ final class ProfileVerdict {
     private static View find(ViewGroup block) {
         Object pending = block.getTag(PENDING);
         if (pending instanceof View) return (View) pending;
-        for (int i = 0; i < block.getChildCount(); i++) if (plate(block.getChildAt(i))) return block.getChildAt(i);
+        // its own plate only: `plate` also answers for the frame's, which isn't this one's to replace
+        for (int i = 0; i < block.getChildCount(); i++) if (block.getChildAt(i).getTag(PLATE) != null) return block.getChildAt(i);
         return null;
     }
 

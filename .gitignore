@@ -20,3 +20,7 @@ vendor/
 __pycache__/
 *.pyc
 tools/jadx/
+
+# Margy Helper's provider credential and private chat memory.
+/server/elisart.key
+/server/margyai.db*
