@@ -25,6 +25,36 @@
       },
       "releases": [
         {
+          "version": "2.2.3",
+          "beta": false,
+          "base": {
+            "name": "TikTok 47.2.41",
+            "sha256": "4bcad2a15ac82da68d373629a9520f855781c3ec46f0e2937e605040285ba75c",
+            "size": 346017026,
+            "sources": [
+              {
+                "name": "margy.narez.xyz",
+                "url": "https://margy.narez.xyz/original/tiktok-47-2-41.apk",
+                "direct": true
+              }
+            ]
+          },
+          "patch": {
+            "url": "https://git.narez.xyz/narezany/MargyT/releases/download/v2.2.3/margyt-2.2.3.mpatch",
+            "sha256": "e0689fee1e755c2a9700c2b84a7e370990a53fbe7ee4d013d4981c599e4ca29b",
+            "size": 73898936
+          },
+          "result": {
+            "sha256": "5383a8c1a8d102c8f68105566126aaa3816d8ddf9dc37df2aae5e692a49cc3ca",
+            "size": 397199654
+          },
+          "notes": {
+            "ru": "Исправлены пропадающая анимация лайка, доступ к служебным чатам, счётчики, обрезание аватарок и цвет имён во входящих. Кнопка нового чата больше не остаётся поверх переписки. Добавлены недостающие английские и украинские переводы. Предпросмотр рамок учитывает форму аватарки. Оформление самих переписок Material 3 удалено.",
+            "uk": "Виправлено зникнення анімації вподобання, доступ до службових чатів, лічильники, обрізання аватарок і колір імен у вхідних. Кнопка нового чату більше не залишається поверх листування. Додано відсутні англійські й українські переклади. Попередній перегляд рамок враховує форму аватарки. Оформлення самих чатів Material 3 видалено.",
+            "en": "Fixed disappearing double-tap hearts, access to service chats, unread counters, clipped story avatars and chat name colours in the inbox. The new chat button no longer stays over conversations. Added missing English and Ukrainian translations. Frame previews now follow the avatar shape. Removed the Material 3 conversation design."
+          }
+        },
+        {
           "version": "2.2.2",
           "beta": false,
           "base": {
