@@ -23,6 +23,100 @@ public final class Heart {
         view.setIconRes(resource);
         view.setTintColor(LikeColors.colour());
         tint(view);
+        flyLater(view);
+    }
+
+    // ------------------------------------------------------------ into the like button
+
+    private static final int FLOWN=0x54544C49;
+
+    /**
+     * A heart from a double tap does not just fade where it was: once TikTok
+     * has popped it up, it flies on a curve into the like button of the video
+     * on screen, shrinking to the button's size, and the button gives a little
+     * bounce as it lands.
+     */
+    /** The like button of the video the heart is over: the rail's own, or one said to be a like. */
+    private static android.view.View likeButton(android.view.View heart){
+        android.view.View known=FeedRail.likeOnScreen();
+        if(known!=null)return known;
+        android.view.View cell=heart;
+        while(cell.getParent() instanceof android.view.View){
+            cell=(android.view.View)cell.getParent();
+            if(cell.getClass().getName().contains("VideoViewCellRootView"))break;
+        }
+        return saidLike(cell,0);
+    }
+
+    private static android.view.View saidLike(android.view.View view,int depth){
+        if(view==null||depth>30||!view.isShown())return null;
+        CharSequence said=view.getContentDescription();
+        if(said!=null){
+            String words=said.toString().toLowerCase(java.util.Locale.ROOT);
+            if((words.contains("лайк")||words.contains("нрав")||words.contains("like")||words.contains("вподоб"))
+                    && !words.contains("комментар")&&!words.contains("comment"))return view;
+        }
+        if(view instanceof android.view.ViewGroup){
+            android.view.ViewGroup group=(android.view.ViewGroup)view;
+            for(int i=0;i<group.getChildCount();i++){
+                android.view.View found=saidLike(group.getChildAt(i),depth+1);
+                if(found!=null)return found;
+            }
+        }
+        return null;
+    }
+
+    private static void flyLater(final android.view.View heart){
+        if(heart.getTag(FLOWN)!=null)return;
+        heart.setTag(FLOWN,Boolean.TRUE);
+        heart.postDelayed(()->{try{fly(heart);}catch(Throwable error){Diary.note("heart flight: "+error);}},260);
+    }
+
+    private static void fly(final android.view.View heart){
+        if(!heart.isAttachedToWindow()){Diary.note("heart flight: the heart was already gone");return;}
+        final android.view.View like=likeButton(heart);
+        if(like==null){Diary.note("heart flight: no like button on screen");return;}
+        if(heart.getWidth()<=0||heart.getHeight()<=0)return;
+        // the heart as it looks, taken off the screen: its drawable is TikTok's own and cannot be copied
+        android.graphics.Bitmap picture=android.graphics.Bitmap.createBitmap(heart.getWidth(),heart.getHeight(),android.graphics.Bitmap.Config.ARGB_8888);
+        heart.draw(new android.graphics.Canvas(picture));
+        final android.view.View root=heart.getRootView();
+        int[] at=new int[2],rootAt=new int[2],to=new int[2];
+        root.getLocationInWindow(rootAt);
+        heart.getLocationInWindow(at);
+        like.getLocationInWindow(to);
+        final float fromW=heart.getWidth()*heart.getScaleX(),fromH=heart.getHeight()*heart.getScaleY();
+        if(fromW<=0||fromH<=0)return;
+        // the heart's centre, where its scale left it, and the like button's
+        final float x0=at[0]-rootAt[0]+heart.getWidth()*heart.getScaleX()/2f,y0=at[1]-rootAt[1]+heart.getHeight()*heart.getScaleY()/2f;
+        final float x1=to[0]-rootAt[0]+like.getWidth()/2f,y1=to[1]-rootAt[1]+like.getHeight()*.38f;
+        final float toSize=Math.min(like.getWidth(),like.getHeight())*.62f;
+        // the curve bows out to the left and up before it comes down to the button
+        final float cx=(x0+x1)/2f-Math.abs(x1-x0)*.25f,cy=Math.min(y0,y1)-root.getHeight()*.12f;
+        final android.graphics.drawable.Drawable copy=new android.graphics.drawable.BitmapDrawable(heart.getResources(),picture);
+        copy.setAlpha(Math.round(255*Math.max(.3f,heart.getAlpha())));
+        heart.setVisibility(android.view.View.INVISIBLE);
+        root.getOverlay().add(copy);
+        android.animation.ValueAnimator flight=android.animation.ValueAnimator.ofFloat(0f,1f);
+        flight.setDuration(520);
+        flight.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
+        flight.addUpdateListener(a->{
+            float t=(Float)a.getAnimatedValue(),u=1-t;
+            float x=u*u*x0+2*u*t*cx+t*t*x1,y=u*u*y0+2*u*t*cy+t*t*y1;
+            float w=fromW+(toSize-fromW)*t,h=fromH+(toSize-fromH)*t;
+            copy.setBounds(Math.round(x-w/2),Math.round(y-h/2),Math.round(x+w/2),Math.round(y+h/2));
+            copy.setAlpha(Math.round(255*(1-.35f*t*t)));
+        });
+        flight.addListener(new android.animation.AnimatorListenerAdapter(){
+            @Override public void onAnimationEnd(android.animation.Animator a){
+                root.getOverlay().remove(copy);
+                like.animate().cancel();
+                like.animate().scaleX(1.22f).scaleY(1.22f).setDuration(110).withEndAction(()->
+                        like.animate().scaleX(1f).scaleY(1f).setDuration(240)
+                                .setInterpolator(new android.view.animation.OvershootInterpolator(3f)).start()).start();
+            }
+        });
+        flight.start();
     }
     public static void setTintColor(com.bytedance.tux.icon.TuxIconView view,int ignored) {
         if(view==null)return;
@@ -35,5 +129,6 @@ public final class Heart {
         view.setTag(0x54544C48,Boolean.TRUE);
         view.setImageDrawable(image);
         tint(view);
+        if(image!=null)flyLater(view);
     }
 }

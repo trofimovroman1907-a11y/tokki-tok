@@ -33,13 +33,8 @@ public final class Dates {
     }
 
     public static boolean isEnabled() {
-        Boolean known = on;
-        if (known != null) return known.booleanValue();
-        SharedPreferences prefs = prefs();
-        if (prefs == null) return false;
-        boolean value = prefs.getBoolean(KEY, false);
-        on = Boolean.valueOf(value);
-        return value;
+        // 2.2.2: always on, and no longer a switch: nobody wants it off
+        return true;
     }
 
     public static void setEnabled(boolean enabled) {

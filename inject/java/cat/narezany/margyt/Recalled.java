@@ -40,13 +40,8 @@ public final class Recalled {
     private static Method recall;
 
     static boolean enabled() {
-        Boolean known = on;
-        if (known != null) return known;
-        Context context = Margy.context();
-        if (context == null) return true;
-        boolean value = context.getSharedPreferences(Margy.PREFS, Context.MODE_PRIVATE).getBoolean(KEY, true);
-        on = value;
-        return value;
+        // 2.2.2: always on, and no longer a switch: nobody wants it off
+        return true;
     }
 
     static void setEnabled(boolean value) {

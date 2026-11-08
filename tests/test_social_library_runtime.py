@@ -27,6 +27,7 @@ class SocialLibraryTest(unittest.TestCase):
    'cat/narezany/margyt/Test.java':"""package cat.narezany.margyt;public class Test{public static void main(String[] a)throws Exception{SocialLibrary.load("1",null);if(mock.Api.calls!=2||NativeStreaks.all.size()!=2)throw new AssertionError("both immediate and suspended pages");NativeStreaks.all.clear();mock.Api.stale=true;SocialLibrary.load("1",null);if(!NativeStreaks.all.isEmpty())throw new AssertionError("stale account accepted");System.out.println("pagination and account guards passed");}}"""}
   return files
  def run_with(self,files):
+  files['cat/narezany/margyt/Watch.java']='package cat.narezany.margyt;class Watch{static Object here(){return null;}}'
   with tempfile.TemporaryDirectory() as directory:
    work=pathlib.Path(directory)
    __import__("android_doubles").with_mod(files)

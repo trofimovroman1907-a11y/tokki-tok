@@ -10,15 +10,8 @@ public final class FeedRail {
     private static final class State {final int kind;int wanted;State(int k,int v){kind=k;wanted=v;}}
     private FeedRail(){}
     public static boolean shown(int kind){
-        boolean[] current=shown;
-        if(current==null){
-            android.content.Context c=Margy.context();if(c==null)return true;
-            current=new boolean[]{true,true,true,true};
-            try{android.content.SharedPreferences p=AccountAppearance.prefs(c);for(int i=0;i<4;i++)current[i]=p.getBoolean(KEYS[i],true);}
-            catch(Throwable error){Diary.note("feed rail settings: "+error);}
-            shown=current;
-        }
-        return kind<0 || kind>=current.length || current[kind];
+        // 2.2.2: hiding the like, comment, favourite and share buttons is gone
+        return true;
     }
     public static void setShown(int kind,boolean value){
         if(kind<0 || kind>=4)return;
@@ -97,6 +90,19 @@ public final class FeedRail {
     }
     /** Every button the mod has been handed, in no order. */
     static java.util.List<View> views(){synchronized(slots){return new java.util.ArrayList<View>(slots.keySet());}}
+    /** The like button of the video on screen: the one of the like slots that is the most in view. */
+    static View likeOnScreen(){
+        View best=null;int bestArea=0;android.graphics.Rect seen=new android.graphics.Rect();
+        synchronized(slots){
+            for(Map.Entry<View,State> one:slots.entrySet()){
+                View v=one.getKey();
+                if(one.getValue().kind!=0||v==null||!v.isShown()||!v.getGlobalVisibleRect(seen))continue;
+                int area=seen.width()*seen.height();
+                if(area>bestArea){bestArea=area;best=v;}
+            }
+        }
+        return best;
+    }
     /** Every button the mod has been handed, for what dresses them to look at again. */
     static void restyle(){
         java.util.List<View> views;

@@ -593,6 +593,10 @@ class Build:
         # ones people sent in, cut out of their photos
         for skin in ("alien", "gold", "crown", "anime", "taco", "watermelon", "sausage", "santa", "rapper", "snow"):
             entries.append(("assets/margyt/tilcayo_run_%s.png" % skin, os.path.join(asset_root, "tilcayo_run_%s.png" % skin)))
+        # the default font (Nunito, rounded, with Cyrillic) and the chalk hand of the thanks page (Caveat),
+        # both from Google Fonts under the OFL, which travels with them
+        for font in ("nunito.ttf", "nunito-OFL.txt", "caveat.ttf", "caveat-OFL.txt"):
+            entries.append(("assets/margyt/fonts/" + font, os.path.join(asset_root, "fonts", font)))
         for destination, path in entries:
             with open(path, "rb") as handle:
                 raw = handle.read()

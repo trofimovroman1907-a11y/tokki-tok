@@ -107,6 +107,7 @@ public final class AvatarShape {
     private static final Path RING = new Path();
     private static final Path PART = new Path();
     private static final Matrix RING_PLACE = new Matrix();
+    private static final RectF INBOX_RING = new RectF();
 
     /**
      * What the view that draws a story ring calls where it used to draw an arc.
@@ -121,6 +122,24 @@ public final class AvatarShape {
     public static void drawArc(Canvas canvas, RectF oval, float start, float sweep,
                                boolean useCentre, Paint paint) {
         Object who = takeOwner();
+        if (oval != null && !useCentre && InboxMd3.storyRing(who)) {
+            synchronized (RING) {
+                float nativeStroke = paint.getStrokeWidth();
+                float stroke = 2f * ((View) who).getResources().getDisplayMetrics().density;
+                INBOX_RING.set(oval);
+                float inset = (stroke - nativeStroke) / 2f;
+                INBOX_RING.inset(inset, inset);
+                paint.setStrokeWidth(stroke);
+                try { storyArc(canvas, INBOX_RING, start, sweep, false, paint, who); }
+                finally { paint.setStrokeWidth(nativeStroke); }
+            }
+            return;
+        }
+        storyArc(canvas, oval, start, sweep, useCentre, paint, who);
+    }
+
+    private static void storyArc(Canvas canvas, RectF oval, float start, float sweep,
+                                 boolean useCentre, Paint paint, Object who) {
         int shape = index();
         if (shape > 0 && !useCentre && oval != null && sweep != 0) {
             try {

@@ -51,17 +51,8 @@ public final class Sound {
     private static volatile Boolean cached;
 
     public static boolean isEnabled() {
-        Boolean known = cached;
-        if (known != null) return known;
-        SharedPreferences prefs = prefs();
-        if (prefs == null) return true;  // the default, before anything is read
-        boolean on = true;
-        try {
-            on = prefs.getBoolean(KEY, true);
-        } catch (Throwable ignored) {
-        }
-        cached = on;
-        return on;
+        // 2.2.2: always on, and no longer a switch: nobody wants it off
+        return true;
     }
 
     public static void setEnabled(boolean enabled) {

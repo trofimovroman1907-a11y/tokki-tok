@@ -18,6 +18,8 @@ STUBS={
 'com/ss/android/ugc/aweme/feed/model/FeedItemList.java': 'package com.ss.android.ugc.aweme.feed.model; public class FeedItemList {public java.util.List items;public java.util.List getItems(){return items;}}',
 }
 STUBS['com/ss/android/ugc/aweme/search/pages/result/topsearch/core/model/SearchMixFeedList.java']=(ROOT/'inject/stubs/com/ss/android/ugc/aweme/search/pages/result/topsearch/core/model/SearchMixFeedList.java').read_text()
+from heart_doubles import STUBS as HEART_STUBS
+STUBS.update(HEART_STUBS)
 HARNESS=r"""package cat.narezany.margyt;
 import android.graphics.drawable.Drawable;import android.widget.ImageView;
 import com.ss.android.ugc.aweme.feed.model.*;import java.util.*;
@@ -38,14 +40,19 @@ class FeatureHarness {
   FeedItemList page=new FeedItemList();Aweme a=new Aweme(false),ad=new Aweme(true),b=new Aweme(false);
   List original=new ArrayList(Arrays.asList(a,ad,b));page.items=original;
   List filtered=Feed.getItems(page);check(filtered.size()==2 && filtered.get(0)==a && filtered.get(1)==b,"ads removed in order");
-  check(a.reads==1 && ad.reads==1 && b.reads==1,"one classification per post");check(original.size()==3,"host list not mutated");Feed.setEnabled(false);check(Feed.getItems(page)==original,"disabled preserves host list");
+  check(a.reads==1 && ad.reads==1 && b.reads==1,"one classification per post");check(original.size()==3,"host list not mutated");Feed.setEnabled(false);check(Feed.getItems(page).size()==2,"legacy preference cannot disable ad filtering");
   Feed.setEnabled(true);page.items=new ArrayList(Arrays.asList(a,b));check(Feed.getItems(page)==page.items,"clean feed keeps identity");
   page.items=new ArrayList(Arrays.asList(ad));check(Feed.getItems(page).isEmpty(),"all-ad page becomes empty");
   Aweme card=new Aweme(false);card.card=3;check(Feed.suggestion(card),"ordinary suggestion removed");
   card.reason=new Object();check(!Feed.suggestion(card),"friend repost reason preserved");card.reason=null;
   card.upvotes=new Object();check(!Feed.suggestion(card),"friend upvote metadata preserved");card.upvotes=null;
   card.preload=new Object();check(!Feed.suggestion(card),"preloaded friend repost preserved");
-  check(Feed.getItems(null)==null,"null safe");System.out.println("heart and ad runtime checks passed");
+  check(Feed.getItems(null)==null,"null safe");
+  FeedRail.like=new android.view.View();android.view.View.flush();
+  check(android.animation.ValueAnimator.runs==2,"both native heart hosts fly to the current like button");
+  check(FeedRail.like.animations>0&&heart.getOverlay().count==0,"landing bounces the button and removes the overlay");
+  check(heart.visibility==android.view.View.INVISIBLE,"native stationary heart is hidden during its flight");
+  System.out.println("heart and ad runtime checks passed");
  }
 }"""
 STUBS['cat/narezany/margyt/FeedDates.java']='package cat.narezany.margyt;class FeedDates{static boolean active(){return false;}static boolean leavesOut(long t){return false;}}'

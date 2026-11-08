@@ -40,13 +40,8 @@ public final class Brightness {
     private Brightness() {}
 
     public static boolean isEnabled() {
-        Boolean known = cached;
-        if (known != null) return known;
-        SharedPreferences prefs = prefs();
-        if (prefs == null) return true;  // too early to know; not remembered
-        boolean on = prefs.getBoolean(KEY, true);
-        cached = on;
-        return on;
+        // 2.2.2: always on, and no longer a switch: nobody wants TikTok dimming or brightening videos
+        return true;
     }
 
     public static void setEnabled(boolean enabled) {

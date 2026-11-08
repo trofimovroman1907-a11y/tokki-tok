@@ -625,7 +625,8 @@ class SettingsSearchSourceTest(unittest.TestCase):
         with open(source, encoding="utf-8") as handle:
             java = handle.read()
         self.assertIn("if (searchQuery.length() > 0)", java)
-        self.assertIn("searchResults();", java)
+        self.assertIn("searchResults(index);", java)
+        self.assertIn("harvest(contentStart)", java)
         self.assertIn("matchesSearch(title + \" \" + words)", java)
         self.assertIn("EditorInfo.IME_ACTION_SEARCH", java)
 

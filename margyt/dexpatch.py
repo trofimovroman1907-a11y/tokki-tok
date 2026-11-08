@@ -58,6 +58,7 @@ PLAYER_CONTROLLER="Lcom/ss/android/ugc/aweme/feed/controller/PlayerController;"
 REPOST_CLASS="Lcom/ss/android/ugc/aweme/upvote/detail/videorepost/VideoRepostAssem;"
 AVATAR_CLASS="Lcom/ss/android/ugc/aweme/feed/assem/avatar/FeedAvatarDefaultAssem;"
 PROFILE_CONTAINER="Lcom/ss/android/ugc/profile/platform/base/component/BaseContainerComponent;"
+PROFILE_HEADER="Lcom/ss/android/ugc/profile/platform/business/header/base/HeaderBaseContainerComponent;"
 MESSAGE_CLASSES=("Lcom/ss/android/ugc/aweme/im/sdk/chat/messagelist/skeleton/cell/IMSkeletonLayoutReusedUISlotAssem;","Lcom/ss/android/ugc/aweme/im/sdk/chat/messagelist/skeleton/cell/SkeletonLayoutReusedUISlotAssem;")
 PUSH_GUIDE="Lcom/ss/android/ugc/aweme/unifiedauth/push/UniAuthGuidePopupServiceImpl;"
 FRIENDS_RESPONSE="Lcom/ss/android/ugc/aweme/relation/model/FriendsListResponse;"
@@ -228,7 +229,6 @@ ANCHORED_SOURCES: List[Tuple[str, str, str, str, str, str]] = [
 CLASS_ANCHORED_SOURCES = {
     "Lcom/ss/android/ugc/aweme/commentv2/commentlist/powercell/BaseCommentCell;",
 }
-
 
 # TikTok 47.2.41's feed touch listener. The callback below is inserted only in
 # this one method after the multi-touch early return; no global touch dispatch
@@ -1117,6 +1117,18 @@ def rewrite_anchored(root: str) -> Dict[str, int]:
                 add_exit(r"(?ms)^\.method public final (?:onViewCreated\(Landroid/view/View;\)|s4\(Ljava/lang/Object;\))V.*?^\.end method","    invoke-static/range {p0 .. p0}, Lcat/narezany/margyt/Repost;->anchor(Ljava/lang/Object;)V\n","native repost avatar")
             if PROFILE_CONTAINER in declaration:
                 add_exit(r"(?ms)^\.method public onViewCreated\(Landroid/view/View;\)V.*?^\.end method","    invoke-static/range {p0 .. p1}, Lcat/narezany/margyt/ProfileLayout;->bind(Ljava/lang/Object;Landroid/view/View;)V\n","native profile layout")
+            if PROFILE_HEADER in declaration:
+                def profile_parts(match):
+                    body = match.group(0)
+                    if "ProfileParts;->attaching" in body:
+                        return body
+                    # Observe parameters before the optimized native code can reuse them.
+                    hook = "    invoke-static/range {p0 .. p2}, Lcat/narezany/margyt/ProfileParts;->attaching(Ljava/lang/Object;Landroid/view/View;Landroid/view/ViewGroup;)V\n"
+                    body, hits = re.subn(r"(?m)^([ \t]*\.(?:registers|locals) \d+\n)", lambda m: m.group(0) + hook, body, count=1)
+                    if hits:
+                        counts["native profile component roles"] = hits
+                    return body
+                text = re.sub(r"(?ms)^\.method public final dq\(Landroid/view/View;Landroid/view/ViewGroup;Landroid/view/View;ZIZ\)V.*?^\.end method", profile_parts, text)
             if any(owner in declaration for owner in MESSAGE_CLASSES):
                 def message_bind(match):
                     body=match.group(0)
@@ -1757,7 +1769,7 @@ def carries_an_anchor(dex: bytes) -> bool:
             or b"Lcom/ss/android/ugc/aweme/feed/assem/videoauthorinfo/VideoAuthorInfoRelationAssem;" in dex
             or any(owner.encode() in dex for owner in RAIL_CLASSES)
             or PLAYER_CONTROLLER.encode() in dex
-            or any(owner.encode() in dex for owner in (REPOST_CLASS,AVATAR_CLASS,PROFILE_CONTAINER,PUSH_GUIDE)+MESSAGE_CLASSES)
+            or any(owner.encode() in dex for owner in (REPOST_CLASS,AVATAR_CLASS,PROFILE_CONTAINER,PROFILE_HEADER,PUSH_GUIDE)+MESSAGE_CLASSES)
             or SPEED_TOUCH_CLASS.encode() in dex or SPEED_EDGE_CLASS.encode() in dex)
 
 
@@ -2290,6 +2302,7 @@ def rewrite_targets() -> List[str]:
     out.append(RAIL+"->bindNative(Ljava/lang/Object;)V")
     out.append("Lcat/narezany/margyt/PlayerTools;->resumed(Ljava/lang/Object;Ljava/lang/String;)V")
     out.extend(["Lcat/narezany/margyt/Repost;->bind(Ljava/lang/Object;)V","Lcat/narezany/margyt/Repost;->anchor(Ljava/lang/Object;)V","Lcat/narezany/margyt/ProfileLayout;->bind(Ljava/lang/Object;Landroid/view/View;)V","Lcat/narezany/margyt/MessageTimes;->before(Ljava/lang/Object;)V","Lcat/narezany/margyt/MessageTimes;->bind(Ljava/lang/Object;Ljava/lang/Object;)V","Lcat/narezany/margyt/ModNotifications;->noPrompts()Z"])
+    out.append("Lcat/narezany/margyt/ProfileParts;->attaching(Ljava/lang/Object;Landroid/view/View;Landroid/view/ViewGroup;)V")
     out.extend("%s->%s(Ljava/lang/String;)%s" % (FLAGS, method, boxed)
                for method, boxed, _unbox, _wide in FLAG_ANSWERS.values())
     out.append(HDR_QUESTION)

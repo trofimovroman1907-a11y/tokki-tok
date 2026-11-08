@@ -21,12 +21,14 @@ class FeedRailTest(unittest.TestCase):
    'cat/narezany/margyt/Test.java':'''package cat.narezany.margyt;import android.view.View;public class Test{
 static void check(boolean b,String s){if(!b)throw new AssertionError(s);}public static void main(String[] a){
 com.ss.android.ugc.aweme.feed.assem.digg.VideoDiggAssem component=new com.ss.android.ugc.aweme.feed.assem.digg.VideoDiggAssem();View v=component.getContentView();FeedRail.bindNative(component);check(v.getVisibility()==0,"default stays native");
-FeedRail.setShown(0,false);check(v.getVisibility()==8,"live hide");FeedRail.setVisibility(v,0);check(v.getVisibility()==8,"native show cannot flicker hidden slot");FeedRail.setVisibility(v,4);FeedRail.setShown(0,true);check(v.getVisibility()==4,"restore latest native intent, not forced visible");
-FeedRail.setVisibility(v,0);FeedRail.setShown(0,false);AccountAppearance.uid="222";FeedRail.reloadSettings();check(v.getVisibility()==0,"second account defaults");AccountAppearance.uid="111";FeedRail.reloadSettings();check(v.getVisibility()==8,"first account retained");
+FeedRail.setShown(0,false);check(v.getVisibility()==0,"legacy hide preference no longer hides a button");FeedRail.setVisibility(v,0);check(v.getVisibility()==0,"native show is preserved");FeedRail.setVisibility(v,4);FeedRail.setShown(0,true);check(v.getVisibility()==4,"restore latest native intent, not forced visible");
+FeedRail.setVisibility(v,0);FeedRail.setShown(0,false);AccountAppearance.uid="222";FeedRail.reloadSettings();check(v.getVisibility()==0,"second account defaults");AccountAppearance.uid="111";FeedRail.reloadSettings();check(v.getVisibility()==0,"legacy preference on first account is ignored too");
 View unrelated=new View();FeedRail.setVisibility(unrelated,4);check(unrelated.getVisibility()==4,"unregistered comments/media unchanged");int writes=v.writes;FeedRail.bindNative(component);check(v.writes==writes,"repeat binding no redraw");FeedRail.bindNative(new Object());FeedRail.setVisibility(null,0);check(FeedRail.shown(-1),"unknown kind untouched");
-for(int i=0;i<4;i++)FeedRail.setShown(i,false);com.ss.android.ugc.aweme.feed.assem.share.VideoShareAssem share=new com.ss.android.ugc.aweme.feed.assem.share.VideoShareAssem();FeedRail.bindNative(share);check(share.getContentView().getVisibility()==8,"newly created share hidden immediately");
+for(int i=0;i<4;i++)FeedRail.setShown(i,false);com.ss.android.ugc.aweme.feed.assem.share.VideoShareAssem share=new com.ss.android.ugc.aweme.feed.assem.share.VideoShareAssem();FeedRail.bindNative(share);check(share.getContentView().getVisibility()==0,"new share button also ignores old hide preferences");
 }}'''
   })
+  sources['android/graphics/Rect.java']='package android.graphics;public class Rect{public int width(){return 30;}public int height(){return 30;}}'
+  sources['android/view/View.java']=sources['android/view/View.java'].replace('public int writes;', 'public boolean isShown(){return visibility==0;}public boolean getGlobalVisibleRect(android.graphics.Rect r){return true;}public int writes;')
   for name in ['com.ss.android.ugc.aweme.feed.assem.digg.VideoDiggAssem','com.ss.android.ugc.aweme.feed.assem.share.VideoShareAssem']:
    pkg,cl=name.rsplit('.',1);sources[name.replace('.','/')+'.java']='package '+pkg+';public class '+cl+'{android.view.View view=new android.view.View();public android.view.View getContentView(){return view;}}'
   with tempfile.TemporaryDirectory() as folder:

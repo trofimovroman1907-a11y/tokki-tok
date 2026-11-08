@@ -31,17 +31,8 @@ public final class Seekbar {
 
     static void reloadSettings(){cached=null;setEnabled(isEnabled());}
     public static boolean isEnabled() {
-        Boolean known = cached;
-        if (known != null) return known;
-        SharedPreferences prefs = prefs();
-        if (prefs == null) return false;
-        boolean on = false;
-        try {
-            on = prefs.getBoolean(KEY, false);
-        } catch (Throwable ignored) {
-        }
-        cached = on;
-        return on;
+        // 2.2.2: always on, and no longer a switch: nobody wants it off
+        return true;
     }
 
     public static void setEnabled(boolean enabled) {

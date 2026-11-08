@@ -11,6 +11,7 @@ class GlassVideoTest(unittest.TestCase):
     @unittest.skipUnless(shutil.which('javac') and shutil.which('java'),'JDK required')
     def test_current_cell_events_and_idle(self):
         sources={
+            'cat/narezany/margyt/PlayerTools.java':'package cat.narezany.margyt;class PlayerTools{static void heard(Object owner,String id){}}',
             'android/os/Looper.java': 'package android.os;public class Looper{static final Looper MAIN=new Looper();public static Looper getMainLooper(){return MAIN;}public static Looper myLooper(){return MAIN;}}',
             'android/os/Handler.java': 'package android.os;public class Handler{public static int posts;public Handler(Looper l){}public void post(Runnable r){posts++;r.run();}}',
             'android/os/SystemClock.java': 'package android.os;public class SystemClock{public static long now=1000;public static long uptimeMillis(){return now;}}',

@@ -186,6 +186,7 @@ final class Expressive {
         float[] corners(float height) {
             float limit = height / 2f;
             float t = Math.min(top, limit), b = Math.min(bottom, limit);
+            if (pressedRadius < 0) return new float[] {clamp(t, limit), clamp(b, limit)};
             float p = Math.min(pressedRadius, limit);
             float amount = Math.max(0f, press);
             return new float[] {
@@ -226,12 +227,13 @@ final class Expressive {
     // -------------------------------------------------------------- group
 
     /**
-     * A segmented list: every child becomes a tile of its own.
+     * A list on one card: every child is painted as a piece of it.
      *
-     * The first tile has large top corners, the last large bottom ones, and
-     * between them the corners are small, with a thin gap -- the grouped list
-     * of M3 Expressive. A child that already paints its own background (a
-     * preview, a banner) is left as it is.
+     * The first piece has the card's top corners, the last its bottom ones.
+     * In Material 3 the pieces run together with no gap, the way a list sits
+     * on a card; a style may still ask for gaps and small corners between
+     * them. A child that already paints its own background (a preview, a
+     * banner) is left as it is.
      */
     static final class Group extends LinearLayout {
         private final int fill, ripple;
@@ -250,7 +252,8 @@ final class Expressive {
             this.outer = dp(context, Design.style().card);
             this.inner = dp(context, Design.style().inner);
             this.gap = dp(context, Design.style().gap);
-            this.pressed = dp(context, m3?16:28);
+            // a row of one card does not swell into a tile of its own when pressed
+            this.pressed = m3 && Design.style().gap == 0 ? -1 : dp(context, m3?16:28);
             if (Design.glass()) {
                 GradientDrawable surface = new GradientDrawable();
                 surface.setColor(fill); surface.setCornerRadius(outer);

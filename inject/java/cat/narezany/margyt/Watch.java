@@ -60,10 +60,12 @@ public final class Watch implements Application.ActivityLifecycleCallbacks {
             SponsorBlock.attach(activity);
         }
         Screamer.attach(activity);
+        FakeLag.resumed(activity);
     }
 
     @Override
     public void onActivityPaused(Activity activity) {
+        FakeLag.paused(activity);
         if (!Version.LITE) Ghost.paused(activity);
         if (here.get() == activity) {
             here = new java.lang.ref.WeakReference<Activity>(null);
@@ -74,5 +76,5 @@ public final class Watch implements Application.ActivityLifecycleCallbacks {
     @Override public void onActivityStarted(Activity activity) {}
     @Override public void onActivityStopped(Activity activity) {}
     @Override public void onActivitySaveInstanceState(Activity activity, Bundle out) {}
-    @Override public void onActivityDestroyed(Activity activity) {}
+    @Override public void onActivityDestroyed(Activity activity) { FakeLag.paused(activity); }
 }

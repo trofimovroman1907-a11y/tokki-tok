@@ -49,8 +49,18 @@ public final class Popup {
      */
     public static void show(Context context, String title, String message,
                             String button, final android.graphics.drawable.Drawable picture) {
+        show(context, title, message, button, picture, Skin.remembered(context));
+    }
+
+    static void show(View anchor, String title, String message, String button,
+                     android.graphics.drawable.Drawable picture) {
+        Context context = anchor.getContext();
+        show(context, title, message, button, picture, Skin.onPage(context, Md3.behind(anchor)));
+    }
+
+    private static void show(Context context, String title, String message, String button,
+                             android.graphics.drawable.Drawable picture, Skin skin) {
         try {
-            Skin skin = Skin.remembered(context);
             Dialog dialog = new SheetDialog(context, true);
             Window window = dialog.getWindow();
             if (window != null) {

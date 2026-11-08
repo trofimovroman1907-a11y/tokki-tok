@@ -58,14 +58,8 @@ final class ChatFolders {
     // ------------------------------------------------------------ switched on or off
 
     static boolean enabled() {
-        if (Version.LITE) return false;
-        Context context = Margy.context();
-        if (context == null) return false;
-        try {
-            return AccountAppearance.prefs(context).getBoolean(KEY_ON, true);
-        } catch (Throwable ignored) {
-            return true;
-        }
+        // 2.2.2: always on, and no longer a switch: nobody wants it off
+        return !Version.LITE;
     }
 
     static void setEnabled(boolean on) {
@@ -353,6 +347,7 @@ final class ChatFolders {
             return;
         }
         ViewGroup list = inbox();
+        InboxMd3.folderFrame(list);
         if (active != null && list != null) {
             long started = SystemClock.uptimeMillis();
             sweep(list);
@@ -907,10 +902,10 @@ final class ChatFolders {
 
     private static Look lookOf(View chip) {
         Look look = new Look();
-        Drawable background = chip.getBackground();
+        Drawable background = InboxMd3.nativeBackground(chip);
         look.background = background == null ? null : background.getConstantState();
         TextView text = firstText(chip, 0);
-        look.ink = text == null ? 0xFF000000 : text.getCurrentTextColor();
+        look.ink = text == null ? 0xFF000000 : InboxMd3.nativeInk(text);
         return look;
     }
 
@@ -1006,11 +1001,15 @@ final class ChatFolders {
                 ink(chip, Accent.colour() | 0xFF000000);
             }
         }
+        for (LinearLayout chip : theirs)
+            InboxMd3.folder(chip, active == null && selectedLook != null && inkOf(chip) == selectedLook.ink);
+        for (LinearLayout chip : mine)
+            InboxMd3.folder(chip, chip.getTag(TAG_CHIP).equals(active));
     }
 
     private static int inkOf(View chip) {
         TextView text = firstText(chip, 0);
-        return text == null ? 0 : text.getCurrentTextColor();
+        return text == null ? 0 : InboxMd3.nativeInk(text);
     }
 
     /** The one chip that is chosen is the one whose words are not the colour of the others'. */
