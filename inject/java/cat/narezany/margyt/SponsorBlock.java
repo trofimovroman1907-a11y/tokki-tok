@@ -123,7 +123,9 @@ final class SponsorBlock {
         if (aid == null || aid.length() == 0 || !enabled()) return;
         playing = aid;
         ask(aid, false);
-        listen(aid);
+        // listened to only once it has been watched a while: every video scrolled past used
+        // to be fetched whole and its sound taken apart, which kept the phone busy all along
+        main.postDelayed(() -> { if (aid.equals(playing)) listen(aid); }, 6000);
         if (!ticking) {
             ticking = true;
             main.post(tick);
@@ -334,7 +336,19 @@ final class SponsorBlock {
 
     private static volatile Hear.Index heard = new Hear.Index();
     private static long printsUntil, printsAsked;
-    private static final java.util.concurrent.ExecutorService listener = java.util.concurrent.Executors.newSingleThreadExecutor();
+    private static final java.util.concurrent.ExecutorService listener = java.util.concurrent.Executors.newSingleThreadExecutor(quiet());
+
+    /** A thread that gives way to the screen: listening for adverts must never make scrolling stutter. */
+    static java.util.concurrent.ThreadFactory quiet() {
+        return work -> {
+            Thread thread = new Thread(() -> {
+                android.os.Process.setThreadPriority(android.os.Process.THREAD_PRIORITY_BACKGROUND);
+                work.run();
+            }, "margyt-sponsor");
+            thread.setDaemon(true);
+            return thread;
+        };
+    }
     private static final Set<String> listened = new HashSet<String>();
     private static boolean printsLoaded;
 
@@ -568,7 +582,7 @@ final class SponsorBlock {
     static final class Frames {
         final java.io.File file;
         private android.media.MediaMetadataRetriever reader;
-        private final java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor();
+        private final java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor(quiet());
         private final android.util.LruCache<Long, android.graphics.Bitmap> kept = new android.util.LruCache<Long, android.graphics.Bitmap>(48);
         volatile boolean ready, failed;
         private final long[] wanted = {-1, -1};

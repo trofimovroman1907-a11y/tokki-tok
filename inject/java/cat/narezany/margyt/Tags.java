@@ -41,13 +41,8 @@ public final class Tags {
      * behind it.
      */
     public static boolean isEnabled() {
-        Boolean known = on;
-        if (known != null) return known.booleanValue();
-        SharedPreferences prefs = prefs();
-        if (prefs == null) return true;
-        boolean value = prefs.getBoolean(KEY_ON, true);
-        on = Boolean.valueOf(value);
-        return value;
+        // 2.2.2: the hashtag filter is gone; a list someone had kept no longer filters
+        return false;
     }
 
     public static void setEnabled(boolean enabled) {

@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parents[1]
 class RecolourCacheRuntime(unittest.TestCase):
     def test_hit_rgb_key_and_six_colour_lru(self):
         sources = {
+            "cat/narezany/margyt/Version.java": 'package cat.narezany.margyt;class Version{static String TIKTOK="47.2.41";}',
             "android/content/Context.java": """package android.content;
 import java.io.File; import android.content.pm.PackageManager;
 public class Context { private final File root; public Context(File root){this.root=root;}
@@ -25,7 +26,7 @@ public PackageInfo getPackageInfo(String name,int flags){return new PackageInfo(
 """,
             "android/graphics/Bitmap.java": """package android.graphics;
 import java.io.OutputStream;
-public class Bitmap {public enum CompressFormat{PNG} public boolean compress(CompressFormat f,int q,OutputStream out){return false;}}
+public class Bitmap {public enum CompressFormat{PNG} public boolean isRecycled(){return false;}public boolean compress(CompressFormat f,int q,OutputStream out){return false;}}
 """,
             "android/graphics/BitmapFactory.java": """package android.graphics;
 public class BitmapFactory {public static Bitmap decodeByteArray(byte[] b,int o,int n){return null;}}

@@ -65,11 +65,16 @@ public final class Fonts {
     public static final String MONOSPACE = "monospace";
     public static final String CURSIVE = "cursive";
     public static final String FILE = "file";
+    /** Nunito, inside the apk: rounded, the way Material 3 looks, with Cyrillic. The default since 2.2.2. */
+    public static final String ROUNDED = "nunito";
+    static final String ROUNDED_ASSET = "margyt/fonts/nunito.ttf";
+    /** The weights the rounded font is built at; a label asks for the nearest. */
+    private static final int[] ROUNDED_WEIGHTS = {400, 500, 600, 700, 800};
 
     public static final String[] EMOJI_PACKS = {SYSTEM, TWEMOJI, NOTO, BLOBMOJI};
 
     public static final String[] PRESETS = {
-            SYSTEM, SANS, SANS_LIGHT, SANS_CONDENSED, SERIF, MONOSPACE, CURSIVE,
+            ROUNDED, SYSTEM, SANS, SANS_LIGHT, SANS_CONDENSED, SERIF, MONOSPACE, CURSIVE,
     };
 
     private static volatile String chosen;
@@ -87,7 +92,8 @@ public final class Fonts {
         // "the phone's own" down as the answer meant the chosen font never
         // arrived for the rest of the run
         if (prefs == null) return SYSTEM;
-        String value = prefs.getString(KEY, SYSTEM);
+        // nobody has chosen yet: the rounded one. Whoever picked the phone's own keeps it
+        String value = prefs.getString(KEY, ROUNDED);
         chosen = value;
         return value;
     }
@@ -271,7 +277,9 @@ public final class Fonts {
 
         Typeface plain = null;
         try {
-            if (FILE.equals(letters)) {
+            if (ROUNDED.equals(letters)) {
+                plain = rounded(context);
+            } else if (FILE.equals(letters)) {
                 File font = context == null ? null : file(context);
                 if (font != null && font.isFile()) plain = Typeface.createFromFile(font);
             } else if (!SYSTEM.equals(letters)) {
@@ -310,12 +318,15 @@ public final class Fonts {
     private static Typeface hybrid(Context context, String letters, File pack,
                                    String asset) {
         try {
-            File base = FILE.equals(letters) ? file(context) : systemFont(letters);
-            if (base == null || !base.isFile()) return null;
-
-            android.graphics.fonts.FontFamily letterFamily =
-                    new android.graphics.fonts.FontFamily.Builder(
-                            new android.graphics.fonts.Font.Builder(base).build()).build();
+            android.graphics.fonts.FontFamily letterFamily;
+            if (ROUNDED.equals(letters)) {
+                letterFamily = roundedFamily(context);
+            } else {
+                File base = FILE.equals(letters) ? file(context) : systemFont(letters);
+                if (base == null || !base.isFile()) return null;
+                letterFamily = new android.graphics.fonts.FontFamily.Builder(
+                        new android.graphics.fonts.Font.Builder(base).build()).build();
+            }
 
             android.graphics.fonts.Font.Builder emojiFont = asset != null
                     ? new android.graphics.fonts.Font.Builder(context.getAssets(), asset)
@@ -328,6 +339,39 @@ public final class Fonts {
                     .build();
         } catch (Throwable error) {
             Diary.note("emoji: " + error);
+            return null;
+        }
+    }
+
+    /**
+     * The rounded font as a family of weights.
+     *
+     * It is one variable file. Built once per weight, a label that asks for
+     * medium or bold gets that weight drawn by the font itself rather than a
+     * regular one smeared thicker.
+     */
+    private static android.graphics.fonts.FontFamily roundedFamily(Context context) throws java.io.IOException {
+        android.graphics.fonts.FontFamily.Builder family = null;
+        for (int weight : ROUNDED_WEIGHTS) {
+            android.graphics.fonts.Font font = new android.graphics.fonts.Font.Builder(context.getAssets(), ROUNDED_ASSET)
+                    .setWeight(weight)
+                    .setFontVariationSettings("'wght' " + weight)
+                    .build();
+            if (family == null) family = new android.graphics.fonts.FontFamily.Builder(font);
+            else family.addFont(font);
+        }
+        return family.build();
+    }
+
+    /** The rounded font on its own, without emoji of another pack after it. */
+    static Typeface rounded(Context context) {
+        if (context == null) return null;
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= 29)
+                return new Typeface.CustomFallbackBuilder(roundedFamily(context)).build();
+            return Typeface.createFromAsset(context.getAssets(), ROUNDED_ASSET);
+        } catch (Throwable error) {
+            Diary.note("rounded font: " + error);
             return null;
         }
     }
@@ -483,6 +527,8 @@ public final class Fonts {
     private static Typeface keep(Typeface wanted, Typeface theirs) {
         try {
             int style=theirs==null?Typeface.NORMAL:theirs.getStyle();
+            // a font with weights of its own (the rounded one) gets the weight asked for, medium included
+            if(android.os.Build.VERSION.SDK_INT>=28 && theirs!=null && ROUNDED.equals(name()))return weighted(wanted,theirs.getWeight(),theirs.isItalic());
             if(style==Typeface.NORMAL)return wanted;
             if(style<0 || style>=4)return Typeface.create(wanted,style);
             synchronized(Fonts.class){
@@ -492,6 +538,20 @@ public final class Fonts {
             }
         } catch (Throwable ignored) {
             return wanted;
+        }
+    }
+
+    private static final java.util.Map<Integer,Typeface> weights=new java.util.HashMap<Integer,Typeface>();
+    private static Typeface weightBase;
+
+    private static Typeface weighted(Typeface wanted,int weight,boolean italic){
+        if(weight==400 && !italic)return wanted;
+        synchronized(Fonts.class){
+            if(weightBase!=wanted){weightBase=wanted;weights.clear();}
+            int key=weight*2+(italic?1:0);
+            Typeface known=weights.get(key);
+            if(known==null){known=Typeface.create(wanted,weight,italic);weights.put(key,known);}
+            return known;
         }
     }
 

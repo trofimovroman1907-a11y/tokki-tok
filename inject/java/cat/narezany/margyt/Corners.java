@@ -33,19 +33,8 @@ public final class Corners {
     }
 
     public static boolean isEnabled() {
-        if (Version.LITE) return false;
-        Boolean known = cached;
-        if (known != null) return known;
-        try {
-            android.content.Context context = Margy.context();
-            if (context == null) return true;  // on until there is somewhere to read from
-            boolean on = context.getSharedPreferences(Margy.PREFS,
-                    android.content.Context.MODE_PRIVATE).getBoolean(KEY, true);
-            cached = on;
-            return on;
-        } catch (Throwable ignored) {
-            return true;
-        }
+        // 2.2.2: always on, and no longer a switch: nobody wants it off
+        return !Version.LITE;
     }
 
     public static void setEnabled(boolean enabled) {

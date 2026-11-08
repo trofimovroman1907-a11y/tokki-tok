@@ -514,6 +514,7 @@ final class Text {
     static final String FONT_SANS = pick("Обычный", "Звичайний", "Sans");
     static final String FONT_SANS_LIGHT = pick("Тонкий", "Тонкий", "Light");
     static final String FONT_SANS_CONDENSED = pick("Узкий", "Вузький", "Condensed");
+    static final String FONT_ROUNDED = pick("Закруглённый", "Заокруглений", "Rounded");
     static final String FONT_SERIF = pick("С засечками", "Із засічками", "Serif");
     static final String FONT_MONOSPACE = pick("Моноширинный", "Моноширинний", "Monospace");
     static final String FONT_CURSIVE = pick("Рукописный", "Рукописний", "Cursive");
@@ -617,6 +618,7 @@ final class Text {
     static final String MD3_PROFILE = pick("Material 3: профиль", "Material 3: профіль", "Material 3: profile");
     static final String MD3_ICONS = pick("Округлые иконки", "Округлі іконки", "Rounded icons");
     static final String MD3_INBOX = pick("Material 3: входящие", "Material 3: вхідні", "Material 3: inbox");
+    static final String MD3_CHAT = pick("Material 3: личные сообщения", "Material 3: особисті повідомлення", "Material 3: direct messages");
     static final String DESIGN_COMMENTS = pick("Material 3: комментарии", "Material 3: коментарі", "Material 3: comments");
 
     static final String TAB_READ_ALL = pick("Прочитать все?", "Прочитати все?", "Mark all as read?");
@@ -692,6 +694,13 @@ final class Text {
     static final String CHIP_COLLAB = pick("КОЛЛАБ", "КОЛАБ", "COLLAB");
 
     static final String FUN = pick("Смешнявки", "Смішнявки", "Silly things");
+    static final String FUN_LAG = pick("Лаги", "Лаги", "Lag");
+    static final String LAG_NOTE = pick("ну лаги че еще", "ну лаги шо ще", "well, lag, what else");
+    static final String LAG_TITLE = pick("Приложение MargyT не отвечает", "Додаток MargyT не відповідає", "MargyT isn't responding");
+    static final String LAG_QUESTION = pick("Закрыть приложение?", "Закрити додаток?", "Close app?");
+    static final String LAG_CLOSE = pick("Закрыть", "Закрити", "Close");
+    static final String LAG_WAIT = pick("Подождать", "Зачекати", "Wait");
+    static final String LAG_FIX = pick("Починить", "Полагодити", "Fix");
     static final String FUN_AVARIYKA = pick("Мега супер дупер аварийки", "Мега супер дупер аварійки", "Mega super duper emergency popups");
     static final String PAGE_AVARIYKA_NOTE = pick("Окна «срочно обновись в нашем телеграме», как в старых модах", "Вікна «терміново оновись у нашому телеграмі», як у старих модах", "\u201CUpdate now in our Telegram\u201D windows, like old mods had");
     static final String AVARIYKA_NOTE = pick("Иногда выскакивает фейковое «аварийное обновление», как в старых модах. Никуда не ведёт.", "Іноді вискакує фейкове «аварійне оновлення», як у старих модах. Нікуди не веде.", "Now and then a fake “emergency update” pops up, like in old mods. It leads nowhere.");
@@ -1420,8 +1429,8 @@ final class Text {
     static final String PAGE_LOOK_NOTE = pick("Новый или старый профиль TikTok", "Новий або старий профіль TikTok", "TikTok's new or old profile");
     static final String NEW_PROFILE_NOTE = pick("Новый профиль TikTok с именем слева.", "Новий профіль TikTok з ім'ям ліворуч.", "TikTok's new profile with the name on the left.");
     static final String PAGE_ACCOUNT_NOTE = pick("Айди твоего аккаунта", "Айді твого акаунта", "Your account’s ids");
-    static final String PAGE_FEED_NOTE = pick("Реклама, эфиры, фото, упрощённая лента, фильтр по дате и хештеги", "Реклама, ефіри, фото, спрощена стрічка, фільтр за датою і хештеги", "Ads, lives, photos, the simplified feed, the date filter and hashtags");
-    static final String PAGE_VIDEO_NOTE = pick("Кнопки справа, дата, скорость, яркость и частота кадров", "Кнопки праворуч, дата, швидкість, яскравість і частота кадрів", "The buttons on the right, the date, speed, brightness and frame rate");
+    static final String PAGE_FEED_NOTE = pick("Эфиры, фото, истории, упрощённая лента и фильтр по дате", "Ефіри, фото, історії, спрощена стрічка і фільтр за датою", "Lives, photos, stories, the simplified feed and the date filter");
+    static final String PAGE_VIDEO_NOTE = pick("Скорость, яркость и частота кадров", "Швидкість, яскравість і частота кадрів", "Speed, brightness and frame rate");
     static final String PAGE_COMMENTS_NOTE = pick("Копирование комментариев", "Копіювання коментарів", "Copying comments");
     static final String PAGE_BURN_NOTE = pick("Приглушает кнопки поверх видео", "Приглушує кнопки поверх відео", "Dims what sits over the video");
     static final String PAGE_REGION_NOTE = pick("Страна, для которой TikTok подбирает ленту", "Країна, для якої TikTok підбирає стрічку", "The country TikTok picks the feed for");

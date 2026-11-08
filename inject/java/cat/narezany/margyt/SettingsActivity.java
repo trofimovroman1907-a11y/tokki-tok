@@ -113,7 +113,6 @@ public class SettingsActivity extends Activity {
     private boolean themeColoursOpen;
     private boolean fontOpen;
     private ScrollView page;
-    private boolean thanksOpen;
     private int settingsGroup;
     /** The page open inside a shelf, or null for the shelf's own list of pages. */
     private String settingsPage;
@@ -146,8 +145,8 @@ public class SettingsActivity extends Activity {
             new Shelf(2, "look", "account_circle", Text.PROFILE_VIEW, Text.PAGE_LOOK_NOTE, Text.PROFILE_VIEW),
             new Shelf(2, "account", "fingerprint", Text.ACCOUNT, Text.PAGE_ACCOUNT_NOTE, Text.ACCOUNT),
             new Shelf(2, "reposts", "repeat", REPOSTS, REPOSTS_NOTE, REPOSTS),
-            new Shelf(3, "feed", "view_compact", Text.FEED, Text.PAGE_FEED_NOTE, Text.FEED, Text.SIMPLE_FEED, Text.DATE_FILTER, Text.TAGS),
-            new Shelf(3, "video", "play_circle", Text.VIDEO, Text.PAGE_VIDEO_NOTE, Text.RAIL, Text.VIDEO, Text.FPS),
+            new Shelf(3, "feed", "view_compact", Text.FEED, Text.PAGE_FEED_NOTE, Text.FEED, Text.SIMPLE_FEED, Text.DATE_FILTER),
+            new Shelf(3, "video", "play_circle", Text.VIDEO, Text.PAGE_VIDEO_NOTE, Text.VIDEO, Text.FPS),
             new Shelf(3, "sponsor", "fast_forward", SPONSOR, SPONSOR_NOTE, SPONSOR),
             new Shelf(3, "burn", "eye_open", BURN, Text.PAGE_BURN_NOTE, BURN),
             new Shelf(3, "motion", "animation", MOTION, MOTION_NOTE, MOTION),
@@ -160,7 +159,6 @@ public class SettingsActivity extends Activity {
             new Shelf(5, "links", "link", Text.LINKS, Text.PAGE_LINKS_NOTE, Text.LINKS),
             new Shelf(5, "thanks", "favorite_border", Text.THANKS, Text.PAGE_THANKS_NOTE, Text.THANKS),
             new Shelf(6, "plugins", "extension", Text.PLUGINS, "", Text.PLUGINS),
-            new Shelf(7, "chats", "chat", MESSAGES, MESSAGES_NOTE, MESSAGES, INBOX_CLEAN),
             new Shelf(7, "ghost", "visibility_off", GHOST, GHOST_NOTE, GHOST),
             new Shelf(7, "streaks", "schedule", Text.STREAKS, Text.PAGE_STREAKS_NOTE, Text.STREAKS),
             new Shelf(7, "notifications", "notifications", Text.NOTIFICATIONS, Text.PAGE_NOTIFICATIONS_NOTE, Text.NOTIFICATIONS),
@@ -169,6 +167,7 @@ public class SettingsActivity extends Activity {
             new Shelf(8, "tilcayo", "animation", Text.FUN_TILCAYO_RUN, Text.PAGE_TILCAYO_NOTE, Text.FUN_TILCAYO_RUN),
             new Shelf(8, "screamers", "animation", Text.FUN_SCREAMERS, Text.PAGE_SCREAMERS_NOTE, Text.FUN_SCREAMERS),
             new Shelf(8, "avariyka", "notifications", Text.FUN_AVARIYKA, Text.PAGE_AVARIYKA_NOTE, Text.FUN_AVARIYKA),
+            new Shelf(8, "lag", "bug_report", Text.FUN_LAG, "", Text.FUN_LAG),
             new Shelf(8, "cat", "image", Text.FUN_CAT, Text.PAGE_CAT_NOTE, Text.FUN_CAT),
         };
         return shelves;
@@ -335,8 +334,11 @@ public class SettingsActivity extends Activity {
         revealAnimationRequested = false;
         revealAnimationUsed = !animateReveal;
         final int previousScroll = page == null ? 0 : page.getScrollY();
-        sectionTargets.clear();settingTargets.clear();
-        disclosureBodies.clear();disclosureArrows.clear();renderDisclosureKey=null;
+        // a plain rebuild is asked for by a change: the pages are built again. Moving
+        // between them (navigate()) keeps them
+        if (!keepPages) built = null;
+        keepPages = false;
+        renderDisclosureKey=null;
         column.removeAllViews();
         column.addView(backArrow());
         if (settingsGroup == DONATE_PAGE) {
@@ -370,13 +372,9 @@ public class SettingsActivity extends Activity {
             return;
         }
         if (open != null && open.note.length() > 0) { View lead = lead(open.note); lead.setTag(LEAD, Boolean.TRUE); column.addView(lead); }
-        if (searchQuery.length() > 0) {
-            searchResults();
-            restoreScroll(previousScroll);
-            return;
-        }
-
-        if (settingsGroup == 0) {
+        // a search builds every page as if to show it, reads them, and shows what it found instead
+        final boolean searching = searchQuery.length() > 0;
+        if (settingsGroup == 0 && !searching) {
             if (Badges.freeStillOpen() && !Mine.hasFree()) column.addView(freeBanner());
             if (!donateClosed && (!supporter() || bannerAlways())) column.addView(donateBanner());
             column.addView(groupNavigation());
@@ -384,9 +382,47 @@ public class SettingsActivity extends Activity {
             column.addView(versions());
             showRestartBar();
             restoreScroll(0);
+            // the pages are built while this one is looked at, so the first one opened comes at once
+            if (built == null) android.os.Looper.myQueue().addIdleHandler(() -> { prebuild(); return false; });
             return;
         }
 
+        final int contentStart = column.getChildCount();
+        if (built != null) {
+            // the pages were built already: going from one to another only shows a different part
+            for (View page : built) {
+                if (page.getParent() instanceof ViewGroup) ((ViewGroup) page.getParent()).removeView(page);
+                column.addView(page);
+            }
+        } else {
+            sectionTargets.clear();settingTargets.clear();
+            disclosureBodies.clear();disclosureArrows.clear();
+            buildContent();
+            built = new java.util.ArrayList<>();
+            for (int i = contentStart; i < column.getChildCount(); i++) built.add(column.getChildAt(i));
+        }
+
+        if (searching) {
+            java.util.List<Found> index = harvest(contentStart);
+            while (column.getChildCount() > contentStart) column.removeViewAt(contentStart);
+            searchResults(index);
+            restoreScroll(previousScroll);
+            return;
+        }
+        filterGroup();
+        column.addView(versions());
+
+        showRestartBar();
+        restoreScroll(previousScroll);
+    }
+
+    /**
+     * Every page of the settings, one after another; filterGroup() then shows
+     * the one that is open. Built once and kept in `built`: moving between
+     * pages reuses it, and only a change of a setting (a plain rebuild())
+     * builds it again.
+     */
+    private void buildContent() {
         column.addView(section(Text.APPEARANCE));
         column.addView(wrap(designPicker()));
         LinearLayout icons = card();
@@ -418,15 +454,6 @@ public class SettingsActivity extends Activity {
         loading.addView(quiet(Design.frosted()?Text.LOADING_STYLE_NOTE:Text.LOADING_NOTE));
         column.addView(wrap(loading));
 
-        LinearLayout cards = card();
-        final SettingsPictures.Grid grid = new SettingsPictures.Grid(this, skin, Corners.isEnabled());
-        cards.addView(grid);
-        cards.addView(toggleRow("image", Text.ROUND_CARDS, Corners.isEnabled(), on -> {
-            Corners.setEnabled(on);
-            grid.set(on);
-        }));
-        column.addView(wrap(cards));
-
         LinearLayout shapes = card();
         shapes.addView(avatarShapes());
         column.addView(wrap(shapes));
@@ -444,6 +471,7 @@ public class SettingsActivity extends Activity {
         loading.addView(toggleRow("tune", Design.caption(Text.MD3_PROFILE), Md3.isOn(Md3.KEY_PROFILE), on -> Md3.set(Md3.KEY_PROFILE, on)));
         loading.addView(line());
         loading.addView(toggleRow("tune", Design.caption(Text.MD3_INBOX), Md3.isOn(Md3.KEY_INBOX), on -> Md3.set(Md3.KEY_INBOX, on)));
+        loading.addView(toggleRow("chat_bubble", Design.caption(Text.MD3_CHAT), Md3.isOn(Md3.KEY_CHAT), on -> Md3.set(Md3.KEY_CHAT, on)));
         loading.addView(line());
         loading.addView(toggleRow("chat_bubble", Design.caption(Text.DESIGN_COMMENTS), CommentStyle.enabled(), CommentStyle::set));
         column.addView(wrap(loading));
@@ -568,14 +596,8 @@ public class SettingsActivity extends Activity {
                 .hide(SettingsPictures.Feed.AD, Feed.isEnabled())
                 .hide(SettingsPictures.Feed.LIVE, Feed.hides(Feed.KEY_LIVE))
                 .hide(SettingsPictures.Feed.PHOTO, Feed.hides(Feed.KEY_PHOTOS))
-                .hide(SettingsPictures.Feed.STORY, Feed.hides(Feed.KEY_STORIES))
-                .hide(SettingsPictures.Feed.SUGGEST, Feed.hides(Feed.KEY_SUGGESTIONS));
+                .hide(SettingsPictures.Feed.STORY, Feed.hides(Feed.KEY_STORIES));
         feed.addView(strip);
-        feed.addView(toggleRow("block", Text.HIDE_ADS, Feed.isEnabled(), on -> {
-            Feed.setEnabled(on);
-            strip.hide(SettingsPictures.Feed.AD, on).settle();
-        }));
-        feed.addView(line());
         feed.addView(toggleRow("visibility_off", Text.HIDE_LIVE, Feed.hides(Feed.KEY_LIVE), on -> {
             Feed.setHides(Feed.KEY_LIVE, on);
             strip.hide(SettingsPictures.Feed.LIVE, on).settle();
@@ -589,10 +611,6 @@ public class SettingsActivity extends Activity {
         feed.addView(liveToggleRow("visibility_off",Text.HIDE_STORIES,Feed.hides(Feed.KEY_STORIES),on->{
             Feed.setHides(Feed.KEY_STORIES,on);
             strip.hide(SettingsPictures.Feed.STORY, on).settle();
-        }));
-        feed.addView(liveToggleRow("visibility_off",Text.HIDE_SUGGESTIONS,Feed.hides(Feed.KEY_SUGGESTIONS),on->{
-            Feed.setHides(Feed.KEY_SUGGESTIONS,on);
-            strip.hide(SettingsPictures.Feed.SUGGEST, on).settle();
         }));
         column.addView(wrap(feed));
 
@@ -632,58 +650,6 @@ public class SettingsActivity extends Activity {
         dates.addView(caption(Text.DATE_FILTER_NOTE));
         column.addView(wrap(dates));
 
-        column.addView(section(Text.TAGS));
-        LinearLayout tags = card();
-        tags.addView(betaRow("tag", Text.TAGS, Tags.isEnabled(), Tags::setEnabled));
-        java.util.List<String> blocked = Tags.all();
-        if (blocked.isEmpty()) {
-            tags.addView(caption(Text.TAGS_NONE));
-        } else {
-            for (final String tag : blocked) {
-                tags.addView(line());
-                tags.addView(actionRow("block", "#" + tag, null, () -> {
-                    Tags.remove(tag);
-                    rebuild();
-                }));
-            }
-        }
-        tags.addView(line());
-        tags.addView(actionRow("tag", Text.TAGS_ADD, null, () -> Popup.write(
-                this, Text.TAGS_ADD, "", Text.TAGS_ADD, said -> {
-                    if (!Tags.add(said)) {
-                        Toast.makeText(this, Text.TAGS_FULL, Toast.LENGTH_SHORT).show();
-                    }
-                    rebuild();
-                })));
-        tags.addView(caption(Text.TAGS_NOTE));
-        column.addView(wrap(tags));
-
-        column.addView(section(Text.RAIL));
-        LinearLayout rail=card();
-        // the buttons can be tapped on the picture itself, and the switches follow
-        final SettingsArt.Phone railArt = phone("rail");
-        rail.addView(railArt);
-        String[] railNames={Text.RAIL_LIKE,Text.RAIL_COMMENT,Text.RAIL_FAV,Text.RAIL_SHARE};
-        String[] railIcons={"favorite_border","chat","star","share"};
-        final View[] railRows = new View[railNames.length];
-        for(int i=0;i<railNames.length;i++){
-            final int kind=i;
-            railRows[i] = liveToggleRow(railIcons[i],railNames[i],FeedRail.shown(i),on->{
-                FeedRail.setShown(kind,on);
-                railArt.rail(kind,on).settle();
-            });
-            rail.addView(railRows[i]);
-        }
-        railArt.onRail(kind -> {
-            boolean now = !FeedRail.shown(kind);
-            FeedRail.setShown(kind, now);
-            railArt.rail(kind, now).settle();
-            M3Switch moved = switchIn(railRows[kind]);
-            if (moved != null) moved.setChecked(now, true);
-        });
-        rail.addView(quiet(Text.RAIL_TAP));
-        column.addView(wrap(rail));
-
         column.addView(section(Text.VIDEO));
         LinearLayout video = card();
         // a finger on the edge of a video: the speed while held, and swiped down to keep it
@@ -711,37 +677,7 @@ public class SettingsActivity extends Activity {
             speedArt.set(PlayerTools.speed(), on);
         }));
 
-        video.addView(liveToggleRow("timeline", Text.SEEKBAR, Seekbar.isEnabled(), on -> {
-            Seekbar.setEnabled(on);
-            railArt.seekbar(on).settle();
-        }));
-        video.addView(line());
-        video.addView(liveToggleRow("info", Text.ALWAYS_DATE, Dates.isEnabled(), on -> {
-            Dates.setEnabled(on);
-            railArt.date(on).settle();
-        }));
-        video.addView(line());
         column.addView(wrap(video));
-
-        LinearLayout sound = card();
-        final SettingsPictures.Sound soundArt = new SettingsPictures.Sound(this, skin, Sound.isEnabled());
-        sound.addView(soundArt);
-        sound.addView(toggleRow("volume_up", Text.SOUND, Sound.isEnabled(), on -> {
-            Sound.setEnabled(on);
-            soundArt.set(on);
-        }));
-        column.addView(wrap(sound));
-
-        LinearLayout bright = card();
-        final SettingsPictures.Bright brightArt = new SettingsPictures.Bright(this, skin, Brightness.isEnabled());
-        bright.addView(brightArt);
-        bright.addView(toggleRow("hdr_off", Text.OWN_BRIGHTNESS, Brightness.isEnabled(), on -> {
-            Brightness.setEnabled(on);
-            brightArt.set(on);
-            markChanged();
-        }));
-        bright.addView(caption(Text.OWN_BRIGHTNESS_NOTE));
-        column.addView(wrap(bright));
 
         column.addView(section(Text.FPS));
         LinearLayout fps = card();
@@ -966,20 +902,8 @@ public class SettingsActivity extends Activity {
         column.addView(wrap(diary));
 
         column.addView(section(Text.THANKS));
-        LinearLayout support = card();
-        support.addView(thanksHead());
-        if (thanksOpen) {
-            support.addView(line());
-            View details = thanks();
-            support.addView(appear(details));
-        }
-        donateAnchor = wrap(support);
+        donateAnchor = wrap(actionRow("favorite_border", Text.THANKS, Text.PAGE_THANKS_NOTE, this::showThanks));
         column.addView(donateAnchor);
-        LinearLayout offer = card();
-        offer.addView(liveToggleRow("favorite_border", Text.BANNER_ALWAYS, bannerAlways(),
-                on -> AccountAppearance.prefs(this).edit().putBoolean(BANNER_ALWAYS, on).apply()));
-        offer.addView(quiet(Text.BANNER_ALWAYS_NOTE));
-        column.addView(wrap(offer));
 
         column.addView(section(Text.FUN_DEP));
         LinearLayout dep = card();
@@ -1031,6 +955,12 @@ public class SettingsActivity extends Activity {
         avariyka.addView(liveToggleRow("notifications", Text.FUN_AVARIYKA, Avariyka.isOn(this), on -> Avariyka.set(this, on)));
         avariyka.addView(quiet(Text.AVARIYKA_NOTE));
         column.addView(wrap(avariyka));
+
+        column.addView(section(Text.FUN_LAG));
+        LinearLayout lag = card();
+        lag.addView(liveToggleRow("bug_report", Text.FUN_LAG, FakeLag.isOn(this), on -> FakeLag.set(this, on)));
+        lag.addView(quiet(Text.LAG_NOTE));
+        column.addView(wrap(lag));
 
         column.addView(section(Text.FUN_CAT));
         column.addView(fatCat());
@@ -1122,38 +1052,6 @@ public class SettingsActivity extends Activity {
         reposts.addView(actionRow("repeat", Local.of("Удалить все мои репосты"), Local.of("Все репосты пропадут из профиля"), () -> RepostPurge.begin(this)));
         column.addView(wrap(reposts));
 
-        column.addView(section(MESSAGES));
-        LinearLayout messages = card();
-        final NewPictures.Folders foldersArt = new NewPictures.Folders(this, skin, ChatFolders.enabled());
-        messages.addView(foldersArt);
-        messages.addView(liveToggleRow("chat", Local.of("Папки в личных сообщениях"), ChatFolders.enabled(), on -> {
-            ChatFolders.setEnabled(on);
-            foldersArt.set(on);
-        }));
-        messages.addView(quiet(Local.of("Чтобы добавить чат в папку, зажми его и выбери «Добавить в папку».")));
-        messages.addView(line());
-        messages.addView(liveToggleRow("chat", Local.of("Сохранять удалённые сообщения"), Recalled.enabled(), Recalled::setEnabled));
-        messages.addView(quiet(Local.of("Если собеседник удалит сообщение, у тебя оно останется, только станет полупрозрачным. Только те, что успели дойти до телефона.")));
-        column.addView(wrap(messages));
-
-        // what stands in the inbox besides the chats, each piece on its own
-        column.addView(section(INBOX_CLEAN));
-        LinearLayout clean = card();
-        String[][] pieces = {
-                {InboxClean.STRIP, "visibility_off", Local.of("Скрыть полосу историй целиком")},
-                {InboxClean.CREATE, "add", Local.of("Скрыть «Создать» (свою историю)")},
-                {InboxClean.STORIES, "play_circle", Local.of("Скрыть истории друзей")},
-                {InboxClean.LIVE, "play_arrow", Local.of("Скрыть эфиры")},
-                {InboxClean.NOTES, "chat", Local.of("Скрыть заметки над аватарками")},
-                {InboxClean.EXTRAS, "view_compact", Local.of("Скрыть виджет и суперподписку в полосе")},
-                {InboxClean.SUGGESTED, "group", Local.of("Скрыть «Ваши вероятные знакомые»")}};
-        for (int i = 0; i < pieces.length; i++) {
-            final String key = pieces[i][0];
-            if (i > 0) clean.addView(line());
-            clean.addView(liveToggleRow(pieces[i][1], pieces[i][2], InboxClean.on(key), on -> InboxClean.set(key, on)));
-        }
-        column.addView(wrap(clean));
-
         column.addView(section(GHOST));
         LinearLayout ghost = card();
         final NewPictures.Ghosting ghostArt = new NewPictures.Ghosting(this, skin, Ghost.on(Ghost.KEY));
@@ -1179,11 +1077,6 @@ public class SettingsActivity extends Activity {
         }
         column.addView(wrap(ghost));
 
-        filterGroup();
-        column.addView(versions());
-
-        showRestartBar();
-        restoreScroll(previousScroll);
     }
 
     /**
@@ -1391,8 +1284,9 @@ public class SettingsActivity extends Activity {
     /** A supporter can still ask to see the offer, to show it to a friend or to give again. */
     static final String BANNER_ALWAYS = "donate_banner_always";
 
+    /** 2.2.2: the switch to keep the support banner for supporters is gone. */
     private boolean bannerAlways() {
-        return AccountAppearance.prefs(this).getBoolean(BANNER_ALWAYS, false);
+        return false;
     }
 
     /** Whether this account already wears the supporter's badge, hidden or shown. */
@@ -2556,6 +2450,7 @@ public class SettingsActivity extends Activity {
     }
 
     private static String fontName(String which) {
+        if (Fonts.ROUNDED.equals(which)) return Text.FONT_ROUNDED;
         if (Fonts.SANS.equals(which)) return Text.FONT_SANS;
         if (Fonts.SANS_LIGHT.equals(which)) return Text.FONT_SANS_LIGHT;
         if (Fonts.SANS_CONDENSED.equals(which)) return Text.FONT_SANS_CONDENSED;
@@ -2633,7 +2528,8 @@ public class SettingsActivity extends Activity {
         View chosen = null;
         String font = Fonts.name();
         for (final String which : Fonts.PRESETS) {
-            Typeface face = Fonts.SYSTEM.equals(which) ? Typeface.DEFAULT : Typeface.create(which, Typeface.NORMAL);
+            Typeface face = Fonts.SYSTEM.equals(which) ? Typeface.DEFAULT
+                    : Fonts.ROUNDED.equals(which) ? Fonts.rounded(this) : Typeface.create(which, Typeface.NORMAL);
             View tile = typeTile(face, "\u0410\u0430", fontName(which), which.equals(font), () -> {
                 Fonts.choose(which);
                 markChanged();
@@ -3919,95 +3815,82 @@ public class SettingsActivity extends Activity {
         return box;
     }
 
-    private View thanksHead() {
-        LinearLayout row = row();
-        row.addView(icon("favorite_border"));
-        row.addView(label(Text.THANKS), grow());
 
-        row.addView(disclosure(thanksOpen,"thanksOpen"));
 
-        row.setOnClickListener(v -> {
-            disclosureKey = "thanksOpen";
-            thanksOpen = !thanksOpen;
-            rebuildAfterReveal(thanksOpen);
+    /**
+     * The thanks as a piece of space (ThanksSpace): the names in chalk, each
+     * with something of its own on a tap and its link on a hold, and the ways
+     * to support drifting through the lower sky.
+     */
+    private View space() {
+        java.util.List<ThanksSpace.Person> people = new java.util.ArrayList<>();
+        people.add(new ThanksSpace.Person("@narezany", Text.THANKS_OWNER, ThanksSpace.EGG_TILCAYO, this::ownerLinks));
+        people.add(new ThanksSpace.Person("Claude Opus 5.5", Text.THANKS_CLAUDE, ThanksSpace.EGG_CONSTELLATION, null));
+        people.add(new ThanksSpace.Person("someone's mf", Text.THANKS_TTCUZ, ThanksSpace.EGG_SCATTER, () -> open(TTCUZ)));
+        people.add(new ThanksSpace.Person("@saintcursed", Local.of("Автор LotusTok: призрак, папки, редактор интерфейса, анимация набора и другое"),
+                ThanksSpace.EGG_LOTUS, () -> open(LOTUSTOK)));
+        people.add(new ThanksSpace.Person("TT Extras", Local.of("Плагин для MargyT: из него призрак и длинные комментарии"),
+                ThanksSpace.EGG_GHOST, null));
+        people.add(new ThanksSpace.Person("санек :3 (санечек)", Local.of("Часть дизайна MargyT"), ThanksSpace.EGG_HEART, () -> open(SANEK)));
+        java.util.List<ThanksSpace.Planet> planets = new java.util.ArrayList<>();
+        planets.add(new ThanksSpace.Planet(Text.YOOMONEY, 0xFF8B5CF6, () -> open(YOOMONEY)));
+        planets.add(new ThanksSpace.Planet(Text.BOOSTY, 0xFFF97316, () -> open(BOOSTY)));
+        planets.add(new ThanksSpace.Planet(Text.FUNPAY, 0xFF38BDF8, () -> open(FUNPAY)));
+        planets.add(new ThanksSpace.Planet(Text.STARS, 0xFFFACC15, () -> open(STARS)));
+        return new ThanksSpace(this, people, planets,
+                Local.of("нажми на имя · зажми, чтобы открыть ссылку"), Text.DONATE);
+    }
+
+    /** The thanks over the whole screen, edge to edge, closed with back or the cross. */
+    private void showThanks() {
+        final android.app.Dialog sky = new android.app.Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
+        android.widget.FrameLayout frame = new android.widget.FrameLayout(this);
+        final ThanksSpace space = (ThanksSpace) space();
+        frame.addView(space, new android.widget.FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        TextView close = new TextView(this);
+        close.setText("\u2715");
+        close.setTextColor(0xDDFFFFFF);
+        close.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+        close.setGravity(Gravity.CENTER);
+        close.setContentDescription(Text.CLOSE);
+        close.setOnClickListener(v -> sky.dismiss());
+        android.widget.FrameLayout.LayoutParams corner = new android.widget.FrameLayout.LayoutParams(dp(56), dp(56), Gravity.TOP | Gravity.END);
+        frame.addView(close, corner);
+        frame.setOnApplyWindowInsetsListener((v, insets) -> {
+            int top = insets.getSystemWindowInsetTop();
+            corner.topMargin = top;
+            close.setLayoutParams(corner);
+            space.setTopInset(top + dp(40));
+            return insets;
         });
-        return sized(row, 52);
-    }
-
-    /** Who made this, and the two ways to pay for it. */
-    private View thanks() {
-        LinearLayout rows = new LinearLayout(this);
-        rows.setOrientation(LinearLayout.VERTICAL);
-        rows.setPadding(0, dp(6), 0, dp(10));
-
-        rows.addView(quiet(Text.THANKS_NOTE));
-        rows.addView(owner());
-        rows.addView(person("Claude Opus 5", Text.THANKS_CLAUDE, null));
-        rows.addView(person("someone's mf", Text.THANKS_TTCUZ, TTCUZ));
-        rows.addView(person("@saintcursed", Local.of("Автор LotusTok: призрак, папки, редактор интерфейса, анимация набора и другое"), LOTUSTOK));
-        rows.addView(person("TT Extras", Local.of("Плагин для MargyT: из него призрак и длинные комментарии"), null));
-        rows.addView(person("Санек :3", Local.of("Часть дизайна MargyT"), SANEK));
-
-        rows.addView(line());
-
-        TextView heading = new TextView(this);
-        heading.setText(Text.DONATE);
-        heading.setTextColor(skin.text);
-        heading.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
-        heading.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
-        heading.setPadding(dp(16), dp(14), dp(16), dp(2));
-        rows.addView(heading);
-
-        rows.addView(quiet(Text.DONATE_NOTE));
-
-        rows.addView(linkRow("star", Text.YOOMONEY, Text.YOOMONEY_NOTE, YOOMONEY));
-        rows.addView(linkRow("public", Text.BOOSTY, Text.BOOSTY_NOTE, BOOSTY));
-        rows.addView(linkRow("public", Text.FUNPAY, Text.FUNPAY_NOTE, FUNPAY));
-        rows.addView(linkRow("star", Text.STARS, Text.STARS_NOTE, STARS));
-        return rows;
-    }
-
-    /** The one row with two places to go, so it asks which. */
-    private View owner() {
-        LinearLayout row = row();
-
-        LinearLayout text = new LinearLayout(this);
-        text.setOrientation(LinearLayout.VERTICAL);
-        text.addView(label("@narezany"));
-        text.addView(detail(Text.THANKS_OWNER));
-        row.addView(text, grow());
-        row.addView(away());
-
-        row.setOnClickListener(v -> {
-            try {
-                new ModDialog.Builder(this, skin)
-                        .setTitle("@narezany")
-                        .setItems(new CharSequence[]{"Telegram", "TikTok"}, (dialog, which) ->
-                                open(which == 0 ? OWNER_TELEGRAM : OWNER_TIKTOK))
-                        .setNegativeButton(Text.CANCEL, null)
-                        .show();
-            } catch (Throwable error) {
-                open(OWNER_TELEGRAM);
-            }
-        });
-        return sized(row, 60);
-    }
-
-    private View person(String name, String what, final String url) {
-        LinearLayout row = row();
-
-        LinearLayout text = new LinearLayout(this);
-        text.setOrientation(LinearLayout.VERTICAL);
-        text.addView(label(name));
-        text.addView(detail(what));
-        row.addView(text, grow());
-
-        if (url != null) {
-            row.addView(away());
-            row.setOnClickListener(v -> open(url));
+        sky.setContentView(frame);
+        android.view.Window window = sky.getWindow();
+        if (window != null) {
+            window.setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+            window.setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(0xFF070A16));
+            window.getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+            window.setStatusBarColor(0);
+            window.setNavigationBarColor(0);
         }
-        return sized(row, 60);
+        sky.show();
     }
+
+    /** Where @narezany is: the two places, so it asks which. */
+    private void ownerLinks() {
+        try {
+            new ModDialog.Builder(this, skin)
+                    .setTitle("@narezany")
+                    .setItems(new CharSequence[]{"Telegram", "TikTok"}, (dialog, which) ->
+                            open(which == 0 ? OWNER_TELEGRAM : OWNER_TIKTOK))
+                    .setNegativeButton(Text.CANCEL, null)
+                    .show();
+        } catch (Throwable error) {
+            open(OWNER_TELEGRAM);
+        }
+    }
+
+
 
     /** The mark on a row that leaves the app. */
     private View away() {
@@ -4688,63 +4571,161 @@ public class SettingsActivity extends Activity {
         panel.view(rows);panel.quiet(Text.CLOSE,null);panel.show();
     }
 
-    private void searchResults() {
+    /** One thing on a settings page that a search can lead to: a row, or a line of text. */
+    private static final class Found {
+        final String section, title, words;
+        Found(String section, String title, String words) { this.section = section; this.title = title; this.words = words; }
+    }
+
+    /** Everything on the pages just built, row by row, with the words under each (i) too. */
+    private java.util.List<Found> harvest(int from) {
+        java.util.List<Found> out = new java.util.ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        String section = null;
+        for (int i = from; i < column.getChildCount(); i++) {
+            View item = column.getChildAt(i);
+            if (item instanceof TextView && sectionTargets.containsValue(item)) {
+                section = String.valueOf(((TextView) item).getText());
+                continue;
+            }
+            if (section == null || (Version.LITE && !inLite(section))) continue;
+            collect(item, section, out, seen);
+        }
+        return out;
+    }
+
+    private void collect(View view, String section, java.util.List<Found> out, java.util.Set<String> seen) {
+        if (view == null || view.getVisibility() == View.GONE) return;
+        LinearLayout row = functionRow(view);
+        if (row != null) {
+            String title = String.valueOf(firstText(row).getText()).trim();
+            StringBuilder words = new StringBuilder();
+            texts(row, words);
+            Object note = row.getTag(INFO);
+            if (note instanceof String[]) words.append(' ').append(((String[]) note)[0]);
+            if (title.length() > 1 && seen.add(section + "\n" + title)) out.add(new Found(section, title, words.toString()));
+            return;
+        }
+        if (view instanceof TextView) {
+            String text = String.valueOf(((TextView) view).getText()).trim();
+            if (text.length() > 2 && seen.add(section + "\n" + text)) out.add(new Found(section, text, text));
+            return;
+        }
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) collect(group.getChildAt(i), section, out, seen);
+        }
+    }
+
+    private static void texts(View view, StringBuilder into) {
+        if (view instanceof TextView) into.append(' ').append(((TextView) view).getText());
+        else if (view instanceof ViewGroup)
+            for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) texts(((ViewGroup) view).getChildAt(i), into);
+    }
+
+    /** Lower case, ё as е: what people type and what the pages say should meet. */
+    private static String plain(String words) {
+        return words == null ? "" : words.toLowerCase(Locale.ROOT).replace('ё', 'е');
+    }
+
+    /** Every word of the query is somewhere in it; a long word may differ in its ending. */
+    private boolean matches(String haystack) {
+        String hay = plain(haystack);
+        for (String word : plain(searchQuery).split("\\s+")) {
+            if (word.length() == 0) continue;
+            if (hay.contains(word)) continue;
+            if (word.length() > 5 && hay.contains(word.substring(0, word.length() - 2))) continue;
+            return false;
+        }
+        return true;
+    }
+
+    private void searchResults(java.util.List<Found> index) {
         column.addView(section(Text.SEARCH_RESULTS));
         LinearLayout results = card();
         int found = 0;
-        found+=searchControl(results,Text.FEED,Text.HIDE_ADS,Feed.isEnabled());
-        found+=searchControl(results,Text.FEED,Text.HIDE_LIVE,Feed.hides(Feed.KEY_LIVE));
-        found+=searchControl(results,Text.FEED,Text.HIDE_PHOTOS,Feed.hides(Feed.KEY_PHOTOS));
-        found+=searchControl(results,Text.FEED,Text.HIDE_STORIES,Feed.hides(Feed.KEY_STORIES));
-        found+=searchControl(results,Text.FEED,Text.HIDE_SUGGESTIONS,Feed.hides(Feed.KEY_SUGGESTIONS));
-        found+=searchControl(results,Text.FEED,Text.SIMPLE_FEED,SimpleFeed.isOn());
-        found+=searchHit(results,Text.NOTIFICATIONS,Text.NOTIFY_MESSAGES+" "+Text.NOTIFY_PROMOS+" "+Text.NOTIFY_OTHER+" "+Text.NOTIFY_NO_PROMPTS+" "+Text.NOTIFY_SETTINGS,()->{});
-        found+=searchHit(results,Text.VIDEO,Text.PLAYER_SPEED,()->{});
-        found+=searchHit(results,Text.DOWNLOADS,Text.DL_QUALITY+" "+Text.FRAME_QUALITY,()->{});
-        String[] railNames={Text.RAIL_LIKE,Text.RAIL_COMMENT,Text.RAIL_FAV,Text.RAIL_SHARE};
-        for(int i=0;i<4;i++)found+=searchControl(results,Text.RAIL,railNames[i],FeedRail.shown(i));
-        if(matchesSearch(Text.HIDDEN_ITEMS)){
-            results.addView(actionRow("visibility_off",Text.HIDDEN_ITEMS,Text.HIDDEN_ITEMS_NOTE,this::showHiddenItems));found++;
+        // whole pages first, by their names and what they are for
+        for (Shelf shelf : shelves()) {
+            if (Version.LITE && shelf.sections.length > 0 && !inLite(shelf.sections[0])) continue;
+            if (!matches(shelf.title + " " + shelf.note)) continue;
+            final Shelf to = shelf;
+            results.addView(actionRow(shelf.icon, shelf.title, groupName(shelf.group), () -> {
+                searchQuery = "";
+                settingsGroup = to.group;
+                settingsPage = to.id;
+                page.scrollTo(0, 0);
+                navigate();
+            }));
+            found++;
         }
-        found+=searchControl(results,Text.DOWNLOADS,Text.NO_WATERMARK,Download.isEnabled());
-        found+=searchControl(results,Text.VIDEO,Text.ALWAYS_DATE,Dates.isEnabled());
-        found+=searchControl(results,BURN,Text.DIM,Dim.isConfigured());
-        found+=searchControl(results,Text.VIDEO,Text.OWN_BRIGHTNESS,Brightness.isEnabled());
-        found+=searchControl(results,Text.BADGES,Text.BADGES_ON,Badges.isEnabled());
-        found+=searchControl(results,Text.PROFILE_VIEW,Text.NEW_PROFILE,Flags.isOn(Flags.KEY_NEW_PROFILE));
-        found+=searchControl(results,Text.MD3_TIKTOK,Text.NAV_CAPSULE,NavBar.isEnabled());
-        found+=searchControl(results,Text.MD3_TIKTOK,Text.MD3_FEED,Md3.isOn(Md3.KEY_FEED));
-        found+=searchControl(results,Text.MD3_TIKTOK,Text.MD3_PROFILE,Md3.isOn(Md3.KEY_PROFILE));
-        found+=searchControl(results,Text.MD3_TIKTOK,Text.MD3_INBOX,Md3.isOn(Md3.KEY_INBOX));
-        found+=searchControl(results,Text.MD3_TIKTOK,Text.DESIGN_COMMENTS,CommentStyle.enabled());
-        found+=searchHit(results,Text.MD3_TIKTOK,Text.AVATAR_SHAPE,()->{});
-        found+=searchHit(results,Text.FPS,Text.FPS,()->{});
-        found+=searchHit(results,Text.TAGS,Text.TAGS+" "+Text.TAGS_ADD,()->{});
-        found+=searchHit(results,Text.GRADIENT,Text.GRADIENT,()->{});
-        found+=searchControl(results,Text.THEME,Text.AMOLED,Themes.isAmoled());
-        if(found==0){
-        found += searchHit(results, Text.REGION, Text.SEARCH_REGION,
-                () -> { countriesOpen = true; });
-        found += searchHit(results, Text.ACCENT, Text.SEARCH_ACCENT,
-                () -> { accentOpen = true; });
-        found += searchHit(results, Text.THEME, Text.SEARCH_THEME,
-                () -> { themeColoursOpen = true; });
-        found += searchHit(results, Text.FEED, Text.SEARCH_FEED, () -> { });
-        found += searchHit(results, Text.VIDEO, Text.SEARCH_VIDEO, () -> { });
-        found += searchHit(results, Text.DOWNLOADS, Text.SEARCH_DOWNLOADS, () -> { });
-        found += searchHit(results, Text.BACKUP, Text.SEARCH_BACKUP, () -> { });
-        found += searchHit(results, Text.FONT, Text.SEARCH_FONT,
-                () -> { fontOpen = true; });
-        found += searchHit(results, Text.BADGES, Text.SEARCH_BADGES, () -> { mineOpen = true; });
+        // then the rows: a name that matches before a row that only mentions it
+        java.util.List<Found> named = new java.util.ArrayList<>(), mentioned = new java.util.ArrayList<>();
+        for (Found one : index) {
+            if (matches(one.title)) named.add(one);
+            else if (matches(one.title + " " + one.words + " " + one.section)) mentioned.add(one);
+        }
+        named.addAll(mentioned);
+        for (int i = 0; i < named.size() && i < 40; i++) {
+            final Found one = named.get(i);
+            Shelf home = shelfOfSection(one.section);
+            String where = home == null ? one.section : home.title.equals(one.section) ? home.title : home.title + " · " + one.section;
+            String title = one.title.length() > 70 ? one.title.substring(0, 68).trim() + "…" : one.title;
+            results.addView(actionRow("search", title, where, () -> openFound(one)));
+            found++;
+        }
+        if (found == 0) {
+            // the old list of synonyms, for words no page says
+            found += searchHit(results, Text.REGION, Text.SEARCH_REGION, () -> { countriesOpen = true; });
+            found += searchHit(results, Text.ACCENT, Text.SEARCH_ACCENT, () -> { accentOpen = true; });
+            found += searchHit(results, Text.THEME, Text.SEARCH_THEME, () -> { themeColoursOpen = true; });
+            found += searchHit(results, Text.FEED, Text.SEARCH_FEED, () -> { });
+            found += searchHit(results, Text.VIDEO, Text.SEARCH_VIDEO, () -> { });
+            found += searchHit(results, Text.DOWNLOADS, Text.SEARCH_DOWNLOADS, () -> { });
+            found += searchHit(results, Text.BACKUP, Text.SEARCH_BACKUP, () -> { });
+            found += searchHit(results, Text.FONT, Text.SEARCH_FONT, () -> { fontOpen = true; });
+            found += searchHit(results, Text.BADGES, Text.SEARCH_BADGES, () -> { mineOpen = true; });
         }
         if (found == 0) results.addView(caption(Text.SEARCH_NONE));
         column.addView(wrap(results));
     }
 
-    private int searchControl(LinearLayout into,String section,String title,boolean on){
-        if(!matchesSearch(title))return 0;if(into.getChildCount()>0)into.addView(line());
-        into.addView(actionRow("search",title,on?Local.of("Включено"):Local.of("Выключено"),()->{searchQuery="";settingsGroup=groupOf(section);Shelf to=shelfOfSection(section);settingsPage=to==null?null:to.id;rebuild();page.post(()->{View target=settingTargets.get(title);if(target==null)return;int offset=0;View cursor=target;while(cursor!=column){offset+=cursor.getTop();if(!(cursor.getParent() instanceof View))break;cursor=(View)cursor.getParent();}page.smoothScrollTo(0,Math.max(0,offset-dp(16)));Motion.change(target);});}));return 1;
+    /** Opens the page a found row is on and brings the row into view. */
+    private void openFound(Found one) {
+        searchQuery = "";
+        settingsGroup = groupOf(one.section);
+        Shelf to = shelfOfSection(one.section);
+        settingsPage = to == null ? null : to.id;
+        page.scrollTo(0, 0);
+        navigate();
+        page.post(() -> {
+            View target = shown(column, one.title);
+            if (target == null) target = sectionTargets.get(one.section);
+            if (target == null) return;
+            View row = target.getParent() instanceof LinearLayout ? (View) target.getParent() : target;
+            int offset = 0;
+            View cursor = target;
+            while (cursor != column && cursor != null) {
+                offset += cursor.getTop();
+                if (!(cursor.getParent() instanceof View)) break;
+                cursor = (View) cursor.getParent();
+            }
+            page.smoothScrollTo(0, Math.max(0, offset - dp(96)));
+            Motion.change(row);
+        });
     }
+
+    /** The visible text on the page that says exactly this. */
+    private static View shown(View view, String text) {
+        if (view == null || view.getVisibility() != View.VISIBLE) return null;
+        if (view instanceof TextView) return text.equals(String.valueOf(((TextView) view).getText()).trim()) ? view : null;
+        if (view instanceof ViewGroup)
+            for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
+                View hit = shown(((ViewGroup) view).getChildAt(i), text);
+                if (hit != null) return hit;
+            }
+        return null;
+    }
+
     private int searchHit(LinearLayout into, String title, String words, final Runnable open) {
         if (!matchesSearch(title + " " + words)) return 0;
         if (into.getChildCount() > 0) into.addView(line());
@@ -4845,7 +4826,7 @@ public class SettingsActivity extends Activity {
             entry.setMinimumHeight(dp(80));Motion.touch(entry);
             entry.setOnClickListener(v -> {
                 if(navigating)return;navigating=true;
-                Motion.navigate(column,1f,()->{settingsGroup=chosen;settingsPage=null;page.scrollTo(0,0);rebuild();navigating=false;});
+                Motion.navigate(column,1f,()->{settingsGroup=chosen;settingsPage=null;page.scrollTo(0,0);navigate();navigating=false;});
             });
             list.addView(entry);
         }
@@ -4881,8 +4862,10 @@ public class SettingsActivity extends Activity {
             entry.addView(words, grow()); entry.addView(away());
             entry.setMinimumHeight(dp(72)); Motion.touch(entry);
             entry.setOnClickListener(v -> {
+                // the thanks are a whole screen of space, not a page of rows
+                if ("thanks".equals(one.id)) { showThanks(); return; }
                 if (navigating) return; navigating = true;
-                Motion.navigate(column, 1f, () -> { settingsPage = one.id; page.scrollTo(0, 0); rebuild(); navigating = false; });
+                Motion.navigate(column, 1f, () -> { settingsPage = one.id; page.scrollTo(0, 0); navigate(); navigating = false; });
             });
             list.addView(entry);
         }
@@ -4926,7 +4909,7 @@ public class SettingsActivity extends Activity {
         return section.equals(Text.REGION) || section.equals(Text.COUNTRY)
                 || section.equals(Text.ACCENT) || section.equals(Text.THEME)
                 || section.equals(Text.DOWNLOADS) || section.equals(Text.BADGES) || section.equals(Text.ACCOUNT)
-                || section.equals(Text.FUN_SCREAMERS) || section.equals(Text.FUN_CAT)
+                || section.equals(Text.FUN_SCREAMERS) || section.equals(Text.FUN_CAT) || section.equals(Text.FUN_LAG)
                 || section.equals(Text.DIAGNOSTICS) || section.equals(Text.DIARY)
                 || section.equals(Text.THANKS) || section.equals(Text.LINKS) || section.equals(Text.CHANNEL);
     }
@@ -4954,16 +4937,48 @@ public class SettingsActivity extends Activity {
             SPONSOR_NOTE = Local.of("Пропуск рекламы, которую читают авторы");
 
     private boolean navigating;
+    /** The pages as last built, reused while only moving between them. */
+    private java.util.List<View> built;
+    private boolean keepPages;
+
+    /** Builds the pages off screen, into `built`, for the first move to use. */
+    private void prebuild() {
+        if (built != null || isFinishing()) return;
+        LinearLayout real = column;
+        LinearLayout scratch = new LinearLayout(this);
+        scratch.setOrientation(LinearLayout.VERTICAL);
+        column = scratch;
+        try {
+            sectionTargets.clear();settingTargets.clear();
+            disclosureBodies.clear();disclosureArrows.clear();
+            buildContent();
+            java.util.List<View> pages = new java.util.ArrayList<>();
+            for (int i = 0; i < scratch.getChildCount(); i++) pages.add(scratch.getChildAt(i));
+            scratch.removeAllViews();
+            built = pages;
+        } catch (Throwable error) {
+            built = null;
+            Diary.note("settings prebuild: " + error);
+        } finally {
+            column = real;
+        }
+    }
+
+    /** Moving to another page: shown from the pages already built. */
+    private void navigate() {
+        keepPages = true;
+        rebuild();
+    }
     private void goBack() {
         if(navigating)return;
         if (searchQuery.length() > 0) { searchQuery = ""; rebuild(); }
         else if (settingsPage != null && shelvesOf(settingsGroup).size() > 1) {
-            navigating=true;Motion.navigate(column,-1f,()->{settingsPage=null;rebuild();navigating=false;});
+            navigating=true;Motion.navigate(column,-1f,()->{settingsPage=null;navigate();navigating=false;});
         }
         else if (settingsGroup != 0) {
             // the flags are reached from the tools, so that is where back leads
             final int to = settingsGroup == FLAGS_PAGE ? 4 : 0;
-            navigating=true;Motion.navigate(column,-1f,()->{settingsGroup=to;settingsPage=to==4?"diary":null;rebuild();navigating=false;});
+            navigating=true;Motion.navigate(column,-1f,()->{settingsGroup=to;settingsPage=to==4?"diary":null;navigate();navigating=false;});
         }
         else finish();
     }

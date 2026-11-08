@@ -37,19 +37,8 @@ public final class Feed {
     private static volatile Boolean cached;
 
     public static boolean isEnabled() {
-        Boolean known = cached;
-        if (known != null) return known;
-        SharedPreferences prefs = prefs();
-        if (prefs == null) return true;  // too early to know; do not cache it
-        boolean on = true;
-        try {
-            if(!prefs.getBoolean("ads_enabled_v024",false))
-                prefs.edit().putBoolean(KEY,true).putBoolean("ads_enabled_v024",true).apply();
-            on = prefs.getBoolean(KEY, true);
-        } catch (Throwable ignored) {
-        }
-        cached = on;
-        return on;
+        // 2.2.2: adverts are always hidden, and that is no longer a switch
+        return true;
     }
 
     public static void setEnabled(boolean enabled) {
@@ -61,6 +50,8 @@ public final class Feed {
     // --------------------------------------------- what else to leave out
 
     public static boolean hides(String key) {
+        // 2.2.2: hiding the suggestion cards is gone; whoever had it on gets them back
+        if (KEY_SUGGESTIONS.equals(key)) return false;
         SharedPreferences prefs = prefs();
         return prefs != null && prefs.getBoolean(key, false);
     }

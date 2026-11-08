@@ -60,8 +60,9 @@ final class UiStyle {
         this.neutral = neutral; this.cardLift = cardLift;
     }
 
+    // one card, its rows run together: Material 3 lists have no lines or gaps between items
     static final UiStyle MATERIAL = new UiStyle("md3", "Material 3", "", "", MD3, MD3,
-            16, 4, 28, 24, -1, 2, 1.45f, .24f, 1f, .065f, .003f, 0, 300, 1.6f, .985f, false, .045f);
+            24, 0, 28, 24, -1, 0, 1.45f, .24f, 1f, .065f, .003f, 0, 300, 1.6f, .985f, false, .045f);
     static final UiStyle LIQUID = new UiStyle("glass", "Liquid Glass", "", "", GLASS, GLASS,
             26, 6, 28, 24, -1, 0, 1.45f, .24f, 1f, .065f, .003f, 26, 300, 1.6f, 1.025f, false, .045f);
     static final UiStyle ACRYLIC = new UiStyle("fluent", "Fluent", "", "", FLUENT, FLUENT,

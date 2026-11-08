@@ -31,6 +31,9 @@ class FontCoverageTest(unittest.TestCase):
 }'''}
   # the methods are lifted into a class of their own, outside the mod's package
   sources['Probe.java']='class Probe{static final int FONTS=0;static long start(){return 0L;}static void stop(int what,long started){}}'
+  sources['android/os/Build.java']='package android.os;public class Build{public static class VERSION{public static int SDK_INT=35;}}'
+  sources['android/graphics/Typeface.java']=sources['android/graphics/Typeface.java'].replace('public int getStyle()', 'public int getWeight(){return (style&1)!=0?700:400;}public boolean isItalic(){return (style&2)!=0;}public static Typeface create(Typeface base,int weight,boolean italic){created++;return new Typeface(base.name,(weight>=600?1:0)|(italic?2:0));}public int getStyle()')
+  sources['Test.java']=sources['Test.java'].replace('static class Fonts {}','static final String ROUNDED="rounded";static String name(){return "custom";}static java.util.Map<Integer,Typeface> weights=new java.util.HashMap<>();static Typeface weightBase;\n'+safety.method('Fonts.java','    private static Typeface weighted')+'\n static class Fonts {}')
   safety.SafetyRuntimeTest().run_java(sources)
  def test_resource_and_hint_hooks(self):
   for owner in (dexpatch.TEXT_VIEW,dexpatch.TUX_TEXT,'Landroid/widget/EditText;','Landroid/widget/Button;'):

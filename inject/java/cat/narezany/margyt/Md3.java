@@ -46,9 +46,9 @@ final class Md3 {
 
     private Md3() {}
 
-    static final String KEY_FEED = "md3_feed", KEY_PROFILE = "md3_profile", KEY_INBOX = "md3_inbox", KEY_ICONS = "md3_icons";
-    private static final String[] KEYS = {KEY_FEED, KEY_PROFILE, KEY_INBOX, KEY_ICONS};
-    private static final int FEED = 0, PROFILE = 1, INBOX = 2, ICONS = 3;
+    static final String KEY_FEED = "md3_feed", KEY_PROFILE = "md3_profile", KEY_INBOX = "md3_inbox", KEY_ICONS = "md3_icons", KEY_CHAT = "md3_chat";
+    private static final String[] KEYS = {KEY_FEED, KEY_PROFILE, KEY_INBOX, KEY_ICONS, KEY_CHAT};
+    private static final int FEED = 0, PROFILE = 1, INBOX = 2, ICONS = 3, CHAT = 4;
     private static final Boolean[] ON = new Boolean[KEYS.length];
 
     static boolean isOn(String key) {
@@ -65,6 +65,7 @@ final class Md3 {
                 context.getSharedPreferences(Margy.PREFS, Context.MODE_PRIVATE).edit().putBoolean(key, value).apply();
             }
         }
+        if (KEY_CHAT.equals(key)) ChatMd3.refresh();
     }
 
     private static boolean on(int which) {
@@ -75,9 +76,8 @@ final class Md3 {
         Boolean known = ON[which];
         if (known != null) return known;
         Context context = Margy.context();
-        if (context == null) return which == PROFILE || which == INBOX;  // too early to know; not remembered
-        // the profile and the inbox unless switched off; the feed and its icons only when switched on
-        boolean value = which == PROFILE || which == INBOX;
+        if (context == null) return which == PROFILE || which == INBOX || which == CHAT;
+        boolean value = which == PROFILE || which == INBOX || which == CHAT;
         try {
             value = context.getSharedPreferences(Margy.PREFS, Context.MODE_PRIVATE).getBoolean(KEYS[which], value);
         } catch (Throwable ignored) {
@@ -368,6 +368,9 @@ final class Md3 {
         long now = SystemClock.uptimeMillis();
         if (now - coloured < 500L) return;
         coloured = now;
+        ProfileMd3.refresh();
+        InboxMd3.refresh();
+        ChatMd3.refresh();
         View[] views;
         Shape[] shapes;
         synchronized (WORN) {
@@ -590,7 +593,8 @@ final class Md3 {
     }
 
     /** What TikTok 47.2 calls the views that have no class of their own to be known by. */
-    private static int feedLeft, feedSearch, feedTop, profileRoot, profileTabs, statNumber;
+    private static int feedLeft, feedSearch, feedTop, profileRoot, profileTabs, statNumber, profileHead, profileAvatar,
+            profileColumn, profileEdit, profileHandle, profileCollege, inboxList, chatRoot;
     private static boolean named;
 
     private static void names(Context context) {
@@ -605,6 +609,14 @@ final class Md3 {
             profileRoot = resources.getIdentifier("t7i", "id", pack);
             profileTabs = resources.getIdentifier("z2h", "id", pack);
             statNumber = resources.getIdentifier("t7t", "id", pack);
+            profileHead = resources.getIdentifier("t58", "id", pack);
+            profileAvatar = resources.getIdentifier("t45", "id", pack);
+            profileColumn = resources.getIdentifier("t7l", "id", pack);
+            profileEdit = resources.getIdentifier("ptp", "id", pack);
+            profileHandle = resources.getIdentifier("t3h", "id", pack);
+            profileCollege = resources.getIdentifier("t3i", "id", pack);
+            inboxList = resources.getIdentifier("l78", "id", pack);
+            chatRoot = resources.getIdentifier("dy_", "id", pack);
             Diary.detail("md3: names " + (feedLeft != 0 ? 1 : 0) + (feedSearch != 0 ? 1 : 0) + (profileRoot != 0 ? 1 : 0)
                     + (profileTabs != 0 ? 1 : 0) + (statNumber != 0 ? 1 : 0));
         } catch (Throwable error) {
@@ -728,6 +740,10 @@ final class Md3 {
             if (view == null || depth > 45 || view.getVisibility() != View.VISIBLE) return;
             int id = view.getId();
             if (id != View.NO_ID && id != 0) {
+                if (id == chatRoot && view instanceof ViewGroup) {
+                    ChatMd3.screen((ViewGroup) view, on(CHAT));
+                    return;
+                }
                 if (id == feedLeft || id == feedSearch) {
                     disc(view, on(FEED), OVER_VIDEO, 19f);
                     return;
@@ -742,6 +758,10 @@ final class Md3 {
                     stats(view);
                     return;
                 }
+                if (id == profileHead && view instanceof ViewGroup) head((ViewGroup) view);
+                if (id == profileColumn && view instanceof ViewGroup) ProfileMd3.column((ViewGroup) view, on(PROFILE), profileHead,
+                        profileEdit, profileHandle, profileCollege, profileTabs);
+                if (id == inboxList && view instanceof ViewGroup) InboxMd3.list((ViewGroup) view, on(INBOX));
             }
             if (BurnEye.eye(view)) {
                 disc(view, on(FEED), OVER_VIDEO, 19f);
@@ -944,18 +964,9 @@ final class Md3 {
             }
             return;
         }
-        if (!on(INBOX)) {
-            strip(view);
-            return;
-        }
-        float unit = view.getResources().getDisplayMetrics().density;
-        Shape card = wear(view, CARD);
-        card.left = card.right = 8f * unit;
-        card.top = card.bottom = unit;
-        card.ends(head ? 22f * unit : 5f * unit, tail ? 22f * unit : 5f * unit);
-        // this is asked of every row before every frame; the colour is worked
-        // out once, and after that by what looks at every shape twice a second
-        if (!card.dressed || card.role != SHELL) card.dress(view, SHELL);
+        // The approved inbox uses plain conversation rows; notification tiles
+        // and the shared header are handled together by InboxMd3.
+        strip(view);
     }
 
     /** Whether a row of the list is there to be seen: a chat folder takes the others down to nothing. */
@@ -988,34 +999,44 @@ final class Md3 {
     }
 
     /** The three numbers of a profile, on one card. Given one of the numbers. */
+    /** The numbers of a profile: in the head beside the avatar, on nothing, so any card once put behind them comes off. */
     private static void stats(View number) {
         Object stat = number.getParent();
         Object line = stat instanceof View ? ((View) stat).getParent() : null;
-        if (!(line instanceof ViewGroup)) return;
-        ViewGroup row = (ViewGroup) line;
-        if (!on(PROFILE)) {
-            strip(row);
-            return;
-        }
-        if (row.getTag(OURS) instanceof Shape && row.getBackground() == row.getTag(OURS)) {
-            ((Shape) row.getTag(OURS)).dress(row, SHELL);
-            return;
-        }
-        if (row.getBackground() != null && !(row.getTag(OURS) instanceof Shape)) return;
-        float unit = row.getResources().getDisplayMetrics().density;
-        Shape card = wear(row, CARD);
-        // wider than the numbers it is behind, which start at its very edge
-        card.left = -10f * unit;
-        card.top = -6f * unit;
-        card.bottom = -4f * unit;
-        card.right = 0f;
-        card.radius = 18f * unit;
-        card.dress(row, SHELL);
-        // and so drawn past the row, which its parents would otherwise cut off
-        Object above = row.getParent();
-        for (int i = 0; i < 2 && above instanceof ViewGroup; i++) {
-            ((ViewGroup) above).setClipChildren(false);
-            above = ((ViewGroup) above).getParent();
+        if (line instanceof ViewGroup) strip((ViewGroup) line);
+    }
+
+    private static final int MOVED = 0x4D617260;
+
+    /**
+     * The head of a profile: the avatar first, on the left, and the name, the
+     * handle and the numbers beside it. TikTok has them the other way round.
+     * Turned off, the avatar goes back where it was.
+     */
+    private static void head(ViewGroup head) {
+        View avatar = head.findViewById(profileAvatar);
+        if (avatar == null || avatar.getParent() != head) return;
+        int at = head.indexOfChild(avatar);
+        ViewGroup.LayoutParams given = avatar.getLayoutParams();
+        if (on(PROFILE)) {
+            if (at == 0) return;
+            if (given instanceof ViewGroup.MarginLayoutParams) {
+                ViewGroup.MarginLayoutParams place = (ViewGroup.MarginLayoutParams) given;
+                avatar.setTag(MOVED, new int[] {place.leftMargin, place.rightMargin, at});
+                place.leftMargin = Math.round(-8 * avatar.getResources().getDisplayMetrics().density);
+                place.rightMargin = Math.round(10 * avatar.getResources().getDisplayMetrics().density);
+            }
+            head.removeView(avatar);
+            head.addView(avatar, 0, given);
+        } else if (at == 0 && avatar.getTag(MOVED) instanceof int[]) {
+            int[] was = (int[]) avatar.getTag(MOVED);
+            avatar.setTag(MOVED, null);
+            if (given instanceof ViewGroup.MarginLayoutParams) {
+                ((ViewGroup.MarginLayoutParams) given).leftMargin = was[0];
+                ((ViewGroup.MarginLayoutParams) given).rightMargin = was[1];
+            }
+            head.removeView(avatar);
+            head.addView(avatar, Math.min(was[2], head.getChildCount()), given);
         }
     }
 
@@ -1025,7 +1046,9 @@ final class Md3 {
     static void attach(Activity activity) {
         try {
             String name = activity.getClass().getName();
-            if (!name.endsWith(".SplashActivity") && !name.endsWith(".MainActivity")) return;
+            // someone else's profile opens in a screen of its own
+            if (!name.endsWith(".SplashActivity") && !name.endsWith(".MainActivity")
+                    && !name.endsWith(".UserProfileHostActivity")) return;
             View root = activity.getWindow().getDecorView();
             Object known = root.getTag(WATCHED);
             Screen screen;

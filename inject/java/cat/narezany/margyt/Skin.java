@@ -82,6 +82,16 @@ final class Skin {
         return fallback(context);
     }
 
+    /** A detail window follows the actual page below its anchor, including TikTok's own theme choice. */
+    static Skin onPage(Context context, int page) {
+        Skin kept = remembered(context);
+        boolean dark = NavBar.bright(page) < .5f;
+        if (kept.dark() == dark) return kept;
+        float d = context.getResources().getDisplayMetrics().density;
+        return new Skin(page, NavBar.mix(page, dark ? 0xFFFFFFFF : 0xFF161823, .05f),
+                Md3.ink(page), Math.round(16 * d), Math.round(28 * d), false);
+    }
+
     void remember(Context context) {
         if (!measured) return;
         try {

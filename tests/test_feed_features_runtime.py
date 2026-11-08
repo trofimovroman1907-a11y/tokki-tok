@@ -16,7 +16,7 @@ STUBS = {
     'android/view/View.java': 'package android.view; public class View {public java.util.Map<Integer,Object> tags=new java.util.HashMap<>();public Object getTag(int key){return tags.get(key);}public void setTag(int key,Object value){tags.put(key,value);}public boolean isShown(){return true;}public boolean isAttachedToWindow(){return true;}public void post(Runnable r){r.run();}}',
     'android/os/Looper.java': 'package android.os;public class Looper {public static Looper getMainLooper(){return null;}}',
     'android/os/Handler.java': 'package android.os;public class Handler {public Handler(Looper l){} public void post(Runnable r){r.run();}}',
-    'cat/narezany/margyt/NativeRead.java':'package cat.narezany.margyt;class NativeRead{static Object get(Object o,String n){try{return o.getClass().getMethod(n).invoke(o);}catch(Exception e){return null;}}static long number(Object o){return 0;}}',
+    'cat/narezany/margyt/NativeRead.java':'package cat.narezany.margyt;class NativeRead{static String string(Object o){return o==null?"":o.toString();}static Object get(Object o,String n){try{return o.getClass().getMethod(n).invoke(o);}catch(Exception e){return null;}}static long number(Object o){return 0;}}',
     'cat/narezany/margyt/Margy.java': '''package cat.narezany.margyt;class Margy {
         static String PREFS="mod";static android.content.Context context(){return null;} }''',
     'cat/narezany/margyt/Diary.java': 'package cat.narezany.margyt;class Diary {static void note(String s){}}',
@@ -30,7 +30,7 @@ STUBS = {
 STUBS['cat/narezany/margyt/Text.java']='package cat.narezany.margyt;class Text{static String minutesAgo(int n){return n+" min";}static String hoursAgo(int n){return n+" h";}static String daysAgo(int n){return n+" d";}}'
 STUBS['cat/narezany/margyt/DateInfo.java']='package cat.narezany.margyt;class DateInfo{static final int CELL_TAG=0x7e0d0335;static class Data{static Data of(Object p){return null;}}static void open(android.view.View r,android.view.View c){}}'
 STUBS['cat/narezany/margyt/VideoActions.java']='package cat.narezany.margyt;class VideoActions{static void accountChanged(){} static void bindNative(Object c){} static void selected(Object c,Object p){}}'
-STUBS['cat/narezany/margyt/NativeRead.java']='package cat.narezany.margyt;class NativeRead {static long number(Object o){return o instanceof Number?((Number)o).longValue():0;}static Object get(Object o,String name){try{return o.getClass().getMethod(name).invoke(o);}catch(Throwable e){return null;}}static Object item(Object o){return get(o,"getItem");}static String aid(Object post){Object v=get(post,"getAid");return v instanceof String?(String)v:"";}}'
+STUBS['cat/narezany/margyt/NativeRead.java']='package cat.narezany.margyt;class NativeRead {static String string(Object o){return o==null?"":o.toString();}static long number(Object o){return o instanceof Number?((Number)o).longValue():0;}static Object get(Object o,String name){try{return o.getClass().getMethod(name).invoke(o);}catch(Throwable e){return null;}}static Object item(Object o){return get(o,"getItem");}static String aid(Object post){Object v=get(post,"getAid");return v instanceof String?(String)v:"";}}'
 HARNESS = '''package cat.narezany.margyt;
 public class FeedHarness {
     static void check(boolean v,String s){if(!v)throw new AssertionError(s);}
@@ -48,10 +48,10 @@ public class FeedHarness {
         Post dated=new Post("a",1609459200L);Holder author=new Holder(dated),description=new Holder(dated);Dates.bindAuthor(author);Dates.bindPost(description,dated);check(DateOverlay.bound==author.view,"selected date routes to native author slot rather than description");author.item=new Item(new Post("b",1609459300L));Dates.bindAuthor(author);Dates.bindPost(description,dated);check(DateOverlay.bound==description.view,"recycled author row cannot show a previous post date");
         Bar a=new Bar(),b=new Bar();Seekbar.setEnabled(false);
         Seekbar.setSeekBarShowType(a,3);Seekbar.setSeekBarShowType(b,100);
-        check(a.type==3&&b.type==100,"Disabled preserves native seek modes");
+        check(a.type==0&&b.type==0,"Legacy disabled preference cannot hide the always-on seekbar");
         Seekbar.setEnabled(true);check(a.type==0&&b.type==0,"Existing bars switch immediately");
         Seekbar.setSeekBarShowType(a,4);check(a.type==0,"Later native hide cannot override enabled mode");
-        Seekbar.setEnabled(false);check(a.type==4&&b.type==100,"Disable restores latest requested modes independently");
+        Seekbar.setEnabled(false);check(a.type==0&&b.type==0,"Later writes of the removed preference leave both seekbars enabled");
         String raw="@friend: ответ\\n  Вторая строка 🙂";
         android.content.ClipData clip=CommentClipboard.LIZ("Автор с длинным ником",raw,java.util.Collections.emptyList());
         check(raw.equals(clip.body),"Native copy preserves only comment body, including mentions and newlines");

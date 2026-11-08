@@ -31,8 +31,8 @@ final class InboxClean {
     }
 
     static boolean on(String key) {
-        SharedPreferences prefs = prefs();
-        return prefs != null && prefs.getBoolean(key, false);
+        // 2.2.2: picking what to hide in the inbox is gone; it all shows again
+        return false;
     }
 
     static void set(String key, boolean value) {
