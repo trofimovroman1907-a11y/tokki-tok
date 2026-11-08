@@ -846,6 +846,7 @@ class Build:
         edge_speed_lock = 0
         feature_hits = {"seekbar":0,"comment copy":0,"native comment clipboard":0,"publication date":0,"visible publication date":0,"double-tap heart":0,"native heart tint":0,"comment dim exclusion":0,"ads":0}
         feature_hits["native comment text actions"]=0
+        feature_hits["native heart reuse"]=0
         feature_hits["native loading indicator"]=0
         feature_hits[dexpatch.FLAG_LABEL]=0
         feature_hits["native avatar shape"]=0
@@ -888,6 +889,7 @@ class Build:
                 if "getDesc" in key and any(anchor in key for anchor in dexpatch.DATE_CAPTIONS))
             feature_hits["double-tap heart"] += sum(v for key,v in counts.items() if "LX/0HCj;" in key and "setImageDrawable" in key)
             feature_hits["native heart tint"] += sum(v for key,v in counts.items() if "LX/0HCj;" in key and "setTintColor" in key)
+            feature_hits["native heart reuse"] += counts.get("native heart reuse",0)
             feature_hits["comment dim exclusion"] += counts.get("native comment cell protection",0)
             feature_hits["native comment text actions"] += counts.get("native comment text actions",0)
             feature_hits["native loading indicator"] += counts.get("native loading indicator",0)

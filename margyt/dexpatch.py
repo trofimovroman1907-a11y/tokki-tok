@@ -1111,6 +1111,15 @@ def rewrite_anchored(root: str) -> Dict[str, int]:
                     counts["native share capture"]=counts.get("native share capture",0)+1
                     return body
                 text=re.sub(r"(?ms)^\.method public final onClick\(Landroid/view/View;\)V.*?^\.end method",capture_share,text)
+            if "LX/0HCj;" in declaration:
+                def heart_cycle(match):
+                    body=match.group(0)
+                    if "Heart;->shown" in body:return body
+                    hook="    invoke-static/range {p1 .. p1}, Lcat/narezany/margyt/Heart;->shown(Landroid/widget/ImageView;)V\n"
+                    body,hits=re.subn(r"(?m)^([ \t]*\.(?:registers|locals) \d+\n)",lambda m:m.group(0)+hook,body,count=1)
+                    if hits:counts["native heart reuse"]=counts.get("native heart reuse",0)+hits
+                    return body
+                text=re.sub(r"(?ms)^\.method public final LIZ\(Landroid/widget/ImageView;FF\)V.*?^\.end method",heart_cycle,text)
             if REPOST_CLASS in declaration:
                 add_exit(r"(?ms)^\.method public final (?:onViewCreated\(Landroid/view/View;\)|s4\(Ljava/lang/Object;\))V.*?^\.end method","    invoke-static/range {p0 .. p0}, Lcat/narezany/margyt/Repost;->bind(Ljava/lang/Object;)V\n","native repost")
             if AVATAR_CLASS in declaration:
@@ -2286,6 +2295,7 @@ def rewrite_targets() -> List[str]:
     for _anchor, _owner, name, _original, replacement, target in ANCHORED_SOURCES:
         out.append("%s->%s%s" % (target, name, replacement))
     out.append("Lcat/narezany/margyt/VideoActions;->captureShare(Ljava/lang/Object;)V")
+    out.append("Lcat/narezany/margyt/Heart;->shown(Landroid/widget/ImageView;)V")
     out.extend(["Lcat/narezany/margyt/OfflineComments;->closed(Ljava/lang/Object;)V", "Lcat/narezany/margyt/OfflineComments;->nativeTask(Ljava/lang/String;)Ljava/lang/Object;", "Lcat/narezany/margyt/OfflineComments;->nativeObservable(Ljava/lang/String;)Ljava/lang/Object;"])
     out.extend(["Lcat/narezany/margyt/OfflineComments;->closed(Ljava/lang/Object;)V", "Lcat/narezany/margyt/OfflineComments;->nativeTask(Ljava/lang/String;)Ljava/lang/Object;", "Lcat/narezany/margyt/OfflineComments;->nativeObservable(Ljava/lang/String;)Ljava/lang/Object;"])
     out.extend(["Lcat/narezany/margyt/OfflineChoices;->counts(Ljava/util/List;)Ljava/util/List;", "Lcat/narezany/margyt/OfflineChoices;->row(Ljava/lang/Object;Ljava/lang/Object;)Ljava/lang/Object;", "Lcat/narezany/margyt/OfflineChoices;->validCount(Ljava/util/List;Ljava/lang/Object;)Z", "Lcat/narezany/margyt/OfflineChoices;->legacy(Ljava/lang/Object;)V", "Lcat/narezany/margyt/OfflineComments;->cached(Ljava/lang/Object;Ljava/lang/String;)V", "Lcat/narezany/margyt/OfflineComments;->content(Ljava/lang/Object;)V", "Lcat/narezany/margyt/OfflineComments;->bottom(Landroid/view/View;)Landroid/view/View;"])

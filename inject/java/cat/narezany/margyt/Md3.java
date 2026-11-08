@@ -46,9 +46,9 @@ final class Md3 {
 
     private Md3() {}
 
-    static final String KEY_FEED = "md3_feed", KEY_PROFILE = "md3_profile", KEY_INBOX = "md3_inbox", KEY_ICONS = "md3_icons", KEY_CHAT = "md3_chat";
-    private static final String[] KEYS = {KEY_FEED, KEY_PROFILE, KEY_INBOX, KEY_ICONS, KEY_CHAT};
-    private static final int FEED = 0, PROFILE = 1, INBOX = 2, ICONS = 3, CHAT = 4;
+    static final String KEY_FEED = "md3_feed", KEY_PROFILE = "md3_profile", KEY_INBOX = "md3_inbox", KEY_ICONS = "md3_icons";
+    private static final String[] KEYS = {KEY_FEED, KEY_PROFILE, KEY_INBOX, KEY_ICONS};
+    private static final int FEED = 0, PROFILE = 1, INBOX = 2, ICONS = 3;
     private static final Boolean[] ON = new Boolean[KEYS.length];
 
     static boolean isOn(String key) {
@@ -65,7 +65,6 @@ final class Md3 {
                 context.getSharedPreferences(Margy.PREFS, Context.MODE_PRIVATE).edit().putBoolean(key, value).apply();
             }
         }
-        if (KEY_CHAT.equals(key)) ChatMd3.refresh();
     }
 
     private static boolean on(int which) {
@@ -76,8 +75,8 @@ final class Md3 {
         Boolean known = ON[which];
         if (known != null) return known;
         Context context = Margy.context();
-        if (context == null) return which == PROFILE || which == INBOX || which == CHAT;
-        boolean value = which == PROFILE || which == INBOX || which == CHAT;
+        if (context == null) return which == PROFILE || which == INBOX;
+        boolean value = which == PROFILE || which == INBOX;
         try {
             value = context.getSharedPreferences(Margy.PREFS, Context.MODE_PRIVATE).getBoolean(KEYS[which], value);
         } catch (Throwable ignored) {
@@ -370,7 +369,6 @@ final class Md3 {
         coloured = now;
         ProfileMd3.refresh();
         InboxMd3.refresh();
-        ChatMd3.refresh();
         View[] views;
         Shape[] shapes;
         synchronized (WORN) {
@@ -677,6 +675,7 @@ final class Md3 {
         @Override
         public boolean onPreDraw() {
             try {
+                InboxMd3.frame();
                 FeedRail.icons();
                 recolour();
                 // Every row there is, every frame: which of them begins a group
@@ -741,7 +740,6 @@ final class Md3 {
             int id = view.getId();
             if (id != View.NO_ID && id != 0) {
                 if (id == chatRoot && view instanceof ViewGroup) {
-                    ChatMd3.screen((ViewGroup) view, on(CHAT));
                     return;
                 }
                 if (id == feedLeft || id == feedSearch) {

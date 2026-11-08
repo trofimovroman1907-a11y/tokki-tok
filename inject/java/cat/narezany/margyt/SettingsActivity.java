@@ -471,7 +471,6 @@ public class SettingsActivity extends Activity {
         loading.addView(toggleRow("tune", Design.caption(Text.MD3_PROFILE), Md3.isOn(Md3.KEY_PROFILE), on -> Md3.set(Md3.KEY_PROFILE, on)));
         loading.addView(line());
         loading.addView(toggleRow("tune", Design.caption(Text.MD3_INBOX), Md3.isOn(Md3.KEY_INBOX), on -> Md3.set(Md3.KEY_INBOX, on)));
-        loading.addView(toggleRow("chat_bubble", Design.caption(Text.MD3_CHAT), Md3.isOn(Md3.KEY_CHAT), on -> Md3.set(Md3.KEY_CHAT, on)));
         loading.addView(line());
         loading.addView(toggleRow("chat_bubble", Design.caption(Text.DESIGN_COMMENTS), CommentStyle.enabled(), CommentStyle::set));
         column.addView(wrap(loading));

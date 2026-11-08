@@ -669,6 +669,8 @@ public final class Frames {
         private final Paint round = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
         private final Paint empty = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final android.graphics.Matrix place = new android.graphics.Matrix();
+        private final android.graphics.Matrix maskPlace = new android.graphics.Matrix();
+        private final android.graphics.Path mask = new android.graphics.Path();
         private final Rect to = new Rect();
         private Bitmap shaded;
         private Frame frame;
@@ -697,11 +699,28 @@ public final class Frames {
                 y0 = Math.min(y0, (c[1] - 0.5f) * frame.scale + frame.dy);
                 y1 = Math.max(y1, (c[3] - 0.5f) * frame.scale + frame.dy);
             }
+            boolean turning = AvatarShape.turning();
+            float angle = turning ? AvatarShape.angle() : 0;
+            if (turning) {
+                // Reserve the whole sweep, including corners, while the mask turns.
+                float reach = (float)Math.hypot(.5f,.5f);
+                if(art!=null){
+                    float[] c=covers(frame,art);
+                    float rx=Math.max(Math.abs(c[0]-.5f),Math.abs(c[2]-.5f))*frame.scale;
+                    float ry=Math.max(Math.abs(c[1]-.5f),Math.abs(c[3]-.5f))*frame.scale;
+                    reach=Math.max(reach,Math.abs(frame.dy)+(float)Math.hypot(rx,ry));
+                }
+                x0=y0=-reach;x1=y1=reach;
+            }
             float unit = Math.min(w / (x1 - x0), h / (y1 - y0)) * 0.94f;
             // no frame on: the bare avatar shouldn't fill the whole card
             if (art == null) unit *= 0.62f;
             float cx = w / 2 - (x0 + x1) / 2 * unit, cy = h / 2 - (y0 + y1) / 2 * unit;
             float radius = unit / 2;
+            maskPlace.setScale(radius,radius);
+            maskPlace.postTranslate(cx,cy);
+            if(turning)maskPlace.postRotate(angle,cx,cy);
+            mask.rewind();mask.addPath(AvatarShape.chosenUnit(),maskPlace);
 
             Bitmap own = face(this);
             if (own != null) {
@@ -713,21 +732,25 @@ public final class Frames {
                 place.setScale(scale, scale);
                 place.postTranslate(cx - own.getWidth() * scale / 2, cy - own.getHeight() * scale / 2);
                 round.getShader().setLocalMatrix(place);
-                canvas.drawCircle(cx, cy, radius, round);
+                canvas.drawPath(mask, round);
             } else {
-                canvas.drawCircle(cx, cy, radius, empty);
+                canvas.drawPath(mask, empty);
                 Bitmap note = Badges.note();
                 if (note != null) {
                     int glyph = Math.round(radius * 0.8f);
                     to.set(Math.round(cx) - glyph, Math.round(cy) - glyph, Math.round(cx) + glyph, Math.round(cy) + glyph);
-                    canvas.drawBitmap(note, null, to, plain);
+                    int saved=canvas.save();canvas.clipPath(mask);
+                    canvas.drawBitmap(note, null, to, plain);canvas.restoreToCount(saved);
                 }
             }
+            if(turning)AvatarShape.again(this);
             if (art == null) return;
             int side = Math.round(unit * frame.scale);
             int fx = Math.round(cx), fy = Math.round(cy + unit * frame.dy);
             to.set(fx - side / 2, fy - side / 2, fx + side / 2, fy + side / 2);
-            canvas.drawBitmap(art, null, to, plain);
+            int saved=canvas.save();
+            if(turning)canvas.rotate(angle,cx,cy+unit*frame.dy);
+            canvas.drawBitmap(art, null, to, plain);canvas.restoreToCount(saved);
         }
     }
 }

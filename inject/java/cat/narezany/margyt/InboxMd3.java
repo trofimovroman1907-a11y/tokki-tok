@@ -70,6 +70,24 @@ final class InboxMd3 {
         }
     }
 
+    /** Native binding can remove our panel from a recycled filter row. Repair
+     * that hierarchy before drawing, without restyling the list every frame. */
+    static void frame() {
+        if(!enabled())return;
+        for(Map.Entry<ViewGroup,WeakReference<Session>> entry:sessions.entrySet()){
+            Session session=entry.getValue().get();ViewGroup list=entry.getKey();
+            if(session==null)continue;
+            if(!list.isAttachedToWindow()||!visible(list)){
+                if(session.fab!=null)session.fab.setVisibility(View.GONE);
+                continue;
+            }
+            Header header=session.header;
+            if(session.topology!=topology(list)||(header!=null&&header.panel.getParent()!=header.row.get())
+                    ||(session.fab!=null&&session.fab.getParent()!=session.composeHost(list)))session.update();
+            else session.composeVisibility(list);
+        }
+    }
+
     static int category(String title, String preview) {
         String text = (title + " " + preview).toLowerCase(Locale.ROOT);
         if (text.contains("актив") || text.contains("activ")) return 1;
@@ -89,7 +107,8 @@ final class InboxMd3 {
         LinearLayout fab;
         TextView fabLabel;
         ImageView fabIcon;
-        int page, ink, muted, surface, primary, onPrimary;
+        WeakReference<View> composeButton=new WeakReference<>(null);
+        int page, ink, muted, surface, primary, onPrimary, topology;
 
         Session(ViewGroup list) { this.list = new WeakReference<>(list); }
 
@@ -118,35 +137,30 @@ final class InboxMd3 {
             for (int i = 0; i < list.getChildCount(); i++) {
                 View block = list.getChildAt(i);
                 View row = named(block, "uxm");
-                int kind = row == null ? -1 : category(words(named(row, "brn")), words(named(row, "nhq")));
+                int kind = noticeKind(row);
                 if (kind >= 0) {
                     seen[kind] = true;
                     targets[kind] = new Target(list, row, block, kind);
-                    keep(block).collapsed = true;
-                    size(block, null, 0);
-                    if (block.getMinimumHeight() != 0) block.setMinimumHeight(0);
-                    if (block.getAlpha() != 0) block.setAlpha(0);
-                } else {
-                    Object held = block.getTag(SAVED);
-                    if (held instanceof Saved && ((Saved) held).collapsed) { ((Saved) held).restore(block); ((Saved) held).collapsed=false; }
                 }
                 if (named(block, "user_name") != null) chat(block);
                 HorizontalScrollView strip = scroller(block, 0);
-                if (strip != null && named(block, "user_name") == null && block instanceof ViewGroup) filter = (ViewGroup) block;
+                if (strip != null && block.isShown() && named(block, "user_name") == null && block instanceof ViewGroup) filter = (ViewGroup) block;
                 if (named(block, "wq0") != null && strip == null) stories(block);
             }
             for (int i=0;i<targets.length;i++) {
                 Target target=targets[i];if(target==null||seen[i])continue;
-                View source=target.row.get();
-                if(source==null||!source.isAttachedToWindow()||!target.matches(source))targets[i]=null;
+                if(!target.available())targets[i]=null;
             }
-            if (header != null && (header.row.get() != filter || filter == null)) { header.restore(); header = null; }
+            if (header != null && (header.row.get() != filter || filter == null || header.panel.getParent()!=filter)) { header.restore(); header = null; }
             if (filter != null) {
                 if (header == null) header = new Header(this, filter);
                 header.update();
             }
+            // Shortcuts are additional entry points. Native notification rows
+            // always remain in the list, including rows first bound on scroll.
             top(list.getRootView());
             compose(list);
+            topology=topology(list);
         }
 
         void chat(View block) {
@@ -155,7 +169,10 @@ final class InboxMd3 {
             Saved saved = keep(row);
             if (!(row.getBackground() instanceof FlatRipple)) row.setBackground(new FlatRipple(Accent.colour()));
             size(row, null, dp(row, 76));
-            text(named(row, "user_name"), 16.5f, ink, true);
+            View nickname = named(row, "user_name");
+            // Use the same role colour as native binding and the theme sweep.
+            // Otherwise those passes and MD3 alternate the name's foreground.
+            text(nickname, 16.5f, AppearanceColors.forView(nickname, ink), true);
             text(named(row, "mv1"), 14, muted, false);
             View portrait = named(row, "w0u"), content = named(row, "wip");
             if (portrait != null) margin(portrait, 16);
@@ -254,44 +271,25 @@ final class InboxMd3 {
         void stories(View block) {
             if (!(block instanceof ViewGroup)) return;
             ViewGroup strip = (ViewGroup) block;
-            int height=dp(block,124);
-            for(int i=0;i<strip.getChildCount();i++){
-                View caption=named(strip.getChildAt(i),"wq6");
-                if(caption!=null)height=Math.max(height,dp(block,108)+Math.max(dp(block,16),caption.getHeight())+dp(block,4));
-            }
-            keep(block);size(block,null,height);strip.setClipToPadding(false);
+            keep(strip);
+            // One-item strips must retain the inbox viewport, not the width of
+            // their first cell. Frames, badges and notes extend past that cell.
+            if(strip.getParent()==list.get())size(strip,ViewGroup.LayoutParams.MATCH_PARENT,null);
+            strip.setClipChildren(false);strip.setClipToPadding(false);strip.setClipToOutline(false);
             for (int i = 0; i < strip.getChildCount(); i++) {
                 View cell = strip.getChildAt(i), avatar = named(cell, "wq0");
                 if (avatar == null) continue;
-                keep(cell);size(cell, dp(cell, 80), height);
-                keep(avatar);size(avatar, dp(cell, 64), dp(cell, 64));
-                avatar.setTranslationY(dp(cell,40)-avatar.getTop());
-                // The picture and the ring are separate native children. Inset
-                // only the picture, so the ring has a real transparent gap.
-                try {
-                    View picture=(View)avatar.getClass().getMethod("getRealAvatarView").invoke(avatar);
-                    if(picture!=null){Saved original=keep(picture);picture.setScaleX(original.scaleX*.875f);picture.setScaleY(original.scaleY*.875f);}
-                } catch (ReflectiveOperationException ignored) { }
+                // Keep TikTok's measured geometry for ordinary, self and LIVE
+                // cells. Resizing only one avatar type clipped it and made the
+                // unmodified LIVE cells look much larger.
+                keep(cell);unclip(avatar,strip);
+                if(cell instanceof ViewGroup)((ViewGroup)cell).setClipToOutline(false);
                 if(avatar instanceof ViewGroup){
                     ViewGroup group=(ViewGroup)avatar;
                     for(int j=0;j<group.getChildCount();j++){
                         View child=group.getChildAt(j);
                         if(child.getClass().getName().equals("X.11Wv")){keep(child);child.setTag(STORY_RING,Boolean.TRUE);}
                     }
-                }
-                View caption=named(cell,"wq6"),note=named(cell,"q4n");
-                text(caption,12,muted,false);
-                if(caption!=null){
-                    unclip(caption,strip);
-                    caption.setTranslationY(dp(cell,108)-caption.getTop());
-                }
-                if(note!=null){
-                    keep(note);
-                    float scale=note.getHeight()>0?Math.min(.7f,dp(cell,38)/(float)note.getHeight()):.7f;
-                    note.setScaleX(scale);note.setScaleY(scale);
-                    // Scaling around the normal centre keeps the bubble centred
-                    // on its avatar; put its visible top at the top of the cell.
-                    note.setTranslationY(-(note.getTop()+note.getHeight()*(1-scale)/2));
                 }
             }
         }
@@ -325,22 +323,35 @@ final class InboxMd3 {
         }
 
         void compose(ViewGroup list) {
-            View root = list.getRootView(), nativeButton = named(root, "fha");
-            View content = root.findViewById(android.R.id.content);
-            if (!(content instanceof FrameLayout)) return;
+            View root = list.getRootView();
+            FrameLayout content=composeHost(list);
+            if(fab!=null&&fab.getParent()!=content){
+                if(fab.getParent() instanceof ViewGroup)((ViewGroup)fab.getParent()).removeView(fab);
+                fab=null;
+            }
+            if(content==null)return;
+            View scope=list,nativeButton=null;
+            for(int i=0;i<12&&scope!=null&&scope.getId()!=android.R.id.content;i++){
+                nativeButton=named(scope,"fha");if(nativeButton!=null)break;
+                scope=scope.getParent() instanceof View?(View)scope.getParent():null;
+            }
+            composeButton=new WeakReference<>(nativeButton);
             if (fab == null) {
                 Context context = list.getContext();
                 fab = new LinearLayout(context);fab.setGravity(Gravity.CENTER);fab.setPadding(dp(list, 20),0,dp(list,20),0);
                 fabIcon = new ImageView(context);fab.addView(fabIcon, new LinearLayout.LayoutParams(dp(list,24),dp(list,24)));
                 fabLabel = label(context, Local.of("Новый чат"), 15);fabLabel.setPadding(dp(list,10),0,0,0);fab.addView(fabLabel);
                 fab.setContentDescription(Local.of("Новый чат"));
-                fab.setOnClickListener(v -> {View button = named(v.getRootView(), "fha");if (button != null && button.isShown()) button.performClick();});
+                fab.setOnClickListener(v -> {
+                    ViewGroup owner=this.list.get();View button=composeButton.get();
+                    if(owner!=null&&visible(owner)&&button!=null&&button.isShown()
+                            &&button.getRootView()==owner.getRootView())button.performClick();
+                });
                 Motion.press(fab);
                 FrameLayout.LayoutParams params = new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT,dp(list,56),Gravity.END|Gravity.BOTTOM);
-                params.rightMargin = dp(list,16);params.bottomMargin = dp(list,104);((FrameLayout)content).addView(fab,params);
+                params.rightMargin = dp(list,16);params.bottomMargin = dp(list,16);content.addView(fab,params);
             }
-            boolean shown = nativeButton != null && nativeButton.isShown() && nativeButton.isEnabled() && visible(list);
-            fab.setVisibility(shown ? View.VISIBLE : View.GONE);
+            composeVisibility(list);
             int fill = NavBar.mix(page, Accent.colour()|0xff000000, NavBar.bright(page)<.5f?.48f:.22f), on = Md3.ink(fill);
             background(fab, fill, dp(list,18));fabLabel.setTextColor(on);fabIcon.setImageDrawable(SettingsGlyph.make("edit",on));
             View nav = named(root, "on6");
@@ -352,10 +363,28 @@ final class InboxMd3 {
             }
         }
 
+        FrameLayout composeHost(ViewGroup list){
+            // Stay below the fragment's own container. The activity content is
+            // shared with chats, the feed and every other TikTok page.
+            Object parent=list.getParent();
+            if(!(parent instanceof FrameLayout))return null;
+            FrameLayout host=(FrameLayout)parent;
+            return host==list.getRootView()||host.getId()==android.R.id.content?null:host;
+        }
+
+        void composeVisibility(ViewGroup list){
+            if(fab==null)return;
+            View button=composeButton.get();
+            boolean shown=button!=null&&button.isAttachedToWindow()&&button.isShown()&&button.isEnabled()
+                    &&button.getRootView()==list.getRootView()&&visible(list);
+            fab.setVisibility(shown?View.VISIBLE:View.GONE);
+        }
+
         void restore() {
             if (header != null) {header.restore();header=null;}
             if (fab != null && fab.getParent() instanceof ViewGroup) ((ViewGroup)fab.getParent()).removeView(fab);
             fab=null;
+            composeButton.clear();
             for (WeakReference<View> held : changed) {
                 View view=held.get();if(view==null)continue;
                 Object saved=view.getTag(SAVED);if(saved instanceof Saved)((Saved)saved).restore(view);
@@ -417,7 +446,7 @@ final class InboxMd3 {
             super(context);this.kind=kind;this.session=session;setContentDescription(Local.of(LABELS[kind]));
             LinearLayout body=new LinearLayout(context);body.setOrientation(LinearLayout.VERTICAL);body.setGravity(Gravity.CENTER_HORIZONTAL);body.setPadding(0,dp(this,10),0,0);
             icon=new ImageView(context);icon.setPadding(dp(this,10),dp(this,10),dp(this,10),dp(this,10));
-            icon.setImageDrawable(SettingsGlyph.make(GLYPHS[kind],Color.WHITE));icon.setBackground(shape(COLOURS[kind],dp(this,14)));
+            icon.setImageDrawable(SettingsGlyph.make(GLYPHS[kind],Color.WHITE));icon.setBackground(shape(iconColour(),dp(this,14)));
             body.addView(icon,new LinearLayout.LayoutParams(dp(this,40),dp(this,40)));
             caption=label(context,Local.of(LABELS[kind]),11.5f);caption.setGravity(Gravity.CENTER);caption.setMaxLines(1);caption.setEllipsize(android.text.TextUtils.TruncateAt.END);
             LinearLayout.LayoutParams words=new LinearLayout.LayoutParams(-1,-2);words.topMargin=dp(this,6);body.addView(caption,words);addView(body,new FrameLayout.LayoutParams(-1,-1));
@@ -427,29 +456,47 @@ final class InboxMd3 {
         }
         void update(){
             Target target=session.targets[kind];setVisibility(target==null?View.GONE:View.VISIBLE);
+            background(icon,iconColour(),dp(this,14));
             background(this,session.surface,dp(this,20));caption.setTextColor(session.muted);
             String unread=target==null?"":target.unread();
             if(!unread.contentEquals(count.getText()))count.setText(unread);
             count.setVisibility(unread.isEmpty()||"0".equals(unread)?View.GONE:View.VISIBLE);
             background(count,session.primary,dp(this,8));count.setTextColor(session.onPrimary);
         }
+        int iconColour(){return kind==1?Accent.colour():Accent.swap(COLOURS[kind]);}
     }
 
     private static final class Target {
-        final WeakReference<ViewGroup> list;final WeakReference<View> row;final int kind,position,type;
+        final WeakReference<ViewGroup> list;final WeakReference<View> row;final WeakReference<Object> adapter;final int kind,position,type;
         Target(ViewGroup list,View row,View block,int kind){
             this.list=new WeakReference<>(list);this.row=new WeakReference<>(row);this.kind=kind;
-            int at=-1,viewType=-1;
-            try{at=((Number)list.getClass().getMethod("getChildAdapterPosition",View.class).invoke(list,block)).intValue();Object adapter=list.getClass().getMethod("getAdapter").invoke(list);if(at>=0)viewType=((Number)adapter.getClass().getMethod("getItemViewType",int.class).invoke(adapter,at)).intValue();}catch(Throwable ignored){}
-            position=at;type=viewType;
+            int at=-1,viewType=-1;Object source=null;
+            try{at=((Number)list.getClass().getMethod("getChildAdapterPosition",View.class).invoke(list,block)).intValue();source=list.getClass().getMethod("getAdapter").invoke(list);if(at>=0)viewType=((Number)source.getClass().getMethod("getItemViewType",int.class).invoke(source,at)).intValue();}catch(Throwable ignored){}
+            position=at;type=viewType;adapter=new WeakReference<>(source);
         }
-        boolean matches(View view){return view!=null&&category(words(named(view,"brn")),words(named(view,"nhq")))==kind;}
+        boolean matches(View view){return noticeKind(view)==kind;}
+        Object currentAdapter(){
+            ViewGroup list=this.list.get();Object known=adapter.get();if(list==null||known==null)return null;
+            try{return list.getClass().getMethod("getAdapter").invoke(list)==known?known:null;}catch(Throwable ignored){return null;}
+        }
+        boolean nativeReady(){View view=row.get();return matches(view)&&view.isAttachedToWindow()&&(adapter.get()==null||currentAdapter()!=null);}
+        boolean rebindable(){
+            Object source=currentAdapter();if(source==null||type<0)return false;
+            try{
+                int many=((Number)source.getClass().getMethod("getItemCount").invoke(source)).intValue();
+                for(int n=-1;n<Math.min(many,20);n++){
+                    int at=n<0?position:n;if(at>=0&&at<many&&((Number)source.getClass().getMethod("getItemViewType",int.class).invoke(source,at)).intValue()==type)return true;
+                }
+            }catch(Throwable ignored){}
+            return false;
+        }
+        boolean available(){return nativeReady()||rebindable();}
         String unread(){View view=row.get();return matches(view)?unreadCount(named(view,"nhs")):"";}
         boolean open(){
-            View view=row.get();if(matches(view)&&view.isAttachedToWindow())return view.performClick();
+            View view=row.get();if(nativeReady()&&view.hasOnClickListeners())return view.performClick();
             ViewGroup list=this.list.get();if(list==null||type<0)return false;
             try{
-                Object adapter=list.getClass().getMethod("getAdapter").invoke(list);
+                Object adapter=currentAdapter();if(adapter==null)return false;
                 int many=((Number)adapter.getClass().getMethod("getItemCount").invoke(adapter)).intValue();
                 for(int n=-1;n<Math.min(many,20);n++){
                     int at=n<0?position:n;if(at<0||at>=many)continue;
@@ -470,9 +517,9 @@ final class InboxMd3 {
 
     private static final class Saved {
         final int width,height,minimum,minWidth,left,top,right,bottom,visibility;final float alpha,x,y,scaleX,scaleY;
-        final Drawable background;final boolean clipChildren,clipPadding;
+        final Drawable background;final boolean clipChildren,clipPadding,clipOutline;
         final float textSize;final int textColour,maxLines,maxWidth,maxEms,gravity,layoutGravity;final boolean fontPadding;final Typeface typeface;final int[] margins;
-        int[] rules;boolean collapsed;
+        int[] rules;
         Saved(View view){
             ViewGroup.LayoutParams params=view.getLayoutParams();width=params==null?-2:params.width;height=params==null?-2:params.height;
             minimum=view.getMinimumHeight();left=view.getPaddingLeft();top=view.getPaddingTop();right=view.getPaddingRight();bottom=view.getPaddingBottom();
@@ -480,6 +527,7 @@ final class InboxMd3 {
             layoutGravity=params instanceof LinearLayout.LayoutParams?((LinearLayout.LayoutParams)params).gravity:-1;
             visibility=view.getVisibility();alpha=view.getAlpha();x=view.getTranslationX();y=view.getTranslationY();background=view.getBackground();
             clipChildren=view instanceof ViewGroup&&((ViewGroup)view).getClipChildren();clipPadding=view instanceof ViewGroup&&((ViewGroup)view).getClipToPadding();
+            clipOutline=view.getClipToOutline();
             if(params instanceof ViewGroup.MarginLayoutParams){ViewGroup.MarginLayoutParams p=(ViewGroup.MarginLayoutParams)params;margins=new int[]{p.leftMargin,p.topMargin,p.rightMargin,p.bottomMargin,p.getMarginStart(),p.getMarginEnd()};}else margins=null;
             TextView text=view instanceof TextView?(TextView)view:null;textSize=text==null?0:text.getTextSize();textColour=text==null?0:text.getCurrentTextColor();maxLines=text==null?1:text.getMaxLines();typeface=text==null?null:text.getTypeface();
             maxWidth=text==null?Integer.MAX_VALUE:text.getMaxWidth();gravity=text==null?0:text.getGravity();fontPadding=text!=null&&text.getIncludeFontPadding();
@@ -497,18 +545,48 @@ final class InboxMd3 {
             Object nativeBack=view.getTag(NATIVE_BG);view.setBackground(nativeBack instanceof Object[]?(Drawable)((Object[])nativeBack)[0]:background);
             view.setTag(NATIVE_BG,null);view.setTag(PAINTED_BG,null);
             if(view instanceof ViewGroup){((ViewGroup)view).setClipChildren(clipChildren);((ViewGroup)view).setClipToPadding(clipPadding);}
+            view.setClipToOutline(clipOutline);
             if(view instanceof TextView){TextView text=(TextView)view;text.setTextSize(TypedValue.COMPLEX_UNIT_PX,textSize);Object nativeColour=text.getTag(NATIVE_INK);text.setTextColor(nativeColour instanceof Integer?(Integer)nativeColour:textColour);text.setTag(NATIVE_INK,null);text.setTag(PAINTED_INK,null);text.setMaxLines(maxLines);if(maxWidth>=0)text.setMaxWidth(maxWidth);else text.setMaxEms(maxEms);text.setGravity(gravity);text.setIncludeFontPadding(fontPadding);text.setTypeface(typeface);}
         }
     }
 
     private static void size(View view,Integer width,Integer height){ViewGroup.LayoutParams p=view.getLayoutParams();if(p==null)return;boolean changed=false;if(width!=null&&p.width!=width){p.width=width;changed=true;}if(height!=null&&p.height!=height){p.height=height;changed=true;}if(changed)view.setLayoutParams(p);}
     private static boolean visible(View view){return ProfileLayout.onScreen(view,view.getRootView());}
+    private static int topology(ViewGroup list){int hash=list.getChildCount();for(int i=0;i<list.getChildCount();i++)hash=31*hash+System.identityHashCode(list.getChildAt(i));return hash;}
+    private static int noticeKind(View row){
+        if(row==null)return -1;
+        View title=named(row,"brn"),preview=named(row,"nhq");
+        if(words(title).isEmpty())title=named(row,"brj");
+        if(words(preview).isEmpty())preview=named(row,"nhr");
+        return category(words(title),words(preview));
+    }
     private static int dp(View view,float value){return Math.round(value*view.getResources().getDisplayMetrics().density);}
     private static View named(View root,String name){if(root==null)return null;Integer id=ids.get(name);if(id==null){id=root.getResources().getIdentifier(name,"id",root.getContext().getPackageName());if(id!=0)ids.put(name,id);}return id==0?null:root.findViewById(id);}
     private static String unreadCount(View view){
         if(view==null||view.getVisibility()!=View.VISIBLE)return "";
         String text=words(view);if(!text.isEmpty())return text;
-        try{int count=((Number)view.getClass().getMethod("getCount").invoke(view)).intValue();int max=((Number)view.getClass().getMethod("getMaxCount").invoke(view)).intValue();return count<=0?"":max>0&&count>max?max+"+":String.valueOf(count);}catch(Throwable ignored){return "";}
+        try{
+            int count=((Number)view.getClass().getMethod("getCount").invoke(view)).intValue();
+            if(count<=0)return "";
+            // These native badges draw their text themselves. Copy that text
+            // when available, including compact counts and dot-only variants.
+            try{
+                Object drawable=view.getClass().getField("LL").get(view);
+                if(drawable!=null)for(String field:new String[]{"LJII","LJFF"}){
+                    try{
+                        Object drawn=drawable.getClass().getField(field).get(drawable);
+                        if(drawn instanceof CharSequence)return drawn.toString();
+                    }catch(ReflectiveOperationException ignored){}
+                }
+            }catch(ReflectiveOperationException ignored){}
+            // Tux calls this maxCount, but it is the number of digits: 2 means 99+.
+            int digits=((Number)view.getClass().getMethod("getMaxCount").invoke(view)).intValue();
+            if(digits>=1&&digits<=9){
+                int limit=1;for(int i=0;i<digits;i++)limit*=10;limit--;
+                if(count>limit)return limit+"+";
+            }
+            return String.valueOf(count);
+        }catch(Throwable ignored){return "";}
     }
     private static String words(View view){if(view instanceof TextView){CharSequence text=((TextView)view).getText();return text==null?"":text.toString().trim();}if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++){String text=words(group.getChildAt(i));if(!text.isEmpty())return text;}}return "";}
     private static HorizontalScrollView scroller(View view,int depth){if(view instanceof HorizontalScrollView)return(HorizontalScrollView)view;if(depth<5&&view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;for(int i=0;i<group.getChildCount();i++){HorizontalScrollView found=scroller(group.getChildAt(i),depth+1);if(found!=null)return found;}}return null;}

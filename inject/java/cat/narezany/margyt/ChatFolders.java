@@ -510,7 +510,8 @@ final class ChatFolders {
         // with TikTok's list itself narrowed, every row there is is wanted
         if (folder != null && !Narrowed.on() && !header(row)) {
             String key = keyOf(row);
-            hide = key == null || !folder.chats.containsKey(key);
+            // Service rows have no conversation key and must stay reachable.
+            hide = key != null && !folder.chats.containsKey(key);
         }
         ViewGroup.LayoutParams params = row.getLayoutParams();
         if (!(params instanceof ViewGroup.MarginLayoutParams)) return;
@@ -804,25 +805,13 @@ final class ChatFolders {
             return name instanceof String ? (String) name : null;
         }
 
-        /**
-         * What stays over a folder's chats: the strip of stories and the chips. Everything else that is
-         * not a chat (activity, system notices, TikTok Shop, the spinner of the next page) stays out.
-         */
-        private static boolean header(Object wrapper) throws Exception {
-            if (model == null) model = field(wrapper.getClass(), "LIZ");
-            Object item = model.get(wrapper);
-            if (item == null) return false;
-            String kind = item.getClass().getName();
-            return kind.equals("com.ss.android.ugc.aweme.inbox.widget.multi.InboxHorizontalTopListCombinePod") || kind.equals("X.0TD7");
-        }
-
-        /** The stories, the chips and the folder's chats of a whole list. */
+        /** Keep native service rows; filter only identifiable conversations. */
         private static List<Object> part(String id, List<?> from) throws Exception {
             List<Object> out = new ArrayList<Object>();
             for (Object wrapper : from) {
                 if (wrapper == null) continue;
                 String name = chatName(wrapper);
-                if (name == null ? header(wrapper) : holds(id, name)) out.add(wrapper);
+                if (name == null || holds(id, name)) out.add(wrapper);
             }
             return out;
         }

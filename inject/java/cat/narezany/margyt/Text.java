@@ -618,7 +618,6 @@ final class Text {
     static final String MD3_PROFILE = pick("Material 3: профиль", "Material 3: профіль", "Material 3: profile");
     static final String MD3_ICONS = pick("Округлые иконки", "Округлі іконки", "Rounded icons");
     static final String MD3_INBOX = pick("Material 3: входящие", "Material 3: вхідні", "Material 3: inbox");
-    static final String MD3_CHAT = pick("Material 3: личные сообщения", "Material 3: особисті повідомлення", "Material 3: direct messages");
     static final String DESIGN_COMMENTS = pick("Material 3: комментарии", "Material 3: коментарі", "Material 3: comments");
 
     static final String TAB_READ_ALL = pick("Прочитать все?", "Прочитати все?", "Mark all as read?");

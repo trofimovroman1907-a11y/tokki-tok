@@ -23,7 +23,6 @@ public final class Heart {
         view.setIconRes(resource);
         view.setTintColor(LikeColors.colour());
         tint(view);
-        flyLater(view);
     }
 
     // ------------------------------------------------------------ into the like button
@@ -66,41 +65,79 @@ public final class Heart {
         return null;
     }
 
-    private static void flyLater(final android.view.View heart){
-        if(heart.getTag(FLOWN)!=null)return;
-        heart.setTag(FLOWN,Boolean.TRUE);
-        heart.postDelayed(()->{try{fly(heart);}catch(Throwable error){Diary.note("heart flight: "+error);}},260);
+    /** Called on every native use, including hearts reused without a new drawable. */
+    public static void shown(android.widget.ImageView heart){
+        if(heart==null)return;
+        try{
+            Object previous=heart.getTag(FLOWN);
+            if(previous instanceof Flight)((Flight)previous).dispose();
+            Flight next=new Flight(heart);
+            heart.setTag(FLOWN,next);
+            heart.addOnAttachStateChangeListener(next);
+            heart.postDelayed(()->{
+                if(heart.getTag(FLOWN)!=next)return;
+                try{next.start();}catch(Throwable error){next.dispose();Diary.note("heart flight: "+error);}
+            },260);
+        }catch(Throwable error){Diary.note("heart cycle: "+error);}
     }
 
-    private static void fly(final android.view.View heart){
-        if(!heart.isAttachedToWindow()){Diary.note("heart flight: the heart was already gone");return;}
+    private static final class Flight implements android.view.View.OnAttachStateChangeListener {
+        final android.view.View heart;
+        android.view.View root;
+        android.graphics.drawable.Drawable copy;
+        android.graphics.Bitmap picture;
+        android.animation.ValueAnimator animator;
+        boolean disposed,hidden;
+        int visibility;
+        Flight(android.view.View heart){this.heart=heart;}
+        @Override public void onViewAttachedToWindow(android.view.View view){}
+        @Override public void onViewDetachedFromWindow(android.view.View view){dispose();}
+
+        void removeCopy(){
+            if(root!=null&&copy!=null)root.getOverlay().remove(copy);
+            copy=null;picture=null;root=null;
+        }
+        void dispose(){
+            if(disposed)return;
+            disposed=true;
+            if(animator!=null)animator.cancel();
+            removeCopy();
+            heart.removeOnAttachStateChangeListener(this);
+            if(hidden&&heart.getVisibility()==android.view.View.INVISIBLE)heart.setVisibility(visibility);
+            if(heart.getTag(FLOWN)==this)heart.setTag(FLOWN,null);
+        }
+        void start(){
+        if(disposed||!heart.isAttachedToWindow()||!heart.isShown()){dispose();return;}
         final android.view.View like=likeButton(heart);
-        if(like==null){Diary.note("heart flight: no like button on screen");return;}
-        if(heart.getWidth()<=0||heart.getHeight()<=0)return;
+        if(like==null||!like.isAttachedToWindow()||!like.isShown()){dispose();return;}
+        if(heart.getWidth()<=0||heart.getHeight()<=0){dispose();return;}
+        final float fromW=heart.getWidth()*heart.getScaleX(),fromH=heart.getHeight()*heart.getScaleY();
+        if(fromW<=0||fromH<=0){dispose();return;}
         // the heart as it looks, taken off the screen: its drawable is TikTok's own and cannot be copied
-        android.graphics.Bitmap picture=android.graphics.Bitmap.createBitmap(heart.getWidth(),heart.getHeight(),android.graphics.Bitmap.Config.ARGB_8888);
+        picture=android.graphics.Bitmap.createBitmap(heart.getWidth(),heart.getHeight(),android.graphics.Bitmap.Config.ARGB_8888);
         heart.draw(new android.graphics.Canvas(picture));
-        final android.view.View root=heart.getRootView();
+        root=heart.getRootView();
         int[] at=new int[2],rootAt=new int[2],to=new int[2];
         root.getLocationInWindow(rootAt);
         heart.getLocationInWindow(at);
         like.getLocationInWindow(to);
-        final float fromW=heart.getWidth()*heart.getScaleX(),fromH=heart.getHeight()*heart.getScaleY();
-        if(fromW<=0||fromH<=0)return;
         // the heart's centre, where its scale left it, and the like button's
         final float x0=at[0]-rootAt[0]+heart.getWidth()*heart.getScaleX()/2f,y0=at[1]-rootAt[1]+heart.getHeight()*heart.getScaleY()/2f;
         final float x1=to[0]-rootAt[0]+like.getWidth()/2f,y1=to[1]-rootAt[1]+like.getHeight()*.38f;
         final float toSize=Math.min(like.getWidth(),like.getHeight())*.62f;
         // the curve bows out to the left and up before it comes down to the button
         final float cx=(x0+x1)/2f-Math.abs(x1-x0)*.25f,cy=Math.min(y0,y1)-root.getHeight()*.12f;
-        final android.graphics.drawable.Drawable copy=new android.graphics.drawable.BitmapDrawable(heart.getResources(),picture);
+        copy=new android.graphics.drawable.BitmapDrawable(heart.getResources(),picture);
         copy.setAlpha(Math.round(255*Math.max(.3f,heart.getAlpha())));
+        visibility=heart.getVisibility();hidden=true;
         heart.setVisibility(android.view.View.INVISIBLE);
         root.getOverlay().add(copy);
         android.animation.ValueAnimator flight=android.animation.ValueAnimator.ofFloat(0f,1f);
+        animator=flight;
         flight.setDuration(520);
         flight.setInterpolator(new android.view.animation.AccelerateDecelerateInterpolator());
         flight.addUpdateListener(a->{
+            if(disposed||copy==null)return;
             float t=(Float)a.getAnimatedValue(),u=1-t;
             float x=u*u*x0+2*u*t*cx+t*t*x1,y=u*u*y0+2*u*t*cy+t*t*y1;
             float w=fromW+(toSize-fromW)*t,h=fromH+(toSize-fromH)*t;
@@ -109,7 +146,10 @@ public final class Heart {
         });
         flight.addListener(new android.animation.AnimatorListenerAdapter(){
             @Override public void onAnimationEnd(android.animation.Animator a){
-                root.getOverlay().remove(copy);
+                removeCopy();animator=null;
+                // TikTok removes the original at the end of its own animation.
+                // Keep it hidden until then; detaching or reusing restores it.
+                if(disposed||!like.isAttachedToWindow()||!like.isShown())return;
                 like.animate().cancel();
                 like.animate().scaleX(1.22f).scaleY(1.22f).setDuration(110).withEndAction(()->
                         like.animate().scaleX(1f).scaleY(1f).setDuration(240)
@@ -117,6 +157,7 @@ public final class Heart {
             }
         });
         flight.start();
+        }
     }
     public static void setTintColor(com.bytedance.tux.icon.TuxIconView view,int ignored) {
         if(view==null)return;
@@ -129,6 +170,5 @@ public final class Heart {
         view.setTag(0x54544C48,Boolean.TRUE);
         view.setImageDrawable(image);
         tint(view);
-        if(image!=null)flyLater(view);
     }
 }

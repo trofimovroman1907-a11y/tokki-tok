@@ -48,7 +48,7 @@ class FeatureHarness {
   card.upvotes=new Object();check(!Feed.suggestion(card),"friend upvote metadata preserved");card.upvotes=null;
   card.preload=new Object();check(!Feed.suggestion(card),"preloaded friend repost preserved");
   check(Feed.getItems(null)==null,"null safe");
-  FeedRail.like=new android.view.View();android.view.View.flush();
+  FeedRail.like=new android.view.View();Heart.shown(heart);Heart.shown(tux);android.view.View.flush();
   check(android.animation.ValueAnimator.runs==2,"both native heart hosts fly to the current like button");
   check(FeedRail.like.animations>0&&heart.getOverlay().count==0,"landing bounces the button and removes the overlay");
   check(heart.visibility==android.view.View.INVISIBLE,"native stationary heart is hidden during its flight");
