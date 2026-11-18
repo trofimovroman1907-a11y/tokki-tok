@@ -54,7 +54,29 @@ final class InboxMd3 {
             list.setTag(SESSION, session);
             sessions.put(list, new WeakReference<>(session));
         }
-        session.update();
+        session.updateIfChanged();
+    }
+
+    private static long fullPass;
+
+    /**
+     * Twice a second from Md3: the rows restyled only when they have changed, and
+     * fully every two seconds so the counters on the tiles keep up. It used to be a
+     * full restyle every time, which laid the screen out again, which walked the
+     * whole screen again: the lag of 2.2.2.
+     */
+    static void tick() {
+        if (!enabled()) return;
+        long now = android.os.SystemClock.uptimeMillis();
+        boolean full = now - fullPass > 2000L;
+        if (full) fullPass = now;
+        for (Map.Entry<ViewGroup, WeakReference<Session>> entry : sessions.entrySet()) {
+            Session session = entry.getValue().get();
+            ViewGroup list = entry.getKey();
+            if (session == null || !list.isAttachedToWindow()) continue;
+            if (!visible(list)) { if (session.fab != null) session.fab.setVisibility(View.GONE); continue; }
+            if (full) { session.update(); session.remember(); } else session.updateIfChanged();
+        }
     }
 
     static void refresh() {
@@ -82,8 +104,9 @@ final class InboxMd3 {
                 continue;
             }
             Header header=session.header;
-            if(session.topology!=topology(list)||(header!=null&&header.panel.getParent()!=header.row.get())
+            if((header!=null&&header.panel.getParent()!=header.row.get())
                     ||(session.fab!=null&&session.fab.getParent()!=session.composeHost(list)))session.update();
+            else if(session.topology!=topology(list))session.updateIfChanged();
             else session.composeVisibility(list);
         }
     }
@@ -121,6 +144,33 @@ final class InboxMd3 {
             return saved;
         }
 
+        private int done;
+
+        /**
+         * update() is asked on every layout of the screen and twice a second besides, and
+         * restyling the rows lays the screen out again: it runs only when the rows, their
+         * order, their size or the colours have changed since the last time.
+         */
+        void updateIfChanged() {
+            ViewGroup list = this.list.get();
+            if (list == null) return;
+            int sig = shape(list);
+            if (sig == done && done != 0) return;
+            update();
+            remember();
+        }
+
+        void remember() {
+            ViewGroup list = this.list.get();
+            if (list != null) done = shape(list);
+        }
+
+        private int shape(ViewGroup list) {
+            int sig = topology(list);
+            for (int i = 0; i < list.getChildCount(); i++) sig = 31 * sig + list.getChildAt(i).getHeight();
+            return 31 * (31 * sig + Md3.behind(list)) + Accent.colour();
+        }
+
         void update() {
             ViewGroup list = this.list.get();
             if (list == null) return;
@@ -151,11 +201,9 @@ final class InboxMd3 {
                 Target target=targets[i];if(target==null||seen[i])continue;
                 if(!target.available())targets[i]=null;
             }
-            if (header != null && (header.row.get() != filter || filter == null || header.panel.getParent()!=filter)) { header.restore(); header = null; }
-            if (filter != null) {
-                if (header == null) header = new Header(this, filter);
-                header.update();
-            }
+            // the shortcut tiles (followers, activity, monetization) are taken out at the owner's
+            // word (2.3.0): TikTok's own notification rows stay where they are
+            if (header != null) { header.restore(); header = null; }
             // Shortcuts are additional entry points. Native notification rows
             // always remain in the list, including rows first bound on scroll.
             top(list.getRootView());

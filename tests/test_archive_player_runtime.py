@@ -18,6 +18,7 @@ class ArchivePlayerTest(unittest.TestCase):
  'cat/narezany/margyt/Margy.java':'package cat.narezany.margyt;class Margy{static android.content.Context c=new android.content.Context();static android.content.Context context(){return c;}}',
  'cat/narezany/margyt/AccountAppearance.java':'package cat.narezany.margyt;class AccountAppearance{static String account="111";static android.content.SharedPreferences prefs(android.content.Context c){return c.getSharedPreferences(account,0);}}',
  'cat/narezany/margyt/Diary.java':'package cat.narezany.margyt;class Diary{static void note(String s){}}',
+ 'cat/narezany/margyt/VideoStats.java':'package cat.narezany.margyt;class VideoStats{static void report(Object p){}}',
  'cat/narezany/margyt/Screen.java':'package cat.narezany.margyt;class Screen{static int errors;static void say(String s){errors++;}}',
  'cat/narezany/margyt/Text.java':'package cat.narezany.margyt;class Text{static String SPEED_RANGE="",PLAYER_NOT_READY="",CUSTOM_SPEED="",PLAYER_SPEED="",APPLY="",CLOSE="";}',
  'cat/narezany/margyt/Skin.java':'package cat.narezany.margyt;class Skin{static Skin remembered(android.content.Context c){return new Skin();}}',

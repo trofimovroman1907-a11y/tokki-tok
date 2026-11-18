@@ -32,27 +32,34 @@ final class GlassOptics {
         local.set(0,0,bounds.width(),bounds.height());
         top=Math.min(top,local.height()/2f); bottom=Math.min(bottom,local.height()/2f);
         if(Design.fluent()){top=Math.min(top,density*Design.style().card);bottom=Math.min(bottom,density*Design.style().card);}
-        if (Build.VERSION.SDK_INT >= 33 && canvas.isHardwareAccelerated() && !failed) {
+        long now = android.os.SystemClock.uptimeMillis();
+        if (now - probedAt > 500L && LiveGlass.available()) {
+            probedAt = now;
+            boolean now_ = false;
+            try { now_ = LiveGlass.worthIt(view, bounds.left, bounds.top, local.width(), local.height()); }
+            catch (Throwable ignored) { }
+            // live once is live until it has been plain for a while: one look that missed the
+            // video used to drop the glass to a tint and back (the top bar "fought for its life")
+            if (now_) { worth = true; misses = 0; }
+            else if (++misses >= 6) worth = false;
+        }
+        if (worth && LiveGlass.available() && canvas.isHardwareAccelerated() && !failed) {
             try {
-                if (lens == null) lens = new Lens();
-                GlassBackdrop.Frame frame = GlassBackdrop.frame(view);
-                // A lens is for something to bend: a video, covers in a grid, the blurred screen
-                // behind a window. Over a page of one colour (the inbox, the mod's own screens)
-                // it bent nothing and still cost dozens of reads a pixel on every frame, so there
-                // the pane below is drawn instead, which looks the same.
-                view.getLocationOnScreen(point);
-                if (frame != null && frame.ready && frame.bitmap != null
-                        && busy(frame, point[0] - frame.x + bounds.left, point[1] - frame.y + bounds.top, local.width(), local.height())) {
-                    float x=point[0]-frame.x+bounds.left, y=point[1]-frame.y+bounds.top;
-                    lens.paint(canvas,frame,transform,x,y,local.width(),local.height(),top,bottom,colour,press,density);
+                if (live == null) live = new LiveGlass();
+                // Liquid glass is mostly clear, a breath of the surface's colour so words stay
+                // readable over a video; Fluent's acrylic is a tinted material
+                int tint = (colour & 0xffffff) | (Design.fluent() ? 0x99000000 : 0x2E000000);
+                if (live.draw(canvas, view, bounds.left, bounds.top, local.width(), local.height(), top, bottom,
+                        tint, !Design.fluent())) {
+                    rim(canvas, top, density, press);
                     veil(canvas,view,top,bottom,density,colour);
                     canvas.restoreToCount(save);
                     return;
                 }
             } catch (Throwable error) {
                 failed = true;
-                Diary.note("liquid glass shader: " + error);
-                android.util.Log.e("MargyTGlass", "Optical surface could not be rendered", error);
+                Diary.note("liquid glass: " + error);
+                android.util.Log.e("MargyTGlass", "Live glass could not be rendered", error);
             }
         }
         // Older devices still get the same controls, readable tint and directional rim.
@@ -66,6 +73,30 @@ final class GlassOptics {
         paint.setShader(null);paint.setStyle(Paint.Style.FILL);
         local.inset(-density*.4f,-density*.4f);veil(canvas,view,top,bottom,density,colour);
         canvas.restoreToCount(save);
+    }
+
+    private LiveGlass live;
+    private long probedAt;
+    private boolean worth;
+    private int misses;
+
+    /** The lit edge of the glass: brighter at the top left, where the light comes from. */
+    private void rim(Canvas canvas, float radius, float density, float press) {
+        paint.setStyle(Paint.Style.STROKE);
+        paint.setStrokeWidth(Math.max(1f, density * .8f));
+        paint.setShader(new LinearGradient(0, 0, local.width(), local.height(), Design.fluent()
+                ? new int[]{0x30ffffff, 0x10ffffff}
+                : new int[]{0x8Cffffff, 0x14ffffff, 0x50ffffff}, null, Shader.TileMode.CLAMP));
+        local.inset(density * .4f, density * .4f);
+        float r = Math.min(radius, local.height() / 2f);
+        canvas.drawRoundRect(local, r, r, paint);
+        local.inset(-density * .4f, -density * .4f);
+        paint.setShader(null);
+        paint.setStyle(Paint.Style.FILL);
+        if (press > 0f) {
+            paint.setColor(Color.argb(Math.round(press * 28), 255, 255, 255));
+            canvas.drawRoundRect(local, radius, radius, paint);
+        }
     }
 
     private int busyVersion = Integer.MIN_VALUE;

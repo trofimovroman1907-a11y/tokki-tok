@@ -9,6 +9,7 @@ class FeedRailTest(unittest.TestCase):
   sources={k:STUBS[k] for k in ['android/content/Context.java','android/content/SharedPreferences.java']}
   sources.update({
    'cat/narezany/margyt/VideoActions.java':'package cat.narezany.margyt;class VideoActions{static void accountChanged(){} static void bindNative(Object c){} static void selected(Object c,Object p){}}',
+   'cat/narezany/margyt/VideoStats.java':'package cat.narezany.margyt;class VideoStats{static void bind(Object c){}}',
    'cat/narezany/margyt/Repost.java':'package cat.narezany.margyt;class Repost{static final int TAG=2;static void reload(){} static void anchor(Object c){} static boolean visibility(android.view.View v,int value){return false;}static boolean replacing(android.view.View v){return false;}}',
 
    'android/view/View.java':'package android.view;public class View{public static int VISIBLE=0,INVISIBLE=4,GONE=8;int visibility;java.util.Map<Integer,Object> tags=new java.util.HashMap<>();public Object getTag(int k){return tags.get(k);}public void setTag(int k,Object v){tags.put(k,v);}public int writes;public boolean isAttachedToWindow(){return true;}public int getVisibility(){return visibility;}public void setVisibility(int v){visibility=v;writes++;}public void post(Runnable r){r.run();}}',

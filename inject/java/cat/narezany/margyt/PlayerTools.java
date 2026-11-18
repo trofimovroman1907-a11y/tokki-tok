@@ -17,6 +17,7 @@ public final class PlayerTools {
    current=new WeakReference<Object>(manager);
    if(next.equals(aid)){SponsorBlock.playing(next);return;}
    aid=next;cancelSmooth();
+   VideoStats.report(playing);
    SponsorBlock.playing(next);
   }catch(Throwable error){Diary.note("default speed: "+error);}
  }

@@ -44,7 +44,7 @@ public final class Backup {
             Comments.KEY_COPY,
             Flags.KEY_VOICE, Flags.KEY_BANNER, Flags.KEY_SPEED_LOCK,
             Flags.KEY_COMMENT_REPOST, Flags.KEY_SELF_REPOST, Flags.KEY_NEW_PROFILE, AvatarShape.KEY, AvatarShape.SPIN_KEY,
-            Screamer.KEY, Screamer.KEY_SOUND, DepGame.KEY_FLOAT,
+            Screamer.KEY, Screamer.KEY_SOUND,
             Streaks.KEY_ON, Streaks.KEY_MODE, Streaks.KEY_TEXT,
             Updater.KEY_REMIND
     };
@@ -171,7 +171,7 @@ public final class Backup {
                 else if (value instanceof String) edit.putString(key, (String) value);
             }
             global.apply();appearance.apply();AppearanceColors.reload();Design.reload();
-            FeedRail.reloadSettings();AvatarShape.reloadSettings();
+            FeedRail.reloadSettings();AvatarShape.reloadSettings();NavBar.reloadSettings();
             FeedBlacklist.reload();PlayerTools.accountChanged();ProfileLayout.reload();MessageTimes.reload();ModNotifications.reload();Repost.reload();
             Themes.forget();
             Fonts.reload();
@@ -220,7 +220,7 @@ public final class Backup {
         appearance.apply();AppearanceColors.reload();
         edit.apply();
         Design.reload();
-        FeedRail.reloadSettings();AvatarShape.reloadSettings();
+        FeedRail.reloadSettings();AvatarShape.reloadSettings();NavBar.reloadSettings();
         FeedBlacklist.reload();PlayerTools.accountChanged();ProfileLayout.reload();MessageTimes.reload();ModNotifications.reload();Repost.reload();
         Themes.forget();
         Fonts.reload();

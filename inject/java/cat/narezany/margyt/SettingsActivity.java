@@ -46,7 +46,7 @@ import java.util.Locale;
  * table -- the one thing this build refuses to do.
  */
 public class SettingsActivity extends Activity {
-    void accountAppearanceChanged(){skin=Skin.remembered(this);rebuild();}
+    void accountAppearanceChanged(){skin=Skin.forSettings(this);rebuild();}
 
     private Skin skin;
     private FrameLayout root;
@@ -134,11 +134,11 @@ public class SettingsActivity extends Activity {
         if (shelves != null) return shelves;
         shelves = new Shelf[] {
             new Shelf(1, "style", "palette", Text.PAGE_STYLE, Text.PAGE_STYLE_NOTE, Text.APPEARANCE),
-            new Shelf(1, "accent", "format_color_fill", Text.ACCENT, Text.PAGE_ACCENT_NOTE, Text.ACCENT),
             new Shelf(1, "md3", "view_compact", Text.MD3_TIKTOK, Text.PAGE_MD3_NOTE, Text.MD3_TIKTOK),
             new Shelf(1, "theme", "contrast", Text.THEME, Text.PAGE_THEME_NOTE, Text.THEME),
             new Shelf(1, "font", "text_fields", Text.FONT, Text.PAGE_FONT_NOTE, Text.FONT),
             new Shelf(1, "typing", "edit", TYPING, TYPING_NOTE, TYPING),
+            new Shelf(1, "motionblur", "animation", MOTION_BLUR, MOTION_BLUR_NOTE, MOTION_BLUR),
             new Shelf(2, "badges", "verified", Text.BADGES, Text.PAGE_BADGES_NOTE, Text.BADGES),
             new Shelf(2, "frames", "account_circle", FRAMES, FRAMES_NOTE, FRAMES),
             new Shelf(2, "gradient", "palette", Text.GRADIENT, Text.PAGE_GRADIENT_NOTE, Text.GRADIENT),
@@ -152,6 +152,7 @@ public class SettingsActivity extends Activity {
             new Shelf(3, "motion", "animation", MOTION, MOTION_NOTE, MOTION),
             new Shelf(3, "region", "public", Text.REGION, Text.PAGE_REGION_NOTE, Text.REGION, Text.COUNTRY),
             new Shelf(4, "downloads", "download", Text.DOWNLOADS, Text.PAGE_DOWNLOADS_NOTE, Text.DOWNLOADS),
+            new Shelf(4, "cleanlinks", "link", CLEAN_LINKS, CLEAN_LINKS_NOTE, CLEAN_LINKS),
             new Shelf(4, "backup", "restore", Text.BACKUP, Text.PAGE_BACKUP_NOTE, Text.BACKUP),
             new Shelf(4, "diagnostics", "bug_report", Text.DIAGNOSTICS, Text.PAGE_DIAGNOSTICS_NOTE, Text.DIAGNOSTICS),
             new Shelf(4, "diary", "article", Text.DIARY, Text.PAGE_DIARY_NOTE, Text.DIARY),
@@ -162,7 +163,6 @@ public class SettingsActivity extends Activity {
             new Shelf(7, "ghost", "visibility_off", GHOST, GHOST_NOTE, GHOST),
             new Shelf(7, "streaks", "schedule", Text.STREAKS, Text.PAGE_STREAKS_NOTE, Text.STREAKS),
             new Shelf(7, "notifications", "notifications", Text.NOTIFICATIONS, Text.PAGE_NOTIFICATIONS_NOTE, Text.NOTIFICATIONS),
-            new Shelf(8, "dep", "flare", Text.FUN_DEP, Text.PAGE_DEP_NOTE, Text.FUN_DEP),
             new Shelf(8, "rubble", "open_with", Text.FUN_RUBBLE, Text.PAGE_RUBBLE_NOTE, Text.FUN_RUBBLE),
             new Shelf(8, "tilcayo", "animation", Text.FUN_TILCAYO_RUN, Text.PAGE_TILCAYO_NOTE, Text.FUN_TILCAYO_RUN),
             new Shelf(8, "screamers", "animation", Text.FUN_SCREAMERS, Text.PAGE_SCREAMERS_NOTE, Text.FUN_SCREAMERS),
@@ -214,7 +214,7 @@ public class SettingsActivity extends Activity {
         Margy.attach(this);
         // drawn in what TikTok's own settings were last seen wearing, which is
         // the theme when one is on: this screen is opened from that one
-        skin = Skin.remembered(this);
+        skin = Skin.forSettings(this);
         Unsaved.look(this);
         dressTheWindow();
         // the list may still be the one cached before this screen existed, so
@@ -253,6 +253,327 @@ public class SettingsActivity extends Activity {
         if(getIntent().getBooleanExtra("margyt_tutorial",false))root.postDelayed(()->Tutorial.show(this),350L);
         openPluginFile(getIntent());
         openStyleFile(getIntent());
+        openStats(getIntent());
+    }
+
+    private Bundle stats;
+
+    /** Opened from the button beside a video's share button: that video's numbers. */
+    private void openStats(Intent intent) {
+        Bundle given = intent == null ? null : intent.getBundleExtra(VideoStats.EXTRA);
+        if (given == null) return;
+        stats = given;
+        settingsGroup = STATS_PAGE;
+        settingsPage = null;
+        searchQuery = "";
+        rebuild();
+    }
+
+    private static final int STATS_PAGE = 96;
+
+    private static String whole(long n) {
+        return String.format(Locale.ROOT, "%,d", n).replace(',', '\u00A0');
+    }
+
+    private static String share(long part, long of) {
+        if (of <= 0) return "—";
+        return String.format(Locale.ROOT, "%.2f%%", part * 100.0 / of).replace('.', ',');
+    }
+
+    private View statRow(String picture, String title, String value) {
+        final String copied = value;
+        View row = actionRow(picture, title, value, () -> {
+            try {
+                ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
+                        .setPrimaryClip(android.content.ClipData.newPlainText(title, copied));
+                Toast.makeText(this, Text.COPIED, Toast.LENGTH_SHORT).show();
+            } catch (Throwable ignored) {
+            }
+        });
+        return row;
+    }
+
+    /** A row with a bar under it: the part of the views that did this. */
+    private View ratioRow(String picture, String title, long part, long of, long best) {
+        LinearLayout rows = new LinearLayout(this);
+        rows.setOrientation(LinearLayout.VERTICAL);
+        rows.addView(statRow(picture, title, share(part, of)));
+        final float fill = of <= 0 || best <= 0 ? 0f : Math.min(1f, (float) part / best);
+        View bar = new View(this) {
+            final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            @Override protected void onDraw(Canvas canvas) {
+                float h = getHeight(), w = getWidth();
+                paint.setColor(Expressive.mix(skin.card, skin.text, 0.12f));
+                canvas.drawRoundRect(0, 0, w, h, h / 2f, h / 2f, paint);
+                paint.setColor(Accent.colour());
+                canvas.drawRoundRect(0, 0, Math.max(h, w * fill), h, h / 2f, h / 2f, paint);
+            }
+        };
+        LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(6));
+        size.leftMargin = dp(72); size.rightMargin = dp(20); size.bottomMargin = dp(12);
+        rows.addView(bar, size);
+        return rows;
+    }
+
+    private static String compact(long n) {
+        if (n < 10_000) return whole(n);
+        if (n < 1_000_000) return String.format(Locale.ROOT, "%.1f", n / 1000.0).replace('.', ',').replace(",0", "") + " " + Local.of("тыс.");
+        if (n < 1_000_000_000) return String.format(Locale.ROOT, "%.1f", n / 1_000_000.0).replace('.', ',').replace(",0", "") + " " + Local.of("млн");
+        return String.format(Locale.ROOT, "%.1f", n / 1_000_000_000.0).replace('.', ',').replace(",0", "") + " " + Local.of("млрд");
+    }
+
+    private String postLink(Bundle s) {
+        String handle = s.getString("handle", "");
+        return "https://www.tiktok.com/@" + (handle.length() > 0 ? handle : "_") + (s.getInt("images") > 0 ? "/photo/" : "/video/") + s.getString("aid", "");
+    }
+
+    /** The whole page as text, to send anywhere. */
+    private String statsText(Bundle s) {
+        long views = s.getLong("play");
+        StringBuilder out = new StringBuilder();
+        out.append("📊 ").append(Local.of("Статистика видео")).append(" @").append(s.getString("handle", "")).append('\n');
+        out.append("👁 ").append(Local.of("Просмотры")).append(": ").append(whole(views)).append('\n');
+        out.append("❤️ ").append(Local.of("Лайки")).append(": ").append(whole(s.getLong("digg"))).append(" (").append(share(s.getLong("digg"), views)).append(")\n");
+        out.append("💬 ").append(Local.of("Комментарии")).append(": ").append(whole(s.getLong("comment"))).append('\n');
+        out.append("↗️ ").append(Local.of("Поделились")).append(": ").append(whole(s.getLong("share"))).append('\n');
+        out.append("🔖 ").append(Local.of("Сохранили")).append(": ").append(whole(s.getLong("collect"))).append('\n');
+        long engaged = s.getLong("digg") + s.getLong("comment") + s.getLong("share") + s.getLong("collect");
+        out.append("⚡ ").append(Local.of("Вовлечённость")).append(": ").append(share(engaged, views)).append('\n');
+        if (s.getLong("created") > 0) out.append("🕒 ").append(java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.LONG,
+                java.text.DateFormat.SHORT).format(new java.util.Date(s.getLong("created") * 1000L))).append('\n');
+        out.append("🔗 ").append(postLink(s)).append("\n\nMargyT");
+        return out.toString();
+    }
+
+    private void shareStats() {
+        if (stats == null) return;
+        Intent send = new Intent(Intent.ACTION_SEND);
+        send.setType("text/plain");
+        send.putExtra(Intent.EXTRA_TEXT, statsText(stats));
+        startActivity(Intent.createChooser(send, Local.of("Поделиться статистикой")));
+    }
+
+    /** One number of the grid: an icon, the number, and a line under it. */
+    private View tile(String picture, String name, long value, String under) {
+        LinearLayout tile = new LinearLayout(this);
+        tile.setOrientation(LinearLayout.VERTICAL);
+        tile.setPadding(dp(16), dp(12), dp(12), dp(12));
+        LinearLayout head = new LinearLayout(this);
+        head.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView glyph = new ImageView(this);
+        glyph.setImageDrawable(SettingsGlyph.make(picture, accentInk()));
+        head.addView(glyph, new LinearLayout.LayoutParams(dp(18), dp(18)));
+        TextView label = detail(name);
+        label.setPadding(dp(6), 0, 0, 0);
+        head.addView(label);
+        tile.addView(head);
+        TextView number = new TextView(this);
+        number.setText(compact(value));
+        number.setTextColor(skin.text);
+        M3Type.titleLarge(number);
+        number.setPadding(0, dp(4), 0, 0);
+        tile.addView(number);
+        if (under != null && under.length() > 0) tile.addView(detail(under));
+        final String copied = whole(value);
+        tile.setOnClickListener(v -> {
+            try {
+                ((android.content.ClipboardManager) getSystemService(CLIPBOARD_SERVICE))
+                        .setPrimaryClip(android.content.ClipData.newPlainText(name, copied));
+                Toast.makeText(this, Text.COPIED, Toast.LENGTH_SHORT).show();
+            } catch (Throwable ignored) {
+            }
+        });
+        Motion.press(tile);
+        return tile;
+    }
+
+    private LinearLayout pair(View left, View right) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.addView(left, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        if (right != null) row.addView(right, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        else row.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
+        return row;
+    }
+
+    private int chartKind = 1;
+    private long[][] chartPoints;
+
+    /** The history of one number, as a line over time. */
+    private final class Chart extends View {
+        final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG), area = new Paint(Paint.ANTI_ALIAS_FLAG),
+                text = new Paint(Paint.ANTI_ALIAS_FLAG), dot = new Paint(Paint.ANTI_ALIAS_FLAG);
+        final android.graphics.Path path = new android.graphics.Path(), fill = new android.graphics.Path();
+
+        Chart() {
+            super(SettingsActivity.this);
+            line.setStyle(Paint.Style.STROKE);
+            line.setStrokeWidth(getResources().getDisplayMetrics().density * 2.5f);
+            line.setStrokeCap(Paint.Cap.ROUND);
+            line.setStrokeJoin(Paint.Join.ROUND);
+            text.setTextSize(dp(11));
+        }
+
+        @Override protected void onMeasure(int w, int h) { setMeasuredDimension(MeasureSpec.getSize(w), dp(170)); }
+
+        @Override protected void onDraw(Canvas canvas) {
+            long[][] points = chartPoints;
+            int accent = Accent.colour() | 0xFF000000;
+            text.setColor(skin.muted());
+            float left = dp(16), right = getWidth() - dp(16), top = dp(14), bottom = getHeight() - dp(26);
+            if (points == null) { canvas.drawText(Local.of("Загружаю…"), left, getHeight() / 2f, text); return; }
+            if (points.length < 2) {
+                canvas.drawText(Local.of("Истории пока мало: точки добавляются,"), left, getHeight() / 2f - dp(8), text);
+                canvas.drawText(Local.of("когда ролик смотрят люди с MargyT."), left, getHeight() / 2f + dp(10), text);
+                return;
+            }
+            long t0 = points[0][0], t1 = points[points.length - 1][0];
+            long low = Long.MAX_VALUE, high = 0;
+            for (long[] p : points) { low = Math.min(low, p[chartKind]); high = Math.max(high, p[chartKind]); }
+            if (high == low) high = low + 1;
+            path.reset(); fill.reset();
+            for (int i = 0; i < points.length; i++) {
+                float x = left + (right - left) * (points[i][0] - t0) / (float) Math.max(1, t1 - t0);
+                float y = bottom - (bottom - top) * (points[i][chartKind] - low) / (float) (high - low);
+                if (i == 0) { path.moveTo(x, y); fill.moveTo(x, bottom); }
+                else path.lineTo(x, y);
+                fill.lineTo(x, y);
+                if (i == points.length - 1) {
+                    fill.lineTo(x, bottom); fill.close();
+                    area.setShader(new android.graphics.LinearGradient(0, top, 0, bottom, (accent & 0xFFFFFF) | 0x55000000,
+                            accent & 0xFFFFFF, android.graphics.Shader.TileMode.CLAMP));
+                    canvas.drawPath(fill, area);
+                    line.setColor(accent);
+                    canvas.drawPath(path, line);
+                    dot.setColor(accent);
+                    canvas.drawCircle(x, y, dp(4), dot);
+                }
+            }
+            java.text.DateFormat day = java.text.DateFormat.getDateInstance(java.text.DateFormat.SHORT);
+            canvas.drawText(day.format(new java.util.Date(t0 * 1000L)), left, getHeight() - dp(8), text);
+            String end = day.format(new java.util.Date(t1 * 1000L));
+            canvas.drawText(end, right - text.measureText(end), getHeight() - dp(8), text);
+            canvas.drawText(compact(high), left, top + dp(4), text);
+            canvas.drawText("+" + compact(high - low), right - text.measureText("+" + compact(high - low)), top + dp(4), text);
+        }
+    }
+
+    private void statsPage() {
+        final Bundle s = stats;
+        if (s == null) return;
+        long views = s.getLong("play"), likes = s.getLong("digg"), comments = s.getLong("comment"),
+                shares = s.getLong("share"), saves = s.getLong("collect"), downloads = s.getLong("download"),
+                reposts = s.getLong("repost");
+        long created = s.getLong("created");
+        long now = System.currentTimeMillis() / 1000L;
+        float hours = created > 0 ? Math.max(1f / 60f, (now - created) / 3600f) : 0f;
+
+        if (topBar != null) {
+            ImageView send = new ImageView(this);
+            send.setImageDrawable(SettingsGlyph.make("share", skin.text));
+            send.setPadding(dp(12), dp(12), dp(12), dp(12));
+            send.setContentDescription(Local.of("Поделиться статистикой"));
+            send.setOnClickListener(v -> shareStats());
+            Motion.press(send);
+            topBar.addView(send, new LinearLayout.LayoutParams(dp(48), dp(48)));
+        }
+
+        // who, what, when
+        LinearLayout head = card();
+        LinearLayout who = row();
+        who.addView(icon("account_circle"));
+        LinearLayout words = new LinearLayout(this);
+        words.setOrientation(LinearLayout.VERTICAL);
+        words.addView(label(s.getString("author", "")));
+        String when = "";
+        if (created > 0) {
+            long age = now - created;
+            when = age < 3600 ? (age / 60) + " " + Local.of("мин") : age < 86400 ? (age / 3600) + " " + Local.of("ч")
+                    : (age / 86400) + " " + Local.of("дн");
+            when = "  ·  " + when + " " + Local.of("назад");
+        }
+        words.addView(detail("@" + s.getString("handle", "") + when));
+        who.addView(words, grow());
+        head.addView(who);
+        String desc = s.getString("desc", "");
+        if (desc.length() > 0) {
+            TextView text = detail(desc);
+            text.setMaxLines(3);
+            text.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            text.setPadding(dp(20), 0, dp(20), dp(12));
+            head.addView(text);
+        }
+        column.addView(wrap(head));
+
+        // the numbers, two by two
+        LinearLayout grid = card();
+        grid.addView(pair(tile("play_circle", Local.of("Просмотры"), views,
+                hours > 0 ? compact(Math.round(views / hours)) + " " + Local.of("в час") : null),
+                tile("bolt", Local.of("Вовлечённость"), 0, null)));
+        // the engagement tile shows a share, not a count
+        LinearLayout first = (LinearLayout) ((LinearLayout) grid.getChildAt(0)).getChildAt(1);
+        ((TextView) first.getChildAt(1)).setText(share(likes + comments + shares + saves, views));
+        grid.addView(pair(tile("favorite_border", Local.of("Лайки"), likes, share(likes, views)),
+                tile("chat", Local.of("Комментарии"), comments, share(comments, views))));
+        grid.addView(pair(tile("share", Local.of("Поделились"), shares, share(shares, views)),
+                tile("bookmark", Local.of("Сохранили"), saves, share(saves, views))));
+        if (reposts > 0 || downloads > 0) grid.addView(pair(tile("repeat", Local.of("Репосты"), reposts, null),
+                downloads > 0 ? tile("download", Local.of("Скачали"), downloads, null) : null));
+        column.addView(wrap(grid));
+
+        // how it grew
+        column.addView(section(Local.of("Динамика")));
+        LinearLayout chartCard = card();
+        final Chart chart = new Chart();
+        chartCard.addView(segmented(new String[] {Local.of("Просмотры"), Local.of("Лайки"), Local.of("Комменты")},
+                chartKind - 1, at -> { chartKind = at + 1; chart.invalidate(); }));
+        chartCard.addView(chart);
+        column.addView(wrap(chartCard));
+        final String aid = s.getString("aid", "");
+        if (aid.length() > 0) VideoStats.history(aid, points -> {
+            // the numbers on screen now are the last point
+            long[] latest = {now, views, likes, comments, shares, saves};
+            if (points.length == 0 || points[points.length - 1][0] < now - 600) {
+                long[][] more = java.util.Arrays.copyOf(points, points.length + 1);
+                more[points.length] = latest;
+                points = more;
+            }
+            chartPoints = points;
+            chart.invalidate();
+        });
+
+        // the rest, short
+        column.addView(section(Local.of("Подробно")));
+        LinearLayout more = card();
+        if (created > 0) more.addView(statRow("schedule", Local.of("Опубликовано"), java.text.DateFormat.getDateTimeInstance(
+                java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT).format(new java.util.Date(created * 1000L))));
+        String region = s.getString("region", "");
+        if (region.length() > 0) {
+            String name = new Locale("", region.toUpperCase(Locale.ROOT)).getDisplayCountry();
+            more.addView(statRow("public", Local.of("Регион"), name.length() > 0 ? name : region));
+        }
+        long duration = s.getLong("duration");
+        StringBuilder file = new StringBuilder();
+        if (s.getInt("images") > 0) file.append(s.getInt("images")).append(' ').append(Local.of("фото"));
+        else if (duration > 0) file.append(String.format(Locale.ROOT, "%d:%02d", duration / 60000, (duration / 1000) % 60));
+        if (s.getLong("width") > 0) file.append(file.length() > 0 ? " · " : "").append(s.getLong("width")).append('×').append(s.getLong("height"));
+        if (s.getLong("bitrate") > 0) file.append(" · ").append(String.format(Locale.ROOT, "%.1f", s.getLong("bitrate") / 1_000_000.0).replace('.', ','))
+                .append(' ').append(Local.of("Мбит/с"));
+        if (file.length() > 0) more.addView(statRow("hd", Local.of("Файл"), file.toString()));
+        if (s.getString("music", "").length() > 0) more.addView(statRow("music_note", Local.of("Звук"),
+                s.getString("music", "") + (s.getString("music_author", "").length() > 0 ? " · " + s.getString("music_author", "") : "")));
+        java.util.ArrayList<String> tags = s.getStringArrayList("tags");
+        if (tags != null && !tags.isEmpty()) {
+            StringBuilder all = new StringBuilder();
+            for (String tag : tags) all.append(all.length() > 0 ? " " : "").append('#').append(tag);
+            more.addView(statRow("text_fields", Local.of("Хэштеги"), all.toString()));
+        }
+        if (s.getBoolean("ad")) more.addView(statRow("info", Local.of("Реклама"), Local.of("да")));
+        if (s.getBoolean("ai")) more.addView(statRow("info", Local.of("Сделано с ИИ"), Local.of("да")));
+        more.addView(statRow("link", Local.of("Ссылка"), postLink(s)));
+        more.addView(statRow("fingerprint", "ID", aid));
+        column.addView(wrap(more));
+        if (topBar == null) column.addView(wrap(actionRow("share", Local.of("Поделиться статистикой"), null, this::shareStats)));
     }
 
     /** Set by PluginOpenActivity: a .mtp opened from a file manager, to review as if it were picked here. */
@@ -277,6 +598,7 @@ public class SettingsActivity extends Activity {
         setIntent(intent);
         openPluginFile(intent);
         openStyleFile(intent);
+        openStats(intent);
     }
 
     private void openPluginFile(Intent intent) {
@@ -340,11 +662,24 @@ public class SettingsActivity extends Activity {
         keepPages = false;
         renderDisclosureKey=null;
         column.removeAllViews();
+        topBar = null;
         column.addView(backArrow());
         if (settingsGroup == DONATE_PAGE) {
             column.addView(title(Text.DONATE_BANNER));
             donatePage();
             showRestartBar();
+            restoreScroll(0);
+            return;
+        }
+        if (settingsGroup == STATS_PAGE) {
+            column.addView(title(Local.of("Статистика видео")));
+            statsPage();
+            restoreScroll(0);
+            return;
+        }
+        if (settingsGroup == COUNTRY_PAGE) {
+            column.addView(title(Local.of("Страна")));
+            countriesPage();
             restoreScroll(0);
             return;
         }
@@ -364,13 +699,6 @@ public class SettingsActivity extends Activity {
         if (open != null && open.group != settingsGroup) { settingsPage = null; open = null; }
         column.addView(title(settingsGroup == 0 ? (Version.LITE ? "MargyT Lite" : "MargyT") : open != null ? open.title : groupName(settingsGroup)));
         if(settingsGroup==0 || searchQuery.length()>0)column.addView(searchBox());
-        if (settingsGroup != 0 && open == null && searchQuery.length() == 0) {
-            column.addView(shelfList(settingsGroup));
-            column.addView(wrap(actionRow("info",Local.of("Подсказки"),null,this::showSectionHelp)));
-            showRestartBar();
-            restoreScroll(0);
-            return;
-        }
         if (open != null && open.note.length() > 0) { View lead = lead(open.note); lead.setTag(LEAD, Boolean.TRUE); column.addView(lead); }
         // a search builds every page as if to show it, reads them, and shows what it found instead
         final boolean searching = searchQuery.length() > 0;
@@ -409,7 +737,22 @@ public class SettingsActivity extends Activity {
             restoreScroll(previousScroll);
             return;
         }
-        filterGroup();
+        if (settingsGroup != 0 && open == null) {
+            // a shelf's page: the long pages are rows that open them, the pages of one or two
+            // switches are right here, so nothing short is a tap away behind a page of its own
+            java.util.Set<String> small = smallSections(contentStart);
+            java.util.List<Shelf> long_ = new java.util.ArrayList<>();
+            java.util.Set<String> inline = new java.util.HashSet<>();
+            for (Shelf one : shelvesOf(settingsGroup)) {
+                boolean allSmall = one.sections.length > 0;
+                for (String name : one.sections) allSmall &= small.contains(name);
+                if (allSmall) java.util.Collections.addAll(inline, one.sections);
+                else long_.add(one);
+            }
+            int from = contentStart;
+            if (!long_.isEmpty()) { column.addView(shelfList(long_), contentStart); from++; }
+            filterSections(from, inline);
+        } else filterGroup(contentStart);
         column.addView(versions());
 
         showRestartBar();
@@ -431,19 +774,8 @@ public class SettingsActivity extends Activity {
         icons.addView(actionRow("wallpaper", Text.CUSTOM_ICON, null, () -> CustomIcon.pick(this)));
         column.addView(wrap(icons));
 
-        column.addView(section(Text.ACCENT));
-        LinearLayout accent = card();
-        accent.addView(phone("accent").liked(true));
-        accent.addView(accentHead());
-        if (accentOpen) {
-            if (Accent.fromWallpaper() != 0) {
-                accent.addView(line());
-                accent.addView(appear(wallpaperRow()));
-            }
-            accent.addView(line());
-            accent.addView(appear(palette()));
-        }
-        column.addView(wrap(accent));
+        // 2.3.0: the accent is part of the theme now -- a ready theme brings its own, "own colours" has an accent row,
+        // and the wallpaper switch takes the accent from the wallpaper with the rest; a separate page left them apart
 
         column.addView(section(Text.MD3_TIKTOK));
         LinearLayout loading = card();
@@ -503,11 +835,12 @@ public class SettingsActivity extends Activity {
                         rebuildAfterSwitchAnimation();
                     }));
             theme.addView(quiet(Text.THEME_NOTE));
+            if (Themes.isEnabled() && Themes.isMaterial()) theme.addView(seedPicker());
         } else {
             theme.addView(quiet(Text.THEME_OLD));
         }
         theme.addView(line());
-        theme.addView(actionRow("palette", Text.THEME_PRESETS, Text.THEME_PRESETS_NOTE,
+        theme.addView(actionRow("palette", Text.THEME_PRESETS + NewChip.MARK, Text.THEME_PRESETS_NOTE,
                 this::chooseThemePreset));
         theme.addView(line());
         theme.addView(themeColoursHead());
@@ -580,12 +913,6 @@ public class SettingsActivity extends Activity {
         column.addView(section(Text.COUNTRY));
         LinearLayout countries = card();
         countries.addView(countryHead());
-        if (countriesOpen) {
-            countries.addView(line());
-            for (String[] country : Margy.COUNTRIES) {
-                countries.addView(appear(countryRow(country)));
-            }
-        }
         column.addView(wrap(countries));
 
         column.addView(section(Text.FEED));
@@ -904,20 +1231,6 @@ public class SettingsActivity extends Activity {
         donateAnchor = wrap(actionRow("favorite_border", Text.THANKS, Text.PAGE_THANKS_NOTE, this::showThanks));
         column.addView(donateAnchor);
 
-        column.addView(section(Text.FUN_DEP));
-        LinearLayout dep = card();
-        dep.addView(chipRow("flare", Text.FUN_DEP, new String[] {Text.CHIP_TEMPORARY, Text.CHIP_COLLAB},
-                this::openDep));
-        dep.addView(quiet(Text.DEP_NOTE));
-        dep.addView(line());
-        final SettingsPictures.DepWindow depArt = new SettingsPictures.DepWindow(this, skin, DepFloat.isOn(this));
-        dep.addView(depArt);
-        dep.addView(liveToggleRow("open_with", Text.DEP_FLOAT, DepFloat.isOn(this), on -> {
-            DepFloat.set(this, on);
-            depArt.set(on);
-        }));
-        column.addView(wrap(dep));
-
         column.addView(section(Text.FUN_SCREAMERS));
         LinearLayout screamers = card();
         screamers.addView(new SettingsPictures.Scream(this, skin));
@@ -983,36 +1296,36 @@ public class SettingsActivity extends Activity {
 
         column.addView(section(TYPING));
         LinearLayout typing = card();
-        final NewPictures.Typing typingArt = new NewPictures.Typing(this, skin, TypingAnim.on(TypingAnim.ON));
-        typing.addView(typingArt);
         typing.addView(liveToggleRow("edit", Local.of("Анимация набора текста"), TypingAnim.on(TypingAnim.ON),
                 on -> {
-                    TypingAnim.set(TypingAnim.ON, on);
-                    typingArt.set(on);
+                    TextAnim.set(on);
                     rebuildAfterSwitchAnimation();
                 }));
-        typing.addView(quiet(Local.of("Работает в комментариях и сообщениях.")));
-        if (TypingAnim.on(TypingAnim.ON)) {
-            String[][] looks = {
-                    {TypingAnim.BLUR, "visibility_off", Local.of("Размытие при появлении")},
-                    {TypingAnim.SLIDE, "expand_more", Local.of("Подъём снизу")},
-                    {TypingAnim.SCALE, "add", Local.of("Увеличение (пружина)")},
-                    {TypingAnim.ROTATE, "animation", Local.of("Лёгкий поворот")},
-                    {TypingAnim.GHOST, "restore", Local.of("Анимация удаления")},
-                    {TypingAnim.CURSOR, "edit", Local.of("Плавный курсор")}};
-            for (String[] motion : looks) {
-                final String key = motion[0];
-                typing.addView(line());
-                typing.addView(liveToggleRow(motion[1], motion[2], TypingAnim.on(key), on -> TypingAnim.set(key, on)));
-            }
-            typing.addView(line());
-            // all the choices in sight, the chosen one filled: the picture above shows each at once
-            typing.addView(labeled(Local.of("Скорость"), segmented(new String[] {Local.of("быстро"), Local.of("плавно"), Local.of("медленно")},
-                    TypingAnim.speed(), TypingAnim::setSpeed)));
-            typing.addView(labeled(Local.of("Как буквы появляются"), segmented(new String[] {Local.of("мягко"), Local.of("пружина"), Local.of("резко"), Local.of("выскок")},
-                    TypingAnim.curve(), TypingAnim::setCurve)));
-        }
+        typing.addView(quiet(Local.of("Буквы появляются с размытием, курсор плывёт, стёртое рассыпается. Анимация от @mihailkotovski и @mishabotov.")));
         column.addView(wrap(typing));
+        if (TypingAnim.on(TypingAnim.ON)) textAnimationCards();
+
+        column.addView(section(CLEAN_LINKS));
+        LinearLayout clean = card();
+        clean.addView(toggleRow("link", Local.of("Ссылки без слежки"), ShareLinks.enabled(), on -> ShareLinks.setEnabled(on)));
+        clean.addView(quiet(Local.of("«Копировать ссылку» даёт голый адрес видео: без метки, кто поделился, и без «ответь другу» у того, кто откроет.")));
+        column.addView(wrap(clean));
+
+        column.addView(section(MOTION_BLUR));
+        LinearLayout blur = card();
+        blur.addView(liveToggleRow("animation", MOTION_BLUR, MotionBlur.on(), on -> {
+            MotionBlur.set(on);
+            markChanged();
+            rebuildAfterSwitchAnimation();
+        }));
+        blur.addView(quiet(android.os.Build.VERSION.SDK_INT >= 31
+                ? Local.of("Всё, что листается, размывается по направлению движения: лента, профиль, чаты, комментарии. Видео после включения размывается со следующего запуска TikTok.")
+                : Local.of("Нужен Android 12 или новее.")));
+        if (MotionBlur.on()) blur.addView(slider("tune", Local.of("Сила"), MotionBlur.strength(), 100, 0, "%",
+                value -> MotionBlur.setStrength(value)));
+        column.addView(wrap(blur));
+
+
 
         column.addView(section(SPONSOR));
         LinearLayout sponsor = card();
@@ -1076,23 +1389,6 @@ public class SettingsActivity extends Activity {
         }
         column.addView(wrap(ghost));
 
-    }
-
-    /**
-     * The calculator, for an account that has proved itself. The coins are
-     * the server's and are kept by account, so an account that anybody could
-     * claim to be would have its coins staked by anybody.
-     */
-    private void openDep() {
-        if (DepGame.verified()) {
-            DepCalc.show(this, skin);
-            return;
-        }
-        Panel.with(this, skin, Text.DEP_PROVE)
-                .text(Text.DEP_PROVE_WHY)
-                .primary(Text.PROVE, this::proveAccount)
-                .quiet(Text.CANCEL, null)
-                .show();
     }
 
     /** The fat tilcayo, as wide as the screen will have him. */
@@ -1742,20 +2038,14 @@ public class SettingsActivity extends Activity {
 
         LinearLayout text = new LinearLayout(this);
         text.setOrientation(LinearLayout.VERTICAL);
-        text.addView(label(current[Margy.LABEL]));
+        text.addView(label(Margy.name(current)));
         text.addView(detail(current[Margy.CARRIER] + "  ·  " + current[Margy.MCCMNC]
                 + "  ·  " + current[Margy.ISO].toUpperCase(Locale.US)));
         row.addView(text, grow());
+        row.addView(away());
 
-        row.addView(disclosure(countriesOpen,"countriesOpen"));
-
-        if (Margy.isEnabled()) {
-            row.setOnClickListener(v -> {
-                disclosureKey = "countriesOpen";
-                countriesOpen = !countriesOpen;
-                rebuildAfterReveal(false);
-            });
-        }
+        // the countries are a screen of their own, with a search, not a list unfolding here
+        if (Margy.isEnabled()) row.setOnClickListener(v -> showCountries());
         return sized(row, 60);
     }
 
@@ -1766,7 +2056,7 @@ public class SettingsActivity extends Activity {
 
         LinearLayout text = new LinearLayout(this);
         text.setOrientation(LinearLayout.VERTICAL);
-        text.addView(label(country[Margy.LABEL]));
+        text.addView(label(Margy.name(country)));
         text.addView(detail(country[Margy.CARRIER] + "  ·  " + country[Margy.MCCMNC]
                 + "  ·  " + country[Margy.ISO].toUpperCase(Locale.US)));
         row.addView(text, grow());
@@ -1775,9 +2065,8 @@ public class SettingsActivity extends Activity {
 
         row.setOnClickListener(v -> {
             Margy.setIso(country[Margy.ISO]);
-            countriesOpen = false;
             markChanged();
-            rebuild();
+            goBack();
         });
         return sized(row, 60);
     }
@@ -1795,6 +2084,11 @@ public class SettingsActivity extends Activity {
         TextView view = new TextView(this);
         StringBuilder out = new StringBuilder();
         String code = iso.toUpperCase(Locale.US);
+        // the land of unlearned lessons flies a book
+        if ("XX".equals(code)) { out.append("\uD83D\uDCDA"); code = ""; }
+        // Atlantis under the sea, the pirates under their own flag
+        if ("XA".equals(code)) { out.append("\uD83D\uDD31"); code = ""; }
+        if ("XP".equals(code)) { out.append("\uD83C\uDFF4\u200D\u2620\uFE0F"); code = ""; }
         for (int i = 0; i < code.length() && i < 2; i++) {
             int letter = code.charAt(i) - 'A';
             if (letter < 0 || letter > 25) return spacer();
@@ -1907,10 +2201,6 @@ public class SettingsActivity extends Activity {
         column.addView(wrap(getCard(Tester.SUPPORTER,
                 Local.of("Поддержать разработку MargyT. Вместе со значком даётся золотая рамка на аватарку и градиент ника."),
                 Local.of("Поддержать"), this::showDonations)));
-        String coins = DepGame.balance >= 0 ? Local.of("Сейчас у тебя монет: ") + String.format(java.util.Locale.ROOT, "%,d", DepGame.balance).replace(',', ' ') : "";
-        column.addView(wrap(getCard("calculator",
-                Local.of("Накопить 75 000 монет в Деп калькуляторе и купить на них значок.") + (coins.length() > 0 ? "\n" + coins : ""),
-                Local.of("Открыть калькулятор"), this::openDep)));
         column.addView(wrap(getCard("margychat",
                 Local.of("Зарегистрироваться в Margy Chat, худшей соцсети на свете, и заработать там 30 💎 за посты. Потом взять код в настройках аккаунта Margy Chat и ввести его здесь. Только для личных аккаунтов, не каналов и не ботов."),
                 Local.of("Ввести код"), this::askChatCode)));
@@ -2187,6 +2477,168 @@ public class SettingsActivity extends Activity {
         holder.addView(card, new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
         return holder;
+    }
+
+    // ------------------------------------------- the typing animation's own settings
+
+    private android.content.SharedPreferences animPrefs() {
+        return getSharedPreferences("margyt_text_animation", MODE_PRIVATE);
+    }
+
+    private static String ta(String ru) {
+        return cat.narezany.margyt.textanim.Strings.t(ru);
+    }
+
+    /** A small heading inside the typing section; not a section of its own, so it is not on the shelves. */
+    private TextView subhead(String words) {
+        TextView view = new TextView(this);
+        view.setText(words);
+        view.setTextColor(accentInk());
+        M3Type.titleSmall(view);
+        view.setPadding(dp(32), dp(18), dp(24), dp(8));
+        return view;
+    }
+
+    private View animToggle(String picture, String key, String title, boolean fallback) {
+        return toggleRow(picture, title, animPrefs().getBoolean(key, fallback),
+                on -> animPrefs().edit().putBoolean(key, on).apply());
+    }
+
+    private View animSlider(String picture, String key, String title, int least, int most, int fallback, String unit) {
+        int now = Math.max(least, Math.min(most, animPrefs().getInt(key, fallback)));
+        return slider(picture, title, now - least, most - least, least, unit,
+                value -> animPrefs().edit().putInt(key, value + least).apply());
+    }
+
+    private View animChoice(String picture, String key, String title, final String[] names, int fallback) {
+        int now = Math.max(0, Math.min(names.length - 1, animPrefs().getInt(key, fallback)));
+        return actionRow(picture, title, names[now], () -> new ModDialog.Builder(this).setItems(names, (dialog, index) -> {
+            animPrefs().edit().putInt(key, index).apply();
+            rebuild();
+        }).show());
+    }
+
+    /** What the animation's own screen had, as rows of this one, in its look and theme. */
+    private void textAnimationCards() {
+        column.addView(subhead(ta("Свечение текста (Glow)")));
+        LinearLayout glow = card();
+        glow.addView(animToggle("flare", "glow", ta("Свечение недавних букв (1.5 сек)"), false));
+        glow.addView(animChoice("palette", "glow_mode", ta("Цвет / Режим свечения"), new String[] {
+                ta("Радужный перелив (Rainbow)"), ta("Розовый TikTok (#FE2C55)"), ta("Бирюзовый TikTok (#25F4EE)"),
+                Local.of("Цвет акцента"), ta("Золотой неоновый"), ta("Белый неоновый"), ta("Зеленый неоновый"),
+                ta("Фиолетовый неоновый")}, 0));
+        glow.addView(animToggle("format_color_fill", "gradient_text", ta("Градиентный текст"), false));
+        column.addView(wrap(glow));
+
+        column.addView(subhead(ta("Появление букв")));
+        LinearLayout come = card();
+        come.addView(animToggle("expand_more", "slide", ta("Въезд букв сверху"), true));
+        come.addView(animToggle("add", "scale", ta("Плавное появление (масштаб)"), true));
+        come.addView(animSlider("speed", "duration", ta("Скорость падения буквы (мс)"), 80, 500, 260, ""));
+        come.addView(animSlider("animation", "tilt", ta("Наклон при появлении (°)"), 0, 40, 0, "°"));
+        come.addView(animToggle("visibility_off", "blur", ta("Размытие при появлении"), true));
+        come.addView(animSlider("tune", "blur_dp", ta("Сила размытия"), 1, 30, 6, ""));
+        come.addView(animChoice("timeline", "easing", ta("Кривая движения"), new String[] {ta("Мягкая"), ta("Линейная"),
+                ta("Кубическая"), ta("С перелётом"), ta("Пружина"), ta("Отскок")}, 4));
+        column.addView(wrap(come));
+
+        column.addView(subhead(ta("Курсор")));
+        LinearLayout caret = card();
+        caret.addView(animToggle("edit", "caret", ta("Плавающий курсор"), true));
+        caret.addView(animToggle("animation", "liquid", ta("Жидкий режим (растяжение и прыжки)"), true));
+        caret.addView(animSlider("speed", "caret_speed", ta("Скорость курсора"), 5, 100, 25, ""));
+        caret.addView(animToggle("visibility", "blink", ta("Мягкое мигание курсора"), true));
+        column.addView(wrap(caret));
+
+        column.addView(subhead(ta("Искры и стирание символов")));
+        LinearLayout sparks = card();
+        sparks.addView(animToggle("flare", "particles", ta("Искры при стирании"), true));
+        sparks.addView(animChoice("star", "style", ta("Стиль искр"), new String[] {ta("Пыль / Искры"), ta("Снежинки"),
+                ta("Лепестки сакуры"), ta("Буквы"), ta("Падение с физикой"), ta("Песок по форме буквы"), ta("Дым"),
+                ta("Пузыри"), ta("Штрихи-искры")}, 0));
+        sparks.addView(animChoice("palette", "spark_palette", ta("Цвета искр"), new String[] {
+                ta("TikTok (Розовый + Бирюзовый)"), ta("Неон (Фиолетовый + Синий)"), ta("Огонь (Красный + Золотой)"),
+                ta("Радужные искры"), ta("Цвет текста")}, 0));
+        sparks.addView(animSlider("tune", "amount", ta("Количество искр"), 1, 12, 6, ""));
+        sparks.addView(animToggle("restore", "ghosts", ta("Плавное исчезновение буквы"), true));
+        sparks.addView(animToggle("bolt", "haptic", ta("Виброотклик при удалении"), false));
+        column.addView(wrap(sparks));
+
+        column.addView(subhead(ta("Искры при отправке")));
+        LinearLayout send = card();
+        send.addView(animToggle("upload", "send_particles", ta("Искры при отправке"), true));
+        send.addView(animToggle("check", "send_guess", ta("Угадывать отправку по очистке поля"), true));
+        send.addView(animChoice("flare", "send_preset", ta("Эффект отправки"), cat.narezany.margyt.textanim.Particles.sendPresetNames(true), 1));
+        send.addView(animChoice("palette", "send_palette", ta("Цвета отправки"), cat.narezany.margyt.textanim.Particles.sendPaletteNames(true), 0));
+        send.addView(animChoice("text_fields", "send_shape", ta("Во что превращаются буквы"), cat.narezany.margyt.textanim.Particles.sendShapeNames(true), 0));
+        send.addView(animSlider("tune", "send_amount", ta("Частиц с буквы при отправке"), 1, 8, 4, ""));
+        send.addView(animSlider("speed", "send_speed", ta("Скорость частиц отправки (%)"), 40, 300, 100, "%"));
+        send.addView(animSlider("animation", "send_swirl", ta("Закрутка вихря (%)"), 0, 250, 100, "%"));
+        send.addView(animChoice("swap_horiz", "send_dir", ta("Направление вихря"), new String[] {ta("По часовой"),
+                ta("Против часовой"), ta("Вперемешку")}, 0));
+        column.addView(wrap(send));
+    }
+
+    /** Where the colour circles were scrolled: kept across the rebuild a pick causes. */
+    private static int seedScroll;
+
+    /** Material colours like the phone's wallpaper picker: the wallpaper's first, then seeds. */
+    private View seedPicker() {
+        android.widget.HorizontalScrollView scroll = new android.widget.HorizontalScrollView(this) {
+            @Override
+            protected void onScrollChanged(int l, int t, int oldl, int oldt) {
+                super.onScrollChanged(l, t, oldl, oldt);
+                seedScroll = l;
+            }
+        };
+        scroll.setHorizontalScrollBarEnabled(false);
+        LinearLayout circles = new LinearLayout(this);
+        circles.setPadding(dp(12), dp(10), dp(12), dp(10));
+        final boolean dark = Themes.isDark();
+        final int chosen = MaterialSeeds.seed();
+        for (final int seed : MaterialSeeds.SEEDS) {
+            final int[] colours = MaterialSeeds.swatch(seed, dark);
+            View circle = new View(this) {
+                final android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                final android.graphics.RectF box = new android.graphics.RectF();
+                @Override
+                protected void onDraw(android.graphics.Canvas canvas) {
+                    float cx = getWidth() / 2f, cy = getHeight() / 2f;
+                    boolean on = chosen == seed;
+                    float r = dp(on ? 20 : 24);
+                    box.set(cx - r, cy - r, cx + r, cy + r);
+                    paint.setStyle(android.graphics.Paint.Style.FILL);
+                    paint.setColor(colours[0]); canvas.drawArc(box, 180, 180, true, paint);
+                    paint.setColor(colours[1]); canvas.drawArc(box, 90, 90, true, paint);
+                    paint.setColor(colours[2]); canvas.drawArc(box, 0, 90, true, paint);
+                    if (on) {
+                        paint.setStyle(android.graphics.Paint.Style.STROKE);
+                        paint.setStrokeWidth(dp(2));
+                        paint.setColor(skin.text);
+                        canvas.drawCircle(cx, cy, dp(25), paint);
+                    }
+                    if (seed == 0) {
+                        // the wallpaper's circle: a dot in the middle
+                        paint.setStyle(android.graphics.Paint.Style.FILL);
+                        paint.setColor(skin.card);
+                        canvas.drawCircle(cx, cy, dp(5), paint);
+                    }
+                }
+            };
+            circle.setContentDescription(seed == 0 ? Text.ACCENT_WALLPAPER : String.format("#%06X", seed & 0xFFFFFF));
+            circle.setOnClickListener(v -> {
+                if (MaterialSeeds.seed() == seed) return;
+                MaterialSeeds.choose(seed);
+                markChanged();
+                rebuild();
+            });
+            LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(dp(56), dp(56));
+            size.leftMargin = size.rightMargin = dp(4);
+            circles.addView(circle, size);
+        }
+        scroll.addView(circles);
+        scroll.post(() -> scroll.scrollTo(seedScroll, 0));
+        return scroll;
     }
 
     private static int blend(int colour, int into, float how) {
@@ -3124,14 +3576,15 @@ public class SettingsActivity extends Activity {
     /** Keep theme presets together in one menu row instead of three buttons. */
     private void chooseThemePreset() {
         final String[] choices = {Text.THEME_PRESET_DARK, Text.THEME_PRESET_BLUE,
-                Text.THEME_RESET};
+                Text.THEME_PRESET_VICE + NewChip.MARK, Text.THEME_RESET};
+        // the one that is on is ticked; with none on, "TikTok's own" is
+        int on = Themes.currentPreset();
         new ModDialog.Builder(this, skin)
                 .setTitle(Text.THEME_PRESETS)
-                .setItems(choices, (dialog, index) -> {
-                    
-                    if (index == 0) Themes.preset(0);
-                    else if (index == 1) Themes.preset(1);
+                .setSingleChoiceItems(choices, on < 0 ? choices.length - 1 : on, (dialog, index) -> {
+                    if (index <= 2) Themes.preset(index);
                     else Themes.reset();
+                    dialog.dismiss();
                     markChanged();
                     rebuild();
                 })
@@ -3215,6 +3668,23 @@ public class SettingsActivity extends Activity {
      * by a lobe, when it is on; anything else is a tonal shape that stays put.
      */
     private View icon(String name, boolean toggle, int sizeDp) {
+        if (!Design.frosted()) {
+            // Material 3: a plain 24dp symbol in the on-surface-variant colour, no shape under it
+            android.graphics.drawable.Drawable plain = name.equals("search")
+                    ? new Expressive.Magnifier(iconInk()) : SettingsGlyph.make(name, iconInk());
+            if (plain != null) {
+                android.widget.ImageView view = new android.widget.ImageView(this);
+                view.setImageDrawable(plain);
+                view.setScaleType(android.widget.ImageView.ScaleType.CENTER_INSIDE);
+                int pad = dp(Math.max(0, (Math.min(sizeDp, 40) - 24) / 2));
+                view.setPadding(pad, pad, pad, pad);
+                LinearLayout.LayoutParams size = new LinearLayout.LayoutParams(dp(Math.min(sizeDp, 40)), dp(Math.min(sizeDp, 40)));
+                size.leftMargin = dp(4);
+                size.rightMargin = dp(16);
+                view.setLayoutParams(size);
+                return view;
+            }
+        }
         android.graphics.drawable.Drawable vector = name.equals("search")
                 ? new Expressive.Magnifier(0xFFFFFFFF) : SettingsGlyph.make(name, 0xFFFFFFFF);
         if (vector == null) {
@@ -3426,7 +3896,20 @@ public class SettingsActivity extends Activity {
 
         LinearLayout text = new LinearLayout(this);
         text.setOrientation(LinearLayout.VERTICAL);
-        text.addView(label(title));
+        if (NewChip.marked(title)) {
+            // a title with a NEW plate beside it
+            LinearLayout line = new LinearLayout(this);
+            line.setOrientation(LinearLayout.HORIZONTAL);
+            line.setGravity(Gravity.CENTER_VERTICAL);
+            line.addView(label(NewChip.plain(title)));
+            LinearLayout.LayoutParams chipWhere = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            chipWhere.leftMargin = dp(8);
+            line.addView(NewChip.make(this), chipWhere);
+            text.addView(line);
+        } else {
+            text.addView(label(title));
+        }
         if (detail != null && !value) text.addView(detail(detail));
         row.addView(text, grow());
 
@@ -3436,9 +3919,11 @@ public class SettingsActivity extends Activity {
             shown.setTextSize(TypedValue.COMPLEX_UNIT_SP, 14);shown.setPadding(dp(8), 0, dp(6), 0);
             row.addView(shown);
         }
-        ImageView chevron = new ImageView(this);
-        chevron.setImageDrawable(SettingsGlyph.make("chevron_right", skin.muted()));
-        row.addView(chevron, new LinearLayout.LayoutParams(dp(24), dp(24)));
+        if (Design.frosted()) {
+            ImageView chevron = new ImageView(this);
+            chevron.setImageDrawable(SettingsGlyph.make("chevron_right", skin.muted()));
+            row.addView(chevron, new LinearLayout.LayoutParams(dp(24), dp(24)));
+        }
 
         row.setOnClickListener(v -> action.run());
         return sized(row, detail == null || value ? 48 : 60);
@@ -3893,6 +4378,8 @@ public class SettingsActivity extends Activity {
 
     /** The mark on a row that leaves the app. */
     private View away() {
+        // Material 3 lists have no arrow at the end of a row that opens a page
+        if (!Design.frosted()) { View none = new View(this); none.setVisibility(View.GONE); return none; }
         Chevron arrow=new Chevron(this,skin.muted(),false,false);
         arrow.setRotation(-90f);
         return arrow;
@@ -4033,6 +4520,94 @@ public class SettingsActivity extends Activity {
     }
 
     // ------------------------------------------------------ TikTok's flags
+
+    private static final int COUNTRY_PAGE = 97;
+    private int countryFromGroup;
+    private String countryFromPage;
+    private String countryQuery = "";
+
+    private void showCountries() {
+        if (navigating) return;
+        countryFromGroup = settingsGroup;
+        countryFromPage = settingsPage;
+        navigating = true;
+        Motion.navigate(column, 1f, () -> {
+            settingsGroup = COUNTRY_PAGE;
+            settingsPage = null;
+            searchQuery = "";
+            countryQuery = "";
+            page.scrollTo(0, 0);
+            rebuild();
+            navigating = false;
+        });
+    }
+
+    /** Every country, by name, with a field that narrows them as it is typed into. */
+    private void countriesPage() {
+        LinearLayout field = new LinearLayout(this);
+        field.setOrientation(LinearLayout.HORIZONTAL);
+        field.setGravity(Gravity.CENTER_VERTICAL);
+        field.setPadding(dp(16), dp(4), dp(16), dp(4));
+        GradientDrawable fieldBack = new GradientDrawable();
+        fieldBack.setColor(skin.card);
+        fieldBack.setCornerRadius(dp(28));
+        field.setBackground(fieldBack);
+        ImageView glass = new ImageView(this);
+        glass.setImageDrawable(new Expressive.Magnifier(skin.muted()));
+        LinearLayout.LayoutParams glassSize = new LinearLayout.LayoutParams(dp(24), dp(24));
+        glassSize.rightMargin = dp(16);
+        field.addView(glass, glassSize);
+        final EditText input = new EditText(this);
+        input.setSingleLine(true);
+        input.setHint(Local.of("Поиск страны"));
+        input.setHintTextColor(skin.muted());
+        input.setTextColor(skin.text);
+        M3Type.line(input, 16, 0.5f);
+        input.setBackgroundColor(Color.TRANSPARENT);
+        field.addView(input, grow());
+        LinearLayout box = new LinearLayout(this);
+        box.setPadding(edge(), dp(4), edge(), dp(8));
+        box.addView(sized(field, 56));
+        column.addView(box);
+
+        // the chosen one first, the rest by their names
+        java.util.List<String[]> all = new java.util.ArrayList<>(java.util.Arrays.asList(Margy.COUNTRIES));
+        final java.text.Collator order = java.text.Collator.getInstance();
+        final String chosen = Margy.iso();
+        java.util.Collections.sort(all, (a, b) -> {
+            if (a[Margy.ISO].equals(chosen) != b[Margy.ISO].equals(chosen)) return a[Margy.ISO].equals(chosen) ? -1 : 1;
+            return order.compare(Margy.name(a), Margy.name(b));
+        });
+        final LinearLayout list = card();
+        final java.util.List<View> rows = new java.util.ArrayList<>();
+        final java.util.List<String> keys = new java.util.ArrayList<>();
+        for (String[] country : all) {
+            View row = countryRow(country);
+            rows.add(row);
+            keys.add((Margy.name(country) + " " + country[Margy.LABEL] + " " + country[Margy.ISO] + " "
+                    + country[Margy.CARRIER]).toLowerCase(Locale.ROOT).replace('ё', 'е'));
+            list.addView(row);
+        }
+        column.addView(wrap(list));
+        final TextView none = quiet(Local.of("Ничего не нашлось"));
+        none.setVisibility(View.GONE);
+        none.setGravity(Gravity.CENTER);
+        column.addView(none);
+        input.addTextChangedListener(new android.text.TextWatcher() {
+            @Override public void beforeTextChanged(CharSequence t, int a, int b, int c) {}
+            @Override public void onTextChanged(CharSequence t, int a, int b, int c) {}
+            @Override public void afterTextChanged(android.text.Editable text) {
+                countryQuery = text.toString().trim().toLowerCase(Locale.ROOT).replace('ё', 'е');
+                int shown = 0;
+                for (int i = 0; i < rows.size(); i++) {
+                    boolean hit = countryQuery.length() == 0 || keys.get(i).contains(countryQuery);
+                    rows.get(i).setVisibility(hit ? View.VISIBLE : View.GONE);
+                    if (hit) shown++;
+                }
+                none.setVisibility(shown == 0 ? View.VISIBLE : View.GONE);
+            }
+        });
+    }
 
     private static final int FLAGS_PAGE = 98;
     /** How many rows a search shows. There are twenty thousand flags and a row is a view. */
@@ -4415,6 +4990,7 @@ public class SettingsActivity extends Activity {
             // the app bar's navigation icon: the words of where it goes are an iOS habit
             ((LinearLayout.LayoutParams) button.getLayoutParams()).setMargins(dp(4), dp(4), dp(4), dp(4));
             bar.addView(button);
+            topBar = bar;
             bar.setContentDescription(settingsGroup == 0 ? "TikTok" : Local.of("Настройки"));
             bar.setOnClickListener(v -> goBack());
             return bar;
@@ -4432,10 +5008,70 @@ public class SettingsActivity extends Activity {
         return bar;
     }
 
+    private static android.graphics.Bitmap launcherIcon;
+
+    /** MargyT's launcher icon at the top of the settings: the default (Vice City) one, the mint note if that is missing. */
+    private android.graphics.drawable.Drawable launcherIcon() {
+        if (launcherIcon == null) {
+            int size = dp(32);
+            android.graphics.Bitmap out = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888);
+            android.graphics.Canvas canvas = new android.graphics.Canvas(out);
+            android.graphics.Paint paint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG | android.graphics.Paint.FILTER_BITMAP_FLAG);
+            android.graphics.RectF whole = new android.graphics.RectF(0, 0, size, size);
+            // the icon a fresh install has: the Vice City one, cut to the same rounded square
+            android.graphics.Bitmap vice = Launcher.preview(Launcher.DEFAULT);
+            if (vice != null) {
+                android.graphics.Path round = new android.graphics.Path();
+                round.addRoundRect(whole, size * 0.28f, size * 0.28f, android.graphics.Path.Direction.CW);
+                canvas.clipPath(round);
+                canvas.drawBitmap(vice, null, whole, paint);
+                launcherIcon = out;
+                return new android.graphics.drawable.BitmapDrawable(getResources(), launcherIcon);
+            }
+            paint.setColor(0xFF8DD1B0);
+            canvas.drawRoundRect(whole, size * 0.28f, size * 0.28f, paint);
+            try {
+                byte[] png = android.util.Base64.decode(Emblem.PNG, android.util.Base64.DEFAULT);
+                android.graphics.Bitmap note = android.graphics.BitmapFactory.decodeByteArray(png, 0, png.length);
+                // an adaptive foreground: the drawing is the middle two thirds of it
+                float grow = 1.5f, side = size * grow, at = (size - side) / 2f;
+                canvas.drawBitmap(note, null, new android.graphics.RectF(at, at, at + side, at + side), paint);
+            } catch (Throwable ignored) {
+            }
+            launcherIcon = out;
+        }
+        return new android.graphics.drawable.BitmapDrawable(getResources(), launcherIcon);
+    }
+
+    /** Material 3: the top app bar (back, the page's name, search), filled in by title() and searchBox(). */
+    private LinearLayout topBar;
+    /** The search field is behind the magnifier in the bar until it is tapped. */
+    private boolean searchOpen;
+
     private View title(String text) {
         final TextView view = new TextView(this);
         view.setText(text);
         view.setTextColor(skin.text);
+        if (!Design.frosted() && topBar != null && topBar.getParent() == column) {
+            // the name sits in the app bar next to the arrow, at the very top
+            M3Type.titleLarge(view);
+            view.setSingleLine(true);
+            view.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            view.setPadding(dp(4), 0, dp(8), 0);
+            view.setOnClickListener(v -> { Cats.tapped(view); developerTap(); });
+            if (settingsGroup == 0) {
+                // the app's own icon in colour before its name, as on the launcher
+                ImageView mark = new ImageView(this);
+                mark.setImageDrawable(launcherIcon());
+                LinearLayout.LayoutParams markSize = new LinearLayout.LayoutParams(dp(32), dp(32));
+                markSize.leftMargin = dp(4);
+                markSize.rightMargin = dp(8);
+                topBar.addView(mark, markSize);
+            }
+            topBar.addView(view, grow());
+            View none = new View(this); none.setVisibility(View.GONE);
+            return none;
+        }
         if (Design.frosted()) {
             view.setTextSize(TypedValue.COMPLEX_UNIT_SP, Design.fluent()?(settingsGroup==0?32:28):settingsGroup == 0 ? 44 : 34);
             view.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
@@ -4459,6 +5095,56 @@ public class SettingsActivity extends Activity {
      * and the results are real shortcuts into matching setting groups.
      */
     private View searchBox() {
+        if (!Design.frosted() && topBar != null && topBar.getParent() == column) {
+            final boolean open = searchOpen || searchQuery.length() > 0;
+            ImageView button = new ImageView(this);
+            button.setImageDrawable(open ? SettingsGlyph.make("close", skin.text) : new Expressive.Magnifier(skin.text));
+            button.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            button.setPadding(dp(12), dp(12), dp(12), dp(12));
+            GradientDrawable round = new GradientDrawable();
+            round.setShape(GradientDrawable.OVAL);
+            round.setColor(0xFFFFFFFF);
+            button.setBackground(new android.graphics.drawable.RippleDrawable(
+                    android.content.res.ColorStateList.valueOf((skin.text & 0xFFFFFF) | 0x22000000), null, round));
+            button.setContentDescription(Text.SEARCH);
+            button.setOnClickListener(v -> {
+                if (open) { searchOpen = false; hideKeyboard(); runSearch(""); }
+                else { searchOpen = true; rebuild(); }
+            });
+            topBar.addView(button, new LinearLayout.LayoutParams(dp(48), dp(48)));
+            if (!open) { View none = new View(this); none.setVisibility(View.GONE); return none; }
+            View box = searchField();
+            if (searchQuery.length() == 0) {
+                // opened by the magnifier: the keyboard comes with it
+                final EditText field = findEditText(box);
+                if (field != null) field.post(() -> {
+                    field.requestFocus();
+                    android.view.inputmethod.InputMethodManager keys = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                    if (keys != null) keys.showSoftInput(field, 0);
+                });
+            }
+            return box;
+        }
+        return searchField();
+    }
+
+    private static EditText findEditText(View view) {
+        if (view instanceof EditText) return (EditText) view;
+        if (!(view instanceof ViewGroup)) return null;
+        for (int i = 0; i < ((ViewGroup) view).getChildCount(); i++) {
+            EditText found = findEditText(((ViewGroup) view).getChildAt(i));
+            if (found != null) return found;
+        }
+        return null;
+    }
+
+    private void hideKeyboard() {
+        android.view.inputmethod.InputMethodManager keys = (android.view.inputmethod.InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        View focus = getCurrentFocus();
+        if (keys != null && focus != null) keys.hideSoftInputFromWindow(focus.getWindowToken(), 0);
+    }
+
+    private View searchField() {
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
@@ -4674,8 +5360,8 @@ public class SettingsActivity extends Activity {
         }
         if (found == 0) {
             // the old list of synonyms, for words no page says
-            found += searchHit(results, Text.REGION, Text.SEARCH_REGION, () -> { countriesOpen = true; });
-            found += searchHit(results, Text.ACCENT, Text.SEARCH_ACCENT, () -> { accentOpen = true; });
+            found += searchHit(results, Text.REGION, Text.SEARCH_REGION, () -> { });
+            found += searchHit(results, Text.THEME, Text.SEARCH_ACCENT, () -> { themeColoursOpen = true; });
             found += searchHit(results, Text.THEME, Text.SEARCH_THEME, () -> { themeColoursOpen = true; });
             found += searchHit(results, Text.FEED, Text.SEARCH_FEED, () -> { });
             found += searchHit(results, Text.VIDEO, Text.SEARCH_VIDEO, () -> { });
@@ -4816,13 +5502,13 @@ public class SettingsActivity extends Activity {
             if (n > 0) list.addView(line());
             LinearLayout entry = row();
             entry.setPadding(dp(16),dp(14),dp(20),dp(14));
-            entry.addView(icon(icons[i-1],false,Design.fluent()?32:52));
+            entry.addView(icon(icons[i-1],false,Design.fluent()?32:Design.frosted()?52:40));
             LinearLayout words = new LinearLayout(this); words.setOrientation(LinearLayout.VERTICAL);
-            TextView head = label(groupName(i)); head.setTextSize(Design.fluent()?16:19);
+            TextView head = label(groupName(i)); head.setTextSize(Design.fluent()?16:Design.frosted()?19:17);
             head.setTypeface(Typeface.create("sans-serif-medium",Typeface.NORMAL));
             words.addView(head);words.addView(detail(notes[i-1]));entry.setContentDescription(groupName(i)+". "+notes[i-1]);
             entry.addView(words,grow()); entry.addView(away());
-            entry.setMinimumHeight(dp(80));Motion.touch(entry);
+            entry.setMinimumHeight(dp(Design.frosted()?80:72));Motion.touch(entry);
             entry.setOnClickListener(v -> {
                 if(navigating)return;navigating=true;
                 Motion.navigate(column,1f,()->{settingsGroup=chosen;settingsPage=null;page.scrollTo(0,0);navigate();navigating=false;});
@@ -4843,9 +5529,8 @@ public class SettingsActivity extends Activity {
     }
 
     /** The pages of a shelf, each with what it is for. */
-    private View shelfList(int group) {
+    private View shelfList(java.util.List<Shelf> pages) {
         LinearLayout list = card();
-        java.util.List<Shelf> pages = shelvesOf(group);
         for (int n = 0; n < pages.size(); n++) {
             final Shelf one = pages.get(n);
             if (n > 0) list.addView(line());
@@ -4853,7 +5538,7 @@ public class SettingsActivity extends Activity {
             entry.setPadding(dp(16), dp(12), dp(20), dp(12));
             entry.addView(icon(one.icon, false, Design.fluent() ? 32 : 44));
             LinearLayout words = new LinearLayout(this); words.setOrientation(LinearLayout.VERTICAL);
-            TextView head = label(one.title); head.setTextSize(Design.fluent() ? 15 : 17);
+            TextView head = label(one.title); head.setTextSize(Design.fluent() ? 15 : Design.frosted() ? 17 : 16);
             head.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
             words.addView(head);
             if (one.note.length() > 0) words.addView(detail(one.note));
@@ -4882,10 +5567,71 @@ public class SettingsActivity extends Activity {
         return view;
     }
 
-    private void filterGroup() {
+    /** The sections whose cards hold one or two rows with a name: short enough to sit on the shelf's page. */
+    private java.util.Set<String> smallSections(int contentStart) {
+        java.util.Map<String, Integer> rows = new java.util.HashMap<>();
+        java.util.Set<String> odd = new java.util.HashSet<>();
+        String section = null;
+        for (int i = contentStart; i < column.getChildCount(); i++) {
+            View item = column.getChildAt(i);
+            if (item instanceof TextView && sectionTargets.containsValue(item)) {
+                section = ((TextView) item).getText().toString();
+                if (!rows.containsKey(section)) rows.put(section, 0);
+                continue;
+            }
+            if (section == null) continue;
+            int count = 0;
+            boolean other = false;
+            if (item instanceof ViewGroup && ((ViewGroup) item).getChildCount() > 0
+                    && ((ViewGroup) item).getChildAt(0) instanceof Expressive.Group) {
+                ViewGroup card = (ViewGroup) ((ViewGroup) item).getChildAt(0);
+                for (int k = 0; k < card.getChildCount(); k++) {
+                    View row = card.getChildAt(k);
+                    if (row.getVisibility() == View.GONE) continue;
+                    if (functionRow(row) != null || holdsSlider(row)) count++;
+                    // a carousel, a picker, anything taller than a row: not a short page
+                    else if (!(row instanceof TextView) && !(row instanceof SettingsPictures.Art)) other = true;
+                }
+            } else if (item.getTag(LEAD) == null) other = true;
+            rows.put(section, rows.get(section) + count);
+            if (other) odd.add(section);
+        }
+        java.util.Set<String> small = new java.util.HashSet<>();
+        for (java.util.Map.Entry<String, Integer> one : rows.entrySet())
+            if (one.getValue() >= 1 && one.getValue() <= 2 && !odd.contains(one.getKey())) small.add(one.getKey());
+        // these stay on the shelf's page whatever is switched on in them: a page that
+        // jumps into a tab of its own the moment its switch is turned is worse than none
+        small.add(MOTION_BLUR);
+        small.add(CLEAN_LINKS);
+        return small;
+    }
+
+    /** A slider with its name above it: one setting, a row like any other. */
+    private static boolean holdsSlider(View row) {
+        if (row instanceof android.widget.SeekBar) return true;
+        if (!(row instanceof ViewGroup)) return false;
+        ViewGroup group = (ViewGroup) row;
+        for (int i = 0; i < group.getChildCount() && i < 4; i++) if (group.getChildAt(i) instanceof android.widget.SeekBar) return true;
+        return false;
+    }
+
+    /** Show only these sections, each under its own heading. */
+    private void filterSections(int from, java.util.Set<String> sections) {
+        boolean shown = false;
+        for (int i = from; i < column.getChildCount(); i++) {
+            View item = column.getChildAt(i);
+            if (item instanceof TextView && sectionTargets.containsValue(item)) {
+                String section = ((TextView) item).getText().toString();
+                shown = sections.contains(section) && (!Version.LITE || inLite(section));
+            } else if (item.getTag(LEAD) != null) continue;
+            item.setVisibility(shown ? View.VISIBLE : View.GONE);
+        }
+    }
+
+    private void filterGroup(int contentStart) {
         Shelf open = shelf(settingsPage);
         boolean shown = false, offered = true;
-        for (int i = 3; i < column.getChildCount(); i++) {
+        for (int i = contentStart; i < column.getChildCount(); i++) {
             View item = column.getChildAt(i);
             if (item instanceof TextView && sectionTargets.containsValue(item)) {
                 String section = ((TextView) item).getText().toString();
@@ -4893,7 +5639,7 @@ public class SettingsActivity extends Activity {
                 if (open != null) for (String name : open.sections) shown |= name.equals(section);
                 offered = !Version.LITE || inLite(section);
                 // a page of one section already says its name in the title
-                if (shown && open.sections.length == 1) { item.setVisibility(View.GONE); continue; }
+                if (shown && open != null && open.sections.length == 1) { item.setVisibility(View.GONE); continue; }
             } else if (item.getTag(LEAD) != null) continue;
             item.setVisibility(shown && offered ? View.VISIBLE : View.GONE);
         }
@@ -4921,6 +5667,12 @@ public class SettingsActivity extends Activity {
     private static final boolean EDITOR_READY = false;
     private static final String EDITOR = Local.of("Редактор интерфейса"),
             EDITOR_NOTE = Local.of("Прячь, двигай и перекрашивай что угодно"),
+            CLEAN_LINKS = Local.of("Чистые ссылки"),
+            CLEAN_LINKS_NOTE = Local.of("Ссылки на видео без меток"),
+            MOTION_BLUR = Local.of("Моушен блюр"),
+            MOTION_BLUR_NOTE = Local.of("Размытие всего, что движется"),
+            STATS = Local.of("Статистика видео"),
+            STATS_NOTE = Local.of("Подробные цифры любого ролика"),
             TYPING = Local.of("Анимация набора текста"),
             TYPING_NOTE = Local.of("Буквы пружинят, пока печатаешь"),
             REPOSTS = Local.of("Мои репосты"),
@@ -4970,9 +5722,14 @@ public class SettingsActivity extends Activity {
     }
     private void goBack() {
         if(navigating)return;
+        if (settingsGroup == STATS_PAGE) { finish(); return; }
         if (searchQuery.length() > 0) { searchQuery = ""; rebuild(); }
         else if (settingsPage != null && shelvesOf(settingsGroup).size() > 1) {
             navigating=true;Motion.navigate(column,-1f,()->{settingsPage=null;navigate();navigating=false;});
+        }
+        else if (settingsGroup == COUNTRY_PAGE) {
+            // back to where the country was chosen from
+            navigating=true;Motion.navigate(column,-1f,()->{settingsGroup=countryFromGroup;settingsPage=countryFromPage;page.scrollTo(0,0);rebuild();navigating=false;});
         }
         else if (settingsGroup != 0) {
             // the flags are reached from the tools, so that is where back leads
@@ -5266,6 +6023,11 @@ public class SettingsActivity extends Activity {
     private int accentInk() {
         return skin.dark() ? Expressive.mix(Accent.colour(), 0xFFFFFFFF, 0.45f)
                 : Expressive.mix(Accent.colour(), 0xFF000000, 0.35f);
+    }
+
+    /** Icons of rows: the text colour a little back, like on-surface-variant. */
+    private int iconInk() {
+        return Expressive.mix(skin.card, skin.text, 0.78f);
     }
 
     /** The accent laid thin over the card: the tonal container of M3. */

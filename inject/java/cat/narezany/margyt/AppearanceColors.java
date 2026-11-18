@@ -91,6 +91,8 @@ public final class AppearanceColors {
     public static void set(String role, int colour) {
         int at = index(role);
         if (at < 0) return;
+        // a colour picked by hand: whatever ready theme was on is not any more
+        Themes.forgetPreset();
         if (LIKE.equals(role)) {
             LikeColors.set(colour);
             Themes.repaintVisible();

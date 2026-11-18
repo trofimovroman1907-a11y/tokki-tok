@@ -37,6 +37,8 @@ final class GlassBackdrop {
     static void scene(View view){view.setTag(SCENE,Boolean.TRUE);}
     static void unscene(View view){view.setTag(SCENE,null);}
     static void register(View view){
+        // the glass is live now (LiveGlass): no copies of the screen are taken
+        if(true)return;
         if(!Design.frosted() || capturing)return;
         Session session=session(view);session.owners.put(view,Boolean.TRUE);
     }

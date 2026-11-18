@@ -51,12 +51,12 @@ public final class Watch implements Application.ActivityLifecycleCallbacks {
             NavBar.attach(activity);
             Md3.attach(activity);
             CommentStyle.attach(activity);
-            DepFloat.attach(activity);
             ChatFolders.attach(activity);
             InboxClean.attach(activity);
             ViewEditor.attach(activity);
             Ghost.resumed(activity);
-            TypingAnim.attach(activity);
+            TextAnim.resumed(activity);
+            MotionBlur.attach(activity);
             SponsorBlock.attach(activity);
         }
         Screamer.attach(activity);
@@ -76,5 +76,5 @@ public final class Watch implements Application.ActivityLifecycleCallbacks {
     @Override public void onActivityStarted(Activity activity) {}
     @Override public void onActivityStopped(Activity activity) {}
     @Override public void onActivitySaveInstanceState(Activity activity, Bundle out) {}
-    @Override public void onActivityDestroyed(Activity activity) { FakeLag.paused(activity); }
+    @Override public void onActivityDestroyed(Activity activity) { FakeLag.paused(activity); TextAnim.destroyed(activity); }
 }

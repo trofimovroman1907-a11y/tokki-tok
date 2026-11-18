@@ -1930,6 +1930,11 @@ public final class Accent {
     public static void setBackgroundColor(View view, int colour) {
         int fallback = sourced(colour);
         int mapped = AppearanceColors.forView(view, fallback);
+        // the Vice City theme: a page painted its ground colour shows the screen-wide sunset instead
+        if (ViceGradient.wanted(mapped)) {
+            view.setBackground(new ViceGradient(view, colour, null));
+            return;
+        }
         Drawable background = view.getBackground();
         if (mapped != fallback && background instanceof GradientDrawable) {
             Drawable copy = background.getConstantState() == null ? background.mutate()

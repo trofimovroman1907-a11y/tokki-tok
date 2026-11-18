@@ -9,7 +9,7 @@ STUBS = {
   private static final Choreographer ONE=new Choreographer();public static Choreographer getInstance(){return ONE;}
   public void postFrameCallback(final FrameCallback c){View.frames.add(new Runnable(){public void run(){c.doFrame(0);}});}}''',
  'android/view/ViewGroup.java': 'package android.view;public class ViewGroup extends View{public java.util.List<View> kids=new java.util.ArrayList<>();public int getChildCount(){return kids.size();}public View getChildAt(int i){return kids.get(i);}}',
- 'cat/narezany/margyt/Version.java': 'package cat.narezany.margyt;final class Version{static final boolean TEST=false;}',
+ 'cat/narezany/margyt/Version.java': 'package cat.narezany.margyt;final class Version{static final boolean TEST=false,PROFILE=false;}',
 }
 HARNESS = '''package cat.narezany.margyt;import android.view.*;import android.os.SystemClock;import java.util.*;
 public class SlicedHarness{

@@ -970,6 +970,34 @@ def rewrite_anchored(root: str) -> Dict[str, int]:
                     if hits:counts["native texture frame events"]=counts.get("native texture frame events",0)+hits
                     return body
                 text=re.sub(r"(?ms)^\.method public (?:(?:final|synthetic|synchronized|bridge) )*onSurfaceTextureUpdated\(Landroid/graphics/SurfaceTexture;\)V.*?^\.end method",glass_texture_frame,text)
+            if PLAYER_VIEW_CONFIG in declaration:
+                def texture_video(match):
+                    body=match.group(0)
+                    if "MotionBlur;->textureVideo" in body:return body
+                    hook=("    invoke-static {}, Lcat/narezany/margyt/MotionBlur;->textureVideo()Z\n"
+                          "    move-result v0\n"
+                          "    if-eqz v0, :margyt_surface_view\n"
+                          "    const/4 v0, 0x0\n"
+                          "    return v0\n"
+                          "    :margyt_surface_view\n")
+                    body,hits=re.subn(r"(?m)^([ \t]*\.(?:registers|locals) \d+\n)",lambda m:m.group(0)+hook,body,count=1)
+                    if hits:counts["player video view kind"]=counts.get("player video view kind",0)+hits
+                    return body
+                text=re.sub(r"(?ms)^\.method public final isUseSurfaceView\(\)Z.*?^\.end method",texture_video,text)
+                text=re.sub(r"(?ms)^\.method public isUseSurfaceView\(\)Z.*?^\.end method",texture_video,text)
+            if PLAYER_SETTINGS in declaration:
+                def player_flag(match):
+                    body=match.group(0)
+                    if "Flags;->playerFlag" in body:return body
+                    hook=("    invoke-static {p0, p1}, Lcat/narezany/margyt/Flags;->playerFlag(Ljava/lang/String;Ljava/lang/reflect/Type;)Ljava/lang/Object;\n"
+                          "    move-result-object v0\n"
+                          "    if-eqz v0, :margyt_player_flag\n"
+                          "    return-object v0\n"
+                          "    :margyt_player_flag\n")
+                    body,hits=re.subn(r"(?m)^([ \t]*\.(?:registers|locals) \d+\n)",lambda m:m.group(0)+hook,body,count=1)
+                    if hits:counts["player settings reader"]=counts.get("player settings reader",0)+hits
+                    return body
+                text=re.sub(r"(?ms)^\.method public static LIZ\(Ljava/lang/String;Ljava/lang/reflect/Type;\)Ljava/lang/Object;.*?^\.end method",player_flag,text)
             if FEED_ITEM_LIST in declaration:
                 def native_ad_getter(match):
                     body=match.group(0)
@@ -1754,6 +1782,13 @@ def rewrite_settings_row(root: str, dex: Optional[bytes] = None) -> Dict[str, in
     return counts
 
 
+#: Where TikTok's player reads its own settings (PlayerSettingService), by key:
+#: the mod answers some of them first (Flags.playerFlag).
+PLAYER_SETTINGS = "LX/0nY8;"
+#: The player's settings object: whether a video goes into a SurfaceView or a TextureView.
+PLAYER_VIEW_CONFIG = "LX/0qS5;"
+
+
 def carries_an_anchor(dex: bytes) -> bool:
     return (any(anchor.encode() in dex for anchor, *_rest in ANCHORED_SOURCES)
             or b"onSurfaceTextureUpdated" in dex
@@ -1779,7 +1814,9 @@ def carries_an_anchor(dex: bytes) -> bool:
             or any(owner.encode() in dex for owner in RAIL_CLASSES)
             or PLAYER_CONTROLLER.encode() in dex
             or any(owner.encode() in dex for owner in (REPOST_CLASS,AVATAR_CLASS,PROFILE_CONTAINER,PROFILE_HEADER,PUSH_GUIDE)+MESSAGE_CLASSES)
-            or SPEED_TOUCH_CLASS.encode() in dex or SPEED_EDGE_CLASS.encode() in dex)
+            or SPEED_TOUCH_CLASS.encode() in dex or SPEED_EDGE_CLASS.encode() in dex
+            or PLAYER_SETTINGS.encode() in dex
+            or defines(dex, PLAYER_VIEW_CONFIG))
 
 
 def rewrite_speed_touch(root: str) -> Dict[str, int]:
@@ -2168,6 +2205,8 @@ def interesting(dex: bytes, literals: Optional[Dict[str, str]] = None) -> bool:
         return True
     if opens_the_menu(dex) or defines(dex, URL_DISPATCHER):
         return True
+    if b"ClipboardManager" in dex and b"setPrimaryClip" in dex:
+        return True
     if TELEPHONY.encode() not in dex:
         return False
     return any(name.encode() in dex for name, _o, _r in TARGETS)
@@ -2499,6 +2538,32 @@ def rewrite_everything(root: str, literals: Optional[Dict[str, str]] = None,
     counts.update(rewrite_cards(root))
     counts.update(rewrite_recall(root, dex))
     counts.update(rewrite_frames(root, dex))
+    if dex is None or b"setPrimaryClip" in dex:
+        counts.update(rewrite_clipboard(root))
+    return counts
+
+
+CLIP_CALL = re.compile(r"invoke-virtual(/range)? (\{[^}]*\}), Landroid/content/ClipboardManager;->setPrimaryClip\(Landroid/content/ClipData;\)V")
+CLIP_HOOK = r"invoke-static\1 \2, Lcat/narezany/margyt/ShareLinks;->setPrimaryClip(Landroid/content/ClipboardManager;Landroid/content/ClipData;)V"
+
+
+def rewrite_clipboard(root: str) -> Dict[str, int]:
+    """Every link TikTok copies goes past ShareLinks, which takes the tracking off it."""
+    counts: Dict[str, int] = {}
+    for dirpath, _dirs, files in os.walk(root):
+        for name in files:
+            if not name.endswith(".smali"):
+                continue
+            path = os.path.join(dirpath, name)
+            with open(path, encoding="utf-8") as handle:
+                text = handle.read()
+            if "ClipboardManager;->setPrimaryClip" not in text:
+                continue
+            text, hits = CLIP_CALL.subn(CLIP_HOOK, text)
+            if hits:
+                counts["clipboard links"] = counts.get("clipboard links", 0) + hits
+                with open(path, "w", encoding="utf-8") as handle:
+                    handle.write(text)
     return counts
 
 

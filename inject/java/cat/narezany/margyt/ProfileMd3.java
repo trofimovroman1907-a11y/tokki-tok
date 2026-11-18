@@ -40,9 +40,15 @@ final class ProfileMd3 {
     static void column(ViewGroup column, boolean on, int headId, int editId, int handleId, int collegeId, int tabsId) {
         try {
             if (on) {
+                // asked on every layout of the screen; arranging moves views, which lays the
+                // screen out again: done only when TikTok has changed the column since
+                int before = shape(column);
+                if (Integer.valueOf(before).equals(column.getTag(ARRANGED))) return;
                 ProfileHead.prepare(column, headId);
                 arrange(column, headId, editId, handleId, collegeId, tabsId);
+                column.setTag(ARRANGED, shape(column));
             } else {
+                column.setTag(ARRANGED, null);
                 palettes.remove(column);
                 undo(column);
                 ProfileHead.restore(column);
@@ -51,6 +57,20 @@ final class ProfileMd3 {
             android.util.Log.e("MargyT-md3", "column", error);
             Diary.detail("profile md3: " + error);
         }
+    }
+
+    private static final int ARRANGED = 0x4D617291;
+
+    /** What the column is made of: which views, in which order, which of them show, and the colours. */
+    private static int shape(ViewGroup column) {
+        int sig = column.getChildCount();
+        for (int i = 0; i < column.getChildCount(); i++) {
+            View child = column.getChildAt(i);
+            sig = 31 * sig + System.identityHashCode(child);
+            sig = 31 * sig + child.getVisibility();
+            if (child instanceof ViewGroup) sig = 31 * sig + ((ViewGroup) child).getChildCount();
+        }
+        return 31 * sig + Accent.colour();
     }
 
     private static void arrange(ViewGroup column, int headId, int editId, int handleId, int collegeId, int tabsId) {

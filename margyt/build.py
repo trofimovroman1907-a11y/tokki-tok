@@ -271,6 +271,9 @@ class Build:
         manifest_module.add_receiver(manifest, ALARM_RECEIVER, ALARM_ACTIONS)
         self.detail("%s declared: streak sends wake on the system clock" % ALARM_RECEIVER)
         # what the patcher app asks an installed mod: which mod, which version
+        if os.environ.get("MARGYT_PROFILEABLE") == "1":
+            manifest_module.add_profileable(manifest)
+            self.detail("profileable: simpleperf may attach")
         manifest_module.add_meta_data(manifest, "cat.narezany.margyt.mod",
                                       "margyt-lite" if self.lite else "margyt")
         manifest_module.add_meta_data(manifest, "cat.narezany.margyt.version", self.mod_version())
@@ -291,8 +294,8 @@ class Build:
         else:
             self.detail("every authority is spelled with the package name, nothing to do")
 
-        master = open(os.path.join(self.root, artwork.MASTER_PNG), "rb").read()
-        for line in icon_module.replace_everywhere(apk, arsc, manifest, master):
+        master = open(self._default_icon_png(), "rb").read()
+        for line in icon_module.replace_everywhere(apk, arsc, manifest, master, self._default_icon_layers()):
             self.detail(line.strip())
 
         self.say("Icons to choose from")
@@ -506,9 +509,13 @@ class Build:
                 "    static final String NAME = \"%s\";\n"
                 "    static final String TIKTOK = \"%s\";\n"
                 "    static final boolean TEST = %s;\n"
+                "    /** A profiling build (MARGYT_PROFILE=1): the mod's probes write to the log. */\n"
+                "    static final boolean PROFILE = %s;\n"
                 "    /** Built into TikTok Lite: only what does not need TikTok's own classes runs. */\n"
                 "    static final boolean LITE = %s;\n"
-                "}\n" % (mod, name, tiktok, "true" if test else "false", "true" if self.lite else "false")
+                "}\n" % (mod, name, tiktok, "true" if test else "false",
+                           "true" if os.environ.get("MARGYT_PROFILE") == "1" else "false",
+                           "true" if self.lite else "false")
             )
         self.detail("MargyT %s%s%s on TikTok %s%s"
                     % ("Lite " if self.lite else "", mod, " «%s»" % name if name else "", tiktok, ", a test build" if test else ""))
@@ -667,10 +674,37 @@ class Build:
         # whoever had picked it. The old two stay as they were, under Legacy
         ("margyrialyou", "Margyrial You"),
         ("margyrial3", "Margyrial 3"),
+        # 2.3.0: the default is the Vice City picture now, so the mint note is a choice like the others
+        ("classic", "Обычный MargyT"),
     ]
 
     ICON_PACKAGE = 0x30
     ICON_ALIAS = "cat.narezany.margyt.Icon"
+
+    def _default_icon_png(self) -> str:
+        """The bitmap the default icon's sizes are made from: the picture default when there is one."""
+        if artwork.DEFAULT_RASTER:
+            full = os.path.join(self.root, artwork.DEFAULT_RASTER, "full.png")
+            if os.path.exists(full):
+                return full
+        return os.path.join(self.root, artwork.MASTER_PNG)
+
+    def _default_icon_layers(self):
+        """The picture default's adaptive layers, 432 px (108 dp at xxxhdpi), or None for the vector note."""
+        if not artwork.DEFAULT_RASTER:
+            return None
+        folder = os.path.join(self.root, artwork.DEFAULT_RASTER)
+        if not all(os.path.exists(os.path.join(folder, n + ".png")) for n in ("background", "foreground", "full")):
+            return None
+        from PIL import Image
+        import io as _io
+        layers = {}
+        for key, name in (("background", "background"), ("foreground", "foreground"), (None, "full")):
+            with Image.open(os.path.join(folder, name + ".png")) as picture:
+                out = _io.BytesIO()
+                picture.convert("RGBA").resize((432, 432), Image.LANCZOS).save(out, "PNG", optimize=True)
+                layers[key] = out.getvalue()
+        return layers
 
     def _icon_files(self) -> List[str]:
         return [os.path.join(self.root, "icons", "launcher", key + ".png")
@@ -706,7 +740,7 @@ class Build:
                 "    static final String DEFAULT = \"%s\";\n\n"
                 "    static final String[] DEFAULT_PNG = %s;\n\n"
                 "    static final String[] KEYS = {\n"
-                % (entry, _chunked(_thumbnail(os.path.join(self.root, artwork.MASTER_PNG))))
+                % (entry, _chunked(_thumbnail(self._default_icon_png())))
             )
             for key, _label, _component, _png in rows:
                 handle.write("        \"%s\",\n" % key)

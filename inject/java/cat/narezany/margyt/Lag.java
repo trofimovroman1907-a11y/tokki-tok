@@ -85,7 +85,7 @@ public final class Lag {
      * in developer mode, or when switched on for a report.
      */
     static boolean wanted() {
-        if (Version.TEST || DevMode.isOn()) return true;
+        if (Version.TEST || Version.PROFILE || DevMode.isOn()) return true;
         try {
             return AccountAppearance.prefs(Margy.context()).getBoolean(KEY, false);
         } catch (Throwable ignored) {
@@ -162,13 +162,22 @@ public final class Lag {
             if (where(stack).length() == 0) return;
             busy++;
             String mine = mine(stack);
-            if (mine == null) return;
-            ours++;
-            int[] count = BUSY_IN.get(mine);
+            String key;
+            if (mine != null) {
+                ours++;
+                // in a profiling build: where the mod's time is spent, and which of its entry points led there
+                String outer = Version.PROFILE ? outermost(stack) : null;
+                key = outer == null || outer.equals(mine) ? mine : mine + " <- " + outer;
+            } else if (Version.PROFILE) {
+                key = "[not mod] " + firstApp(stack);
+            } else {
+                return;
+            }
+            int[] count = BUSY_IN.get(key);
             if (count == null) {
-                if (BUSY_IN.size() >= 200) return;
+                if (BUSY_IN.size() >= (Version.PROFILE ? 600 : 200)) return;
                 count = new int[1];
-                BUSY_IN.put(mine, count);
+                BUSY_IN.put(key, count);
             }
             count[0]++;
         }
@@ -182,7 +191,7 @@ public final class Lag {
                     .append(" looks, in the mod in ").append(ours).append('\n');
             java.util.ArrayList<String> names = new java.util.ArrayList<String>(BUSY_IN.keySet());
             java.util.Collections.sort(names, (one, two) -> BUSY_IN.get(two)[0] - BUSY_IN.get(one)[0]);
-            for (int i = 0; i < names.size() && i < 25; i++) {
+            for (int i = 0; i < names.size() && i < (Version.PROFILE ? 60 : 25); i++) {
                 out.append("  ").append(BUSY_IN.get(names.get(i))[0]).append("  ").append(names.get(i)).append('\n');
             }
             return out.toString();
@@ -341,6 +350,27 @@ public final class Lag {
     }
 
     /** The mod's own first frame in a stack, or null when it has none. */
+    /** The mod's outermost frame: the hook or listener TikTok called into. */
+    static String outermost(StackTraceElement[] stack) {
+        String found = null;
+        for (StackTraceElement frame : stack) {
+            if (frame.getClassName().startsWith("cat.narezany.margyt.")) found = name(frame);
+        }
+        return found;
+    }
+
+    /** For a busy main thread outside the mod: TikTok's own first frame, or the framework's top one. */
+    static String firstApp(StackTraceElement[] stack) {
+        for (StackTraceElement frame : stack) {
+            String type = frame.getClassName();
+            if (type.startsWith("java.") || type.startsWith("android.") || type.startsWith("com.android.")
+                    || type.startsWith("dalvik.") || type.startsWith("libcore.") || type.startsWith("sun.")
+                    || type.startsWith("kotlin.") || type.startsWith("androidx.")) continue;
+            return name(frame);
+        }
+        return name(stack[0]);
+    }
+
     static String mine(StackTraceElement[] stack) {
         if (stack == null) return null;
         for (StackTraceElement frame : stack) {

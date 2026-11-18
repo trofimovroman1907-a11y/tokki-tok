@@ -269,6 +269,8 @@ final class Panel {
         LinearLayout.LayoutParams markWhere = new LinearLayout.LayoutParams(dp(24), dp(24));
         markWhere.rightMargin = dp(m3 ? 12 : 14);
         row.addView(mark, markWhere);
+        boolean fresh = NewChip.marked(title);
+        title = NewChip.plain(title);
         TextView name = new TextView(context);
         name.setText(title);
         name.setTextColor(chosen ? Accent.colour() : skin.text);
@@ -276,6 +278,12 @@ final class Panel {
         if (m3) M3Type.line(name, 16, 0.5f);
         name.setTypeface(Typeface.create(m3 && !chosen ? "sans-serif" : "sans-serif-medium", Typeface.NORMAL));
         row.addView(name, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+        if (fresh) {
+            LinearLayout.LayoutParams chipWhere = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+            chipWhere.leftMargin = dp(8);
+            row.addView(NewChip.make(context), chipWhere);
+        }
         row.setClickable(true);
         row.setFocusable(true);
         row.setSelected(chosen);

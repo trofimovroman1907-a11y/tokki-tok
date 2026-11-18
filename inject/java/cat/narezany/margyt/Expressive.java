@@ -208,6 +208,12 @@ final class Expressive {
             radii[4] = radii[5] = radii[6] = radii[7] = c[1];
             path.reset();
             path.addRoundRect(box, radii, Path.Direction.CW);
+            // the Vice City theme: a card is the sunset a shade deeper, not a flat colour
+            if (!mask) {
+                android.graphics.Shader sky = ViceGradient.cardShader(Design.owner(this));
+                paint.setShader(sky);
+                if (sky != null) paint.setAlpha(255);
+            }
             canvas.drawPath(path, paint);
         }
 

@@ -163,7 +163,9 @@ final class Design {
 
     static void page(Activity activity, View root, int colour) {
         colour=pageColour(activity);
-        root.setBackground(frosted() ? GlassBackdrop.page(colour) : new ColorDrawable(colour));
+        // the Vice City theme: the mod's own pages wear the same sunset as TikTok's
+        root.setBackground(frosted() ? GlassBackdrop.page(colour)
+                : ViceGradient.wanted(colour) ? new ViceGradient(root, colour, null) : new ColorDrawable(colour));
         window(activity.getWindow(), colour);
         own(root);
     }

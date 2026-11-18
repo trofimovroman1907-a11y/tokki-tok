@@ -344,7 +344,9 @@ public final class AvatarShape {
         WAITING.put(who, Boolean.TRUE);
         if (posted) return;
         posted = true;
-        Choreographer.getInstance().postFrameCallback(TICK);
+        // a whole turn takes nine seconds: thirty steps a second look as smooth as a hundred and twenty,
+        // and on a 120 Hz screen every frame was redrawing every avatar on it
+        Choreographer.getInstance().postFrameCallbackDelayed(TICK, 30L);
     }
 
     private static final Choreographer.FrameCallback TICK = new Choreographer.FrameCallback() {

@@ -91,9 +91,67 @@ public final class Margy {
             {"sg", "52501",  "Singtel",    "Singapore"},
             {"pk", "41001",  "Mobilink",   "Pakistan"},
             {"bd", "47001",  "Grameenphone", "Bangladesh"},
+            {"cn", "46000", "China Mobile", "China"}, {"tw", "46692", "Chunghwa", "Taiwan"},
+            {"hk", "45400", "CSL", "Hong Kong"}, {"mo", "45501", "CTM", "Macau"},
+            {"mn", "42899", "Mobicom", "Mongolia"}, {"lk", "41302", "Dialog", "Sri Lanka"},
+            {"np", "42901", "Nepal Telecom", "Nepal"}, {"mm", "41401", "MPT", "Myanmar"},
+            {"kh", "45601", "Cellcard", "Cambodia"}, {"la", "45701", "LTC", "Laos"},
+            {"af", "41201", "AWCC", "Afghanistan"}, {"ir", "43211", "MCI", "Iran"},
+            {"iq", "41820", "Zain", "Iraq"}, {"jo", "41601", "Zain", "Jordan"},
+            {"lb", "41501", "Alfa", "Lebanon"}, {"sy", "41701", "Syriatel", "Syria"},
+            {"kw", "41902", "Zain", "Kuwait"}, {"qa", "42701", "Ooredoo", "Qatar"},
+            {"bh", "42601", "Batelco", "Bahrain"}, {"om", "42202", "Omantel", "Oman"},
+            {"ye", "42101", "SabaFon", "Yemen"}, {"cy", "28001", "Cytamobile", "Cyprus"},
+            {"mt", "27801", "Vodafone", "Malta"}, {"is", "27401", "Siminn", "Iceland"},
+            {"lu", "27001", "POST", "Luxembourg"}, {"si", "29341", "Telekom", "Slovenia"},
+            {"ba", "21890", "BH Telecom", "Bosnia and Herzegovina"}, {"me", "29701", "One", "Montenegro"},
+            {"mk", "29401", "Telekom", "North Macedonia"}, {"al", "27601", "One", "Albania"},
+            {"ma", "60400", "Orange", "Morocco"}, {"dz", "60301", "Mobilis", "Algeria"},
+            {"tn", "60502", "Tunisie Telecom", "Tunisia"}, {"ly", "60600", "Libyana", "Libya"},
+            {"sd", "63401", "Zain", "Sudan"}, {"et", "63601", "Ethio Telecom", "Ethiopia"},
+            {"ke", "63902", "Safaricom", "Kenya"}, {"tz", "64004", "Vodacom", "Tanzania"},
+            {"ug", "64101", "Airtel", "Uganda"}, {"rw", "63510", "MTN", "Rwanda"},
+            {"gh", "62001", "MTN", "Ghana"}, {"ci", "61203", "Orange", "Cote d'Ivoire"},
+            {"sn", "60801", "Orange", "Senegal"}, {"cm", "62401", "MTN", "Cameroon"},
+            {"ao", "63102", "Unitel", "Angola"}, {"zm", "64501", "Airtel", "Zambia"},
+            {"zw", "64804", "Econet", "Zimbabwe"}, {"mz", "64304", "Vodacom", "Mozambique"},
+            {"mg", "64604", "Telma", "Madagascar"}, {"cd", "63001", "Vodacom", "DR Congo"},
+            {"ve", "73404", "Movistar", "Venezuela"}, {"ec", "74000", "Movistar", "Ecuador"},
+            {"bo", "73602", "Entel", "Bolivia"}, {"py", "74402", "Claro", "Paraguay"},
+            {"uy", "74801", "Antel", "Uruguay"}, {"cr", "71201", "Kolbi", "Costa Rica"},
+            {"pa", "71401", "+Movil", "Panama"}, {"gt", "70401", "Claro", "Guatemala"},
+            {"hn", "70802", "Tigo", "Honduras"}, {"sv", "70601", "Claro", "El Salvador"},
+            {"ni", "71021", "Claro", "Nicaragua"}, {"do", "37002", "Claro", "Dominican Republic"},
+            {"cu", "36801", "Cubacel", "Cuba"}, {"jm", "338050", "Digicel", "Jamaica"},
+            {"pr", "330110", "Claro", "Puerto Rico"}, {"tt", "37412", "bmobile", "Trinidad and Tobago"},
+            {"fj", "54201", "Vodafone", "Fiji"}, {"pg", "53703", "Digicel", "Papua New Guinea"},
+            {"tm", "43801", "MTS", "Turkmenistan"}, {"mv", "47201", "Dhiraagu", "Maldives"},
+            {"bt", "40211", "B-Mobile", "Bhutan"}, {"bn", "52811", "DST", "Brunei"},
+            {"gl", "29001", "Tusass", "Greenland"}, {"ad", "21303", "Andorra Telecom", "Andorra"},
+            {"mc", "21201", "Monaco Telecom", "Monaco"}, {"li", "29501", "Swisscom", "Liechtenstein"},
+            {"sm", "29201", "TIM", "San Marino"},
+            // not on any map: 001-01 is the test network every phone knows
+            {"xx", "00101", "Двойка", "Страна невыученных уроков"},
+            {"aq", "00103", "Penguin Mobile", "Antarctica"},
+            {"xa", "00102", "Poseidon", "Atlantis"},
+            {"xp", "99999", "Jolly Roger", "Pirate Republic"},
     };
 
     public static final int ISO = 0, MCCMNC = 1, CARRIER = 2, LABEL = 3;
+
+    /** The country's name in the language the phone speaks, the English one where it has none. */
+    public static String name(String[] row) {
+        if ("xx".equals(row[ISO])) return Local.of("Страна невыученных уроков");
+        if ("xa".equals(row[ISO])) return Local.of("Атлантида");
+        if ("xp".equals(row[ISO])) return Local.of("Пиратская республика");
+        try {
+            String shown = new java.util.Locale("", row[ISO].toUpperCase(java.util.Locale.ROOT))
+                    .getDisplayCountry(java.util.Locale.getDefault());
+            if (shown != null && shown.length() > 0 && !shown.equalsIgnoreCase(row[ISO])) return shown;
+        } catch (Throwable ignored) {
+        }
+        return row[LABEL];
+    }
 
     private static volatile Context sContext;
 

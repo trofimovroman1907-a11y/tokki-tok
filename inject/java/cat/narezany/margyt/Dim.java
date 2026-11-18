@@ -498,13 +498,17 @@ public final class Dim {
     }
 
     // Primitive layout signature: no resource reads, text conversions or ancestor walks.
+    /** Set once per fingerprint: whether any comment boundary or panel is known at all. */
+    private static boolean lookForExclusions=true;
     static int layoutFingerprint(View view,int depth){
         if(view==null || depth>40)return 0;
+        // the two weak tables are usually empty: asking them about every view twenty times a second cost more than the hash
+        if(depth==0)lookForExclusions=!commentBoundaries.isEmpty()||!panelIdentity.isEmpty();
         int hash=System.identityHashCode(view)*31+view.getWidth()*17+view.getHeight();
         hash=31*hash+view.getVisibility()+(view.isSelected()?8:0)+(view.isActivated()?16:0);
         hash=31*hash+(int)view.getTranslationX();hash=31*hash+(int)view.getTranslationY();
         hash=31*hash+(view.getAlpha()<=0.01f?1:0);
-        if(excludedTree(view))return hash;
+        if(lookForExclusions?excludedTree(view):Boolean.TRUE.equals(view.getTag(0x5454434D)))return hash;
         if(view instanceof ViewGroup){ViewGroup group=(ViewGroup)view;hash=31*hash+group.getChildCount();
             for(int i=0;i<group.getChildCount();i++)hash=31*hash+layoutFingerprint(group.getChildAt(i),depth+1);}
         return hash;
@@ -821,6 +825,23 @@ public final class Dim {
         return false;
     }
 
+    /**
+     * The black strip TikTok keeps under a video (and any wide backing along the bottom): faded, it lets the top of
+     * the next video show through it. A backing like that keeps its alpha; whatever sits on it is dimmed on its own.
+     */
+    private static boolean bottomBacking(View view) {
+        try {
+            if (view instanceof android.widget.TextView || view instanceof ImageView || view.getBackground() == null) return false;
+            if (viewportWidth <= 0 || viewportHeight <= 0 || view.getWidth() < viewportWidth * 0.85f
+                    || view.getHeight() <= 0 || view.getHeight() > viewportHeight * 0.2f) return false;
+            int[] at = new int[2];
+            view.getLocationOnScreen(at);
+            return at[1] + view.getHeight() >= viewportHeight * 0.85f;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
+
     private static void fadeChrome(View view, float alpha, int depth) {
         if(BurnEye.owns(view))return;
         if (view != null && BottomChrome.isRail(view)) {
@@ -834,8 +855,21 @@ public final class Dim {
         // A whole UI overlay is one composited view. Fading that parent covers
         // TikTok's custom-drawn icons and touch controls as well as its labels;
         // restricting this to TextView used to dim only the words.
+        boolean backing = bottomBacking(view);
+        if (backing && !(view instanceof ViewGroup && ((ViewGroup) view).getChildCount() > 0)) {
+            // a bare strip: nothing on it to dim, and fading it uncovers the next video
+            restoreOne(view);
+            return;
+        }
         if (view instanceof ViewGroup) {
             ViewGroup group = (ViewGroup) view;
+            if (backing) {
+                // a backing with buttons on it: the buttons are dimmed, the backing is not
+                restoreOne(view);
+                for (int i = 0; i < group.getChildCount(); i++)
+                    fadeChrome(group.getChildAt(i), alpha, depth + 1);
+                return;
+            }
             // A comments sheet may have obfuscated container classes. Its
             // marked rows/input identify the whole bounded sheet, including
             // unmarked author names, menus and reaction icons around them.
@@ -885,6 +919,12 @@ public final class Dim {
                 view.setAlpha(state.applied);
             }
         }
+    }
+
+    /** Put one view back to its own alpha now, if it was dimmed. */
+    private static void restoreOne(View view) {
+        Dimmed previous = faded.remove(view);
+        if (previous != null && Math.abs(view.getAlpha() - previous.applied) < 0.001f) view.setAlpha(previous.original);
     }
 
     private static void fade(View view, float alpha) {

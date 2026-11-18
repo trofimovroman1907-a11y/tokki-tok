@@ -219,6 +219,16 @@ def add_meta_data(axml: Axml, name: str, value: str) -> None:
     axml.insert_into(application(axml), [data, axml.close_element(data)])
 
 
+def add_profileable(axml: Axml) -> None:
+    """<profileable android:shell="true"/>: lets simpleperf and Perfetto look inside the app.
+
+    Only for profiling builds (MARGYT_PROFILE=1), never for a release.
+    """
+    node = axml.make_element("profileable")
+    axml.set_attr_bool(node, "shell", True)
+    axml.insert_into(application(axml), [node, axml.close_element(node)])
+
+
 LAUNCH_SINGLE_TASK = 2
 
 

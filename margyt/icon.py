@@ -27,12 +27,15 @@ COLOUR_TYPES = (0x1C, 0x1D, 0x1E, 0x1F)
 class Icon:
     """Replaces every file behind an icon resource, reporting as it goes."""
 
-    def __init__(self, apk: Apk, arsc: Arsc, master_png: bytes):
+    def __init__(self, apk: Apk, arsc: Arsc, master_png: bytes, raster=None):
         self.apk = apk
         self.arsc = arsc
         self.master = png.decode(master_png)
         self.log: List[str] = []
         self._scaled = {}
+        # a picture default icon (a gradient and a glow are no vector): {"background", "foreground", None} -> png
+        self.raster = raster
+        self._written = set()
 
     # ------------------------------------------------------------ the sizes
 
@@ -52,6 +55,8 @@ class Icon:
             self._replace_file(path, value, layer=None)
 
     def _replace_file(self, path: str, value: Value, layer: Optional[str]) -> None:
+        if path in self._written:
+            return
         if not self.apk.has(path):
             self.log.append("  %s: named by the table, missing from the apk" % path)
             return
@@ -82,6 +87,9 @@ class Icon:
                 self._replace_adaptive(path, axml)
                 return
 
+        if self.raster is not None and layer in self.raster:
+            self._raster_layer(path, value, layer)
+            return
         paths = {
             "background": artwork.BACKGROUND,
             "foreground": artwork.GLYPH,
@@ -89,6 +97,17 @@ class Icon:
         }[layer]
         self.apk.replace(path, vector.build(artwork.VIEWPORT, paths))
         self.log.append("  %s: vector (%s)" % (path, layer or "whole icon"))
+
+    def _raster_layer(self, path: str, value: Value, layer: Optional[str]) -> None:
+        """A layer that is a picture: written beside the XML under the same name with .png, which is the same
+        length, so the table's string can be overwritten where it lies; Android reads a .png path as a bitmap."""
+        twin = path[:-4] + ".png"
+        while self.apk.has(twin):
+            twin = twin[:-5] + chr(ord(twin[-5]) % 26 + 97 if twin[-5].isalpha() else 97) + ".png"
+        self.apk.add(twin, self.raster[layer])
+        self.arsc.replace_string(value.data, twin)
+        self._written.add(twin)
+        self.log.append("  %s: picture %s (%s)" % (path, twin, layer or "whole icon"))
 
     def _replace_adaptive(self, path: str, axml: Axml) -> None:
         self.log.append("  %s: adaptive icon, following its layers" % path)
@@ -120,11 +139,11 @@ class Icon:
             self._replace_file(path, value, layer)
 
 
-def replace_everywhere(apk: Apk, arsc: Arsc, manifest: Axml, master_png: bytes) -> List[str]:
+def replace_everywhere(apk: Apk, arsc: Arsc, manifest: Axml, master_png: bytes, raster=None) -> List[str]:
     """Redraw every icon the manifest points the launcher at."""
     from . import manifest as manifest_module
 
-    icon = Icon(apk, arsc, master_png)
+    icon = Icon(apk, arsc, master_png, raster)
     for res_id in manifest_module.icon_ids(manifest):
         icon.log.append("  icon resource 0x%08x" % res_id)
         icon.replace(res_id)

@@ -17,11 +17,13 @@ final class Version {
 
     private Version() {}
 
-    static final String MOD = "2.2.3";
+    static final String MOD = "2.3.0";
     /** What the update is called, from VERSION-NAME; empty when it has no name. */
-    static final String NAME = "More Fun Update";
+    static final String NAME = "Epic Style Update";
     static final String TIKTOK = "47.2.41";
     static final boolean TEST = false;
+    /** A profiling build (MARGYT_PROFILE=1): the mod's probes write to the log. */
+    static final boolean PROFILE = false;
     /** Built into TikTok Lite: only what does not need TikTok's own classes runs. */
     static final boolean LITE = false;
 }

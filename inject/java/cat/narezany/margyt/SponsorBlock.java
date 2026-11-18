@@ -397,7 +397,19 @@ final class SponsorBlock {
     }
 
     /** On Wi-Fi, or on mobile data when that is switched on: the video is fetched once more, in its smallest size, to be listened to. */
+    private static volatile boolean unmeteredKnown;
+    private static volatile long unmeteredAt;
+
     private static boolean unmetered() {
+        // two calls into the system service each time a video starts: asked once in ten seconds is plenty
+        long now = android.os.SystemClock.uptimeMillis();
+        if (unmeteredAt != 0 && now - unmeteredAt < 10000L) return unmeteredKnown;
+        unmeteredKnown = unmeteredNow();
+        unmeteredAt = now;
+        return unmeteredKnown;
+    }
+
+    private static boolean unmeteredNow() {
         try {
             android.net.ConnectivityManager net = (android.net.ConnectivityManager) Margy.context().getSystemService(Context.CONNECTIVITY_SERVICE);
             return net != null && net.getActiveNetwork() != null && !net.isActiveNetworkMetered();

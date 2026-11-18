@@ -26,6 +26,26 @@ final class HeapShot {
 
     /** From the lag watcher's thread, every look; does anything only now and then. */
     static void tick(java.util.function.Supplier<String> profiler) {
+        // a profiling build only reports, never snapshots: a snapshot holds TikTok still for seconds and Android closes it
+        if (Version.PROFILE) {
+            long at = android.os.SystemClock.uptimeMillis();
+            if (at - checked < 20000) return;
+            checked = at;
+            String profile = profiler.get();
+            if (profile != null && profile.length() > 0) {
+                for (String line : profile.split("\n")) android.util.Log.e("MargyT", "profile: " + line);
+                // this phone may keep an app's log to itself: the same goes to Downloads/MargyT as a file
+                try {
+                    String text = "uptime " + (at / 1000) + " s\n" + profile + "\n--- probes ---\n" + Probe.recent();
+                    File temp = new File(Margy.context().getCacheDir(), "margyt-profile.txt");
+                    Net.save(temp, text.getBytes("UTF-8"));
+                    publish(temp, "margyt-profile.txt", "text/plain");
+                } catch (Throwable error) {
+                    Diary.note("profile file: " + error);
+                }
+            }
+            return;
+        }
         // a snapshot holds TikTok still for seconds and Android closes it: only for a developer who asked
         if (!Probe.ON || !DevMode.isOn()) return;
         long now = android.os.SystemClock.uptimeMillis();

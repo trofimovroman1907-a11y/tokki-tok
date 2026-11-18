@@ -35,6 +35,8 @@ final class DateInfo {
     static final class Data {
         final long seconds;
         final String aid, author, handle, region;
+        /** The post itself, while TikTok keeps it: its numbers are read when the date is tapped. */
+        java.lang.ref.WeakReference<Object> post = new java.lang.ref.WeakReference<>(null);
 
         Data(long seconds, String aid, String author, String handle, String region) {
             this.region = region == null ? "" : region;
@@ -50,10 +52,12 @@ final class DateInfo {
             if (time > 100000000000L) time /= 1000L;
             if (time < 1000000000L) return null;
             Object user = NativeRead.get(post, "getAuthor");
-            return new Data(time, NativeRead.aid(post),
+            Data data = new Data(time, NativeRead.aid(post),
                     NativeRead.string(NativeRead.get(user, "getNickname")),
                     NativeRead.string(NativeRead.get(user, "getUniqueId")),
                     Dates.region(post));
+            data.post = new java.lang.ref.WeakReference<>(post);
+            return data;
         }
     }
 
@@ -63,6 +67,10 @@ final class DateInfo {
             Object tag = cell == null ? null : cell.getTag(CELL_TAG);
             Data data = tag instanceof Data ? (Data) tag : Dates.selectedInfo;
             if (data == null || row == null) return;
+            // the date opens the video's whole stats now, its time among them
+            Object post = data.post.get();
+            if (post == null && data.aid.equals(PlayerTools.aid())) post = PlayerTools.post();
+            if (post != null) { VideoStats.open(row.getContext(), post); return; }
             show(row.getContext(), data);
         } catch (Throwable error) {
             Diary.note("date info: " + error);

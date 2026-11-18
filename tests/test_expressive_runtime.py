@@ -37,7 +37,7 @@ SOURCES={
 'cat/narezany/margyt/Motion.java':'package cat.narezany.margyt;class Motion{static boolean enabled(android.content.Context c){return true;}}',
 }
 # The legacy branch still runs against the same shapes and grouping assertions.
-SOURCES['android/graphics/Paint.java']=SOURCES['android/graphics/Paint.java'].replace('public void setColor(int c){colour=c;}', 'public void setColor(int c){colour=c;}public int getColor(){return colour;}')
+SOURCES['android/graphics/Paint.java']=SOURCES['android/graphics/Paint.java'].replace('public void setColor(int c){colour=c;}', 'public void setColor(int c){colour=c;}public int getColor(){return colour;}public Shader setShader(Shader s){return s;}')
 SOURCES['android/graphics/Color.java']=SOURCES['android/graphics/Color.java'].replace('WHITE=0xFFFFFFFF;', 'WHITE=0xFFFFFFFF,TRANSPARENT=0;')
 SOURCES['android/graphics/Path.java']=SOURCES['android/graphics/Path.java'].replace('public void reset()', 'public void addCircle(float x,float y,float r,Direction d){}public void reset()')
 SOURCES['android/view/View.java']=SOURCES['android/view/View.java'].replace('public void setBackground(Drawable d){bg=d;}', 'public void setBackground(Drawable d){bg=d;}public void setBackgroundColor(int c){bg=new android.graphics.drawable.ColorDrawable(c);}')

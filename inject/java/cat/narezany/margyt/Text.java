@@ -163,12 +163,15 @@ final class Text {
             "Класичний пресет", "Classic preset");
     static final String THEME_PRESET_BLUE = pick("Синий пресет",
             "Синій пресет", "Blue preset");
+    static final String NEW = pick("НОВОЕ", "НОВЕ", "NEW");
+    static final String THEME_PRESET_VICE = pick("Вайс-Сити (GTA VI)",
+            "Вайс-Сіті (GTA VI)", "Vice City (GTA VI)");
     static final String THEME_RESET = pick("Сбросить к теме TikTok",
             "Скинути до теми TikTok", "Reset to TikTok theme");
     static final String THEME_PRESETS = pick("Готовые темы", "Готові теми", "Theme presets");
-    static final String THEME_PRESETS_NOTE = pick("Классическая, синяя или исходная тема TikTok",
-            "Класична, синя або початкова тема TikTok",
-            "Classic, blue or original TikTok theme");
+    static final String THEME_PRESETS_NOTE = pick("Классическая, синяя, Вайс-Сити или исходная тема TikTok",
+            "Класична, синя, Вайс-Сіті або початкова тема TikTok",
+            "Classic, blue, Vice City or original TikTok theme");
     static final String OPEN_TTCUZ_SITE = pick("Инструкции на сайте MargyT",
             "Інструкції на сайті MargyT", "Instructions on the MargyT site");
     static final String THEME_COLOURS = pick("Цвета интерфейса",
@@ -554,7 +557,7 @@ final class Text {
     static final String ICON_CONTEST = pick(
             "Участвовать в конкурсе", "Взяти участь у конкурсі", "Enter the contest");
 
-    static final String ICON_DEFAULT = pick("Обычная", "Звичайна", "The usual one");
+    static final String ICON_DEFAULT = pick("Вайс-Сити (GTA VI)", "Вайс-Сіті (GTA VI)", "Vice City (GTA VI)");
 
     // -------------------------------------------------------- the donation
 
@@ -745,8 +748,8 @@ final class Text {
     static final String TILCAYO_NOM = pick("ням!", "ням!", "nom!");
     static final String TILCAYO_HEHE = pick("хи-хи", "хі-хі", "hehe");
     static final String TILCAYO_WHEE = pick("уиии!", "уііі!", "wheee!");
-    static final String FUN_NOTE = pick("Деп калькулятор, скримеры и тилкайо",
-            "Деп калькулятор, скримери й тілкайо", "Dep Calculator, screamers and tilcayo");
+    static final String FUN_NOTE = pick("Скримеры, тилкайо и прочее",
+            "Скримери, тілкайо та інше", "Screamers, tilcayo and the rest");
     static final String FUN_HELP = pick("Ни для чего не нужное. Само ничего не включится.", "Ні для чого не потрібне. Само нічого не ввімкнеться.", "Good for nothing. Nothing here turns on by itself.");
     static final String FUN_DEP = pick("Деп калькулятор", "Деп калькулятор", "Dep Calculator");
     static final String FUN_SCREAMERS = pick("Скримеры", "Скримери", "Screamers");

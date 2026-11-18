@@ -39,6 +39,9 @@ public final class Themes {
     public static final String KEY_TEXT = "theme_text";
     public static final String KEY_BACKGROUND = "theme_background";
     public static final String KEY_STRENGTH = "theme_strength";
+    public static final String KEY_GRADIENT = "theme_gradient";
+    /** Which ready theme was picked; any colour changed by hand afterwards takes it away (forgetPreset). */
+    public static final String KEY_PRESET = "theme_preset";
     /** Pure black for AMOLED screens, over TikTok's dark theme and over the mod's own. */
     public static final String KEY_AMOLED = "theme_amoled";
 
@@ -65,6 +68,8 @@ public final class Themes {
     public static void setMaterial(boolean on) {
         SharedPreferences prefs = prefs();
         if (prefs != null) prefs.edit().putBoolean(KEY_MATERIAL, on).apply();
+        // the wallpaper's colours are the wallpaper's accent too: one switch for the whole look
+        if (on) { forgetPreset(); Accent.setMaterial(true); }
         forget();
     }
 
@@ -194,8 +199,10 @@ public final class Themes {
         int chosenText = 0;
         int chosenBackground = 0;
         if (material) {
-            chosenText = fromSystem(true);
-            chosenBackground = fromSystem(false);
+            // a colour picked in the circles under the switch, or the wallpaper's
+            int seed = MaterialSeeds.seed();
+            chosenText = seed != 0 ? MaterialSeeds.neutral(seed, dark ? 95 : 10) : fromSystem(true);
+            chosenBackground = seed != 0 ? MaterialSeeds.neutral(seed, dark ? 10 : 95) : fromSystem(false);
         }
         if (chosenText == 0) chosenText = number(modeKey(KEY_TEXT, dark),
                 number(KEY_TEXT, dark ? TEXT : 0xFF161823));
@@ -219,10 +226,12 @@ public final class Themes {
     }
 
     public static void setText(int colour) {
+        forgetPreset();
         put(modeKey(KEY_TEXT, isDark()), colour);
     }
 
     public static void setBackground(int colour) {
+        forgetPreset();
         put(modeKey(KEY_BACKGROUND, isDark()), colour);
     }
 
@@ -232,7 +241,7 @@ public final class Themes {
 
     public static void reset() {
         SharedPreferences p = prefs();
-        if (p != null) p.edit().putBoolean(KEY_ON, false).remove(KEY_MATERIAL)
+        if (p != null) p.edit().putBoolean(KEY_ON, false).remove(KEY_MATERIAL).remove(KEY_GRADIENT).remove(KEY_PRESET)
                 .remove(KEY_TEXT).remove(KEY_BACKGROUND)
                 .remove(modeKey(KEY_TEXT, true)).remove(modeKey(KEY_TEXT, false))
                 .remove(modeKey(KEY_BACKGROUND, true)).remove(modeKey(KEY_BACKGROUND, false))
@@ -241,18 +250,50 @@ public final class Themes {
         AppearanceColors.reset();
     }
 
+    /** Which ready theme is on now, -1 for none. Kept as picked, and dropped by any change made by hand. */
+    public static int currentPreset() {
+        SharedPreferences p = prefs();
+        if (p == null || !p.getBoolean(KEY_ON, false) || p.getBoolean(KEY_MATERIAL, true)) return -1;
+        return p.getInt(KEY_PRESET, -1);
+    }
+
+    /** A colour was chosen by hand: no ready theme is on any more, and the Vice City gradient goes with it. */
+    public static void forgetPreset() {
+        SharedPreferences p = prefs();
+        if (p != null && (p.contains(KEY_PRESET) || p.contains(KEY_GRADIENT)))
+            p.edit().remove(KEY_PRESET).remove(KEY_GRADIENT).apply();
+        forget();
+    }
+
+    /** The accent each ready theme brings: TikTok's own, a clear blue, Vice City's neon pink. */
+    private static int presetAccent(int chosen) {
+        return chosen == 1 ? 0xFF3D8BFF : chosen == 2 ? 0xFFFF4FA3 : 0;
+    }
+
+    private static int presetBackground(int chosen, boolean dark) {
+        return dark
+                ? (chosen == 1 ? 0xFF0D1B2A : chosen == 2 ? 0xFF1B1030 : 0xFF161823)
+                : (chosen == 1 ? 0xFFEAF3FA : chosen == 2 ? 0xFFFCE8F3 : 0xFFF8F8F8);
+    }
+
+    private static int presetText(int chosen, boolean dark) {
+        return dark ? 0xFFFFFFFF : chosen == 2 ? 0xFF2A1240 : 0xFF161823;
+    }
+
+    /** 0 classic, 1 blue, 2 Vice City (the GTA VI release): night violet or sunset pink, with a neon pink accent. */
     public static void preset(int chosen) {
         boolean dark = isDark();
-        int background = dark
-                ? (chosen == 1 ? 0xFF0D1B2A : 0xFF161823)
-                : (chosen == 1 ? 0xFFEAF3FA : 0xFFF8F8F8);
-        int text = dark ? 0xFFFFFFFF : 0xFF161823;
+        int background = presetBackground(chosen, dark);
+        int text = presetText(chosen, dark);
+        // a ready theme is the whole look: its own accent, and no role colours left over from before
+        AppearanceColors.reset();
+        Accent.set(presetAccent(chosen));
         SharedPreferences p = prefs();
         if (p != null) p.edit().putBoolean(KEY_ON, true)
                 .putBoolean(KEY_MATERIAL, false)
                 .putInt(modeKey(KEY_BACKGROUND, dark), background)
                 .putInt(modeKey(KEY_TEXT, dark), text)
-                .putInt(KEY_STRENGTH, 100).apply();
+                .putInt(KEY_STRENGTH, 100).putBoolean(KEY_GRADIENT, chosen == 2).putInt(KEY_PRESET, chosen).apply();
         forget();
     }
 
@@ -312,6 +353,10 @@ public final class Themes {
         // with them so the steps between them stay
         if (now.amoled) level = level <= AMOLED_FLOOR ? 0f : (level - AMOLED_FLOOR) / (1f - AMOLED_FLOOR);
 
+        // TikTok's greys spread evenly from black to white put its sheets and cards at tone 25
+        // on the theme's ground; Material 3 keeps containers low (tone 12 to 22), so in the
+        // dark theme the low end is pressed down and the words stay where they were
+        if (isDark() && !now.amoled) level = (float) Math.pow(level, 1.5);
         int mixed = mix(now.ground, now.text, level);
         return (colour & 0xFF000000) | (mixed & 0xFFFFFF);
     }
@@ -461,6 +506,12 @@ public final class Themes {
             if (drawable instanceof android.graphics.drawable.ColorDrawable) {
                 int was = ((android.graphics.drawable.ColorDrawable) drawable).getColor();
                 int now = recolour(was, true);
+                // the Vice City preset: the page's ground is a sunset across the screen, not one colour -- also where
+                // the colour came in already the theme's (from the resources), which is most pages
+                if (view != null && ViceGradient.wanted(now)) {
+                    view.setBackground(new ViceGradient(view, was, null));
+                    return;
+                }
                 if (now == was) return;
                 if (view != null) {
                     view.setBackground(new android.graphics.drawable.ColorDrawable(now));
@@ -484,6 +535,12 @@ public final class Themes {
                 }
                 int was = held.getDefaultColor();
                 int now = recolour(was, true);
+                // a sheet with rounded corners (comments, a menu) in the ground colour: the sunset, the same corners
+                if (view != null && ViceGradient.wanted(now)
+                        && shape.getShape() == android.graphics.drawable.GradientDrawable.RECTANGLE) {
+                    view.setBackground(new ViceGradient(view, was, ViceGradient.radiiOf(shape)));
+                    return;
+                }
                 if (now != was) {
                     android.graphics.drawable.Drawable copy = shape.mutate();
                     ((android.graphics.drawable.GradientDrawable) copy).setColor(now);
@@ -495,6 +552,26 @@ public final class Themes {
                 // a ripple is one of these too, with the colour under it
                 android.graphics.drawable.LayerDrawable layers =
                         (android.graphics.drawable.LayerDrawable) drawable;
+                // the Vice City preset: a row's colour layer in the ground colour becomes the sunset, inside the
+                // same ripple, so a row still lights up when pressed
+                if (view != null && depth == 0 && Build.VERSION.SDK_INT >= 23 && gradientOn()) {
+                    for (int i = 0; i < layers.getNumberOfLayers(); i++) {
+                        if (layers.getId(i) == android.R.id.mask) continue;
+                        android.graphics.drawable.Drawable inner = layers.getDrawable(i);
+                        int colour = 0;
+                        if (inner instanceof android.graphics.drawable.ColorDrawable)
+                            colour = ((android.graphics.drawable.ColorDrawable) inner).getColor();
+                        else if (inner instanceof android.graphics.drawable.GradientDrawable && Build.VERSION.SDK_INT >= 24
+                                && ((android.graphics.drawable.GradientDrawable) inner).getColor() != null)
+                            colour = ((android.graphics.drawable.GradientDrawable) inner).getColor().getDefaultColor();
+                        if (colour != 0 && ViceGradient.wanted(recolour(colour, true))) {
+                            float[] radii = inner instanceof android.graphics.drawable.GradientDrawable
+                                    ? ViceGradient.radiiOf((android.graphics.drawable.GradientDrawable) inner) : null;
+                            layers.mutate();
+                            layers.setDrawable(i, new ViceGradient(view, colour, radii, inner));
+                        }
+                    }
+                }
                 for (int i = 0; i < layers.getNumberOfLayers(); i++) {
                     paint(layers.getDrawable(i), null, depth + 1);
                 }
@@ -523,6 +600,8 @@ public final class Themes {
                 }
                 return;
             }
+            // the Vice City preset: a background of a kind not read here may still be the ground colour
+            if (view != null && depth == 0 && ViceGradient.tryReplace(drawable, view)) return;
             other(drawable);
             if (Probe.ON && view != null) unknown(drawable, view);
         } catch (Throwable ignored) {
@@ -1030,9 +1109,21 @@ public final class Themes {
     }
 
     /** Something the answers depend on has changed; nothing remembered stands. */
+    /** The Vice City preset paints its ground as a screen-wide gradient (ViceGradient). Read once per settle. */
+    private static volatile Boolean gradient;
+
+    static boolean gradientOn() {
+        Boolean known = gradient;
+        if (known != null) return known;
+        boolean value = flag(KEY_GRADIENT, false) && currentPreset() == 2;
+        gradient = value;
+        return value;
+    }
+
     static void forget() {
         mode = 0;
         settled = null;
+        gradient = null;
         Accent.forget();
     }
 

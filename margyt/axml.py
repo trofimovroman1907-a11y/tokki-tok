@@ -46,6 +46,7 @@ ATTR_IDS = {
     "icon": 0x01010002,
     "name": 0x01010003,
     "exported": 0x01010010,
+    "shell": 0x01010594,
     "enabled": 0x0101000E,
     "configChanges": 0x0101001F,
     "launchMode": 0x0101001D,

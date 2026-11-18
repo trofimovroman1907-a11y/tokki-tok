@@ -53,9 +53,29 @@ final class SettingsPictures {
             setMeasuredDimension(MeasureSpec.getSize(widthSpec), Math.round(tall * d));
         }
 
-        /** Asks for the next frame, but only while some of it is on the screen. */
+        /**
+         * Asks for the next frame while some of it is on the screen. Out of sight it looks
+         * again a few times a second instead of stopping for good: a picture drawn while the
+         * page was sliding in, or below the fold, used to stand still until touched.
+         */
         void again() {
+            if (!isAttachedToWindow()) return;
             if (isShown() && getGlobalVisibleRect(seen)) postInvalidateOnAnimation();
+            else { removeCallbacks(lookAgain); postDelayed(lookAgain, 250); }
+        }
+
+        private final Runnable lookAgain = new Runnable() {
+            @Override public void run() {
+                if (!isAttachedToWindow()) return;
+                if (isShown() && getGlobalVisibleRect(seen)) invalidate();
+                else postDelayed(this, 250);
+            }
+        };
+
+        @Override
+        protected void onDetachedFromWindow() {
+            super.onDetachedFromWindow();
+            removeCallbacks(lookAgain);
         }
 
         /** Seconds since the phone started, for pictures that loop. */
@@ -955,49 +975,4 @@ final class SettingsPictures {
     }
 
     // ============================================================ dep
-
-    /** The dep window floating over TikTok, drifting a little. */
-    static final class DepWindow extends Art {
-        private static float last = 0f;
-        private final Eased shown = new Eased(last);
-        private float want;
-
-        DepWindow(Context context, Skin skin, boolean on) {
-            super(context, skin, 150);
-            want = on ? 1f : 0f;
-        }
-
-        void set(boolean on) {
-            want = on ? 1f : 0f;
-            shown.to(this, want, 360);
-            last = want;
-        }
-
-        @Override
-        protected void onAttachedToWindow() {
-            super.onAttachedToWindow();
-            set(want > 0.5f);
-        }
-
-        @Override
-        protected void onDraw(Canvas canvas) {
-            float h = getHeight() - 20 * d, w = h * 0.49f, left = (getWidth() - w) / 2f, top = 10 * d;
-            box.set(left, top, left + w, top + h);
-            paint.setShader(new LinearGradient(0, top, 0, top + h, 0xFF2B2250, 0xFF0F2A30, Shader.TileMode.CLAMP));
-            canvas.drawRoundRect(box, 12 * d, 12 * d, paint);
-            paint.setShader(null);
-            float v = shown.value;
-            if (v > 0.01f) {
-                float drift = (float) Math.sin(clock() * 1.4f) * 3 * d;
-                float bw = 52 * d, bh = 26 * d, bx = left + w - bw - 6 * d, by = top + 28 * d + drift;
-                box.set(bx, by, bx + bw * v, by + bh);
-                paint.setColor(faint(0xFF1E1E1E, 0.92f));
-                canvas.drawRoundRect(box, 13 * d, 13 * d, paint);
-                if (v > 0.6f) {
-                    words(canvas, "\uD83C\uDFB0 2000", bx + bw / 2f, by + 17 * d, 11, 0xFFFFC83D, true, Paint.Align.CENTER);
-                }
-                again();
-            }
-        }
-    }
 }

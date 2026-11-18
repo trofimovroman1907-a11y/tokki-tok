@@ -17,7 +17,7 @@ final class Probe {
 
     private Probe() {}
 
-    static final boolean ON = Version.TEST;
+    static final boolean ON = Version.TEST || Version.PROFILE;
 
     static final int THEME = 0, FONTS = 1, DATES = 2, COLOURS = 3, BADGES = 4, ACCENT = 5,
             DIM_PRINT = 6, DIM_PASS = 7, DIM_FRAME = 8, PINK = 9, TEXT = 10, PAINT = 11,
@@ -33,6 +33,14 @@ final class Probe {
     private static final int[] calls = new int[NAMES_OF.length];
     private static final long[] longest = new long[NAMES_OF.length];
     private static long told;
+    private static final java.util.ArrayDeque<String> RECENT = new java.util.ArrayDeque<String>();
+
+    /** The last two minutes of totals, for a profiling build's file. */
+    static String recent() {
+        synchronized (RECENT) {
+            return String.join("\n", RECENT);
+        }
+    }
 
     static long start() {
         return ON ? System.nanoTime() : 0L;
@@ -62,6 +70,12 @@ final class Probe {
             spent[i] = 0;
             calls[i] = 0;
             longest[i] = 0;
+        }
+        if (Version.PROFILE) {
+            synchronized (RECENT) {
+                RECENT.addLast("in " + since + "ms the mod took " + all / 100000L / 10f + "ms: " + line);
+                while (RECENT.size() > 60) RECENT.removeFirst();
+            }
         }
         if (all >= 1000000L) {
             // as an error, because this phone keeps nothing quieter from an app

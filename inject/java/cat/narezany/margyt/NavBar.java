@@ -120,13 +120,27 @@ final class NavBar {
 
     // -------------------------------------------------------------- the switch
 
+    /** Asked on every frame: read from the preferences once, then kept until it is changed here. */
+    private static volatile Boolean enabled;
+
     static boolean isEnabled() {
         if (Version.LITE) return false;
+        Boolean known = enabled;
+        if (known != null) return known;
         SharedPreferences prefs = prefs();
-        return prefs == null || prefs.getBoolean(KEY, true);
+        if (prefs == null) return true;
+        boolean value = prefs.getBoolean(KEY, true);
+        enabled = value;
+        return value;
+    }
+
+    /** After a backup is restored: read the setting again. */
+    static void reloadSettings() {
+        enabled = null;
     }
 
     static void setEnabled(boolean on) {
+        enabled = on;
         SharedPreferences prefs = prefs();
         if (prefs != null) prefs.edit().putBoolean(KEY, on).apply();
     }
@@ -396,6 +410,17 @@ final class NavBar {
 
     private static final class Capsule extends Drawable {
         private WeakReference<View> glassHost=new WeakReference<View>(null);
+        /** Liquid glass: the drop under the chosen tab is held and dragged to another one. */
+        private boolean dragging, dragMoved;
+        private long dragTouched;
+        private float dragX, dragDownX;
+        private Tab dragFrom;
+        /** While the drop is held: the bar recorded on its own, and the glass of the bubble over it. */
+        private final android.graphics.RenderNode barNode = new android.graphics.RenderNode("margyt-tab-bar");
+        private LiveGlass bubbleGlass;
+        /** Where the drop is along the bar, and how far it has grown into the held lens (0 to 1). */
+        private float dropX = Float.NaN, hold;
+        private long dropAt;
         private final float unit;
         private final Paint fill = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint line = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -592,6 +617,85 @@ final class NavBar {
             tab.setTranslationX(0f);
             tab.setScaleX(1f);
             tab.setClipBounds(null);
+            tab.setOnTouchListener(null);
+        }
+
+        /**
+         * Apple's tab bar: the drop of glass on the chosen tab can be held and slid along the
+         * bar, and the tab it is let go over is the one chosen. A plain tap is TikTok's own.
+         */
+        private void hold(final Tab tab, final ViewGroup bar) {
+            final int slop = android.view.ViewConfiguration.get(bar.getContext()).getScaledTouchSlop();
+            tab.view.setOnTouchListener((touched, event) -> {
+                if (!Design.glass() || tab.kind == CREATE) return false;
+                int[] where = new int[2];
+                bar.getLocationOnScreen(where);
+                float x = event.getRawX() - where[0];
+                dragTouched = SystemClock.uptimeMillis();
+                switch (event.getActionMasked()) {
+                    case android.view.MotionEvent.ACTION_DOWN:
+                        if (tab.open < 0.5f) return false;   // only the chosen tab's drop is held
+                        dragging = true; dragMoved = false; dragFrom = tab; dragX = dragDownX = x;
+                        bar.getParent().requestDisallowInterceptTouchEvent(true);
+                        bar.invalidate();
+                        return true;
+                    case android.view.MotionEvent.ACTION_MOVE:
+                        if (!dragging) return false;
+                        if (Math.abs(x - dragDownX) > slop) dragMoved = true;
+                        dragX = Math.max(body.left, Math.min(body.right, x));
+                        bar.invalidate();
+                        return true;
+                    case android.view.MotionEvent.ACTION_UP:
+                        if (!dragging) return false;
+                        dragging = false;
+                        Tab over = tabAt(dragX);
+                        if (!dragMoved || over == null || over == dragFrom) dragFrom.view.performClick();
+                        else if (over.kind != CREATE) over.view.performClick();
+                        bar.invalidate();
+                        return true;
+                    case android.view.MotionEvent.ACTION_CANCEL:
+                        dragging = false;
+                        bar.invalidate();
+                        return true;
+                }
+                return dragging;
+            });
+        }
+
+        /** Moves the drop toward where it belongs and grows or shrinks the lens; true while still moving. */
+        private boolean settleDrop() {
+            // a drag whose finger went away without telling us (no up, no cancel) does not stay held
+            if (dragging && SystemClock.uptimeMillis() - dragTouched > 4000L) dragging = false;
+            Tab chosen = null;
+            for (Tab one : tabs) if (one.view.isSelected() && one.kind != CREATE) chosen = one;
+            float goal = dragging ? dragX : chosen != null ? (chosen.left + chosen.right) / 2f : dropX;
+            long now = SystemClock.uptimeMillis();
+            float dt = dropAt == 0 ? 16f : Math.min(64f, now - dropAt);
+            dropAt = now;
+            if (Float.isNaN(dropX)) dropX = goal;
+            if (Float.isNaN(goal)) return false;
+            // the drop follows the finger closely and slides between tabs softly
+            float k = 1f - (float) Math.exp(-dt / (dragging ? 40f : 90f));
+            dropX += (goal - dropX) * k;
+            float h = 1f - (float) Math.exp(-dt / 70f);
+            hold += ((dragging ? 1f : 0f) - hold) * h;
+            boolean moving = Math.abs(goal - dropX) > 0.5f || Math.abs((dragging ? 1f : 0f) - hold) > 0.01f;
+            if (!moving) { dropX = goal; hold = dragging ? 1f : 0f; }
+            // the lens rises above the bar: what holds the bar must not cut it off
+            View host = glassHost.get();
+            if (host != null && hold > 0.01f) {
+                Object up = host.getParent();
+                for (int i = 0; i < 2 && up instanceof ViewGroup; i++) {
+                    if (((ViewGroup) up).getClipChildren()) ((ViewGroup) up).setClipChildren(false);
+                    up = ((ViewGroup) up).getParent();
+                }
+            }
+            return moving;
+        }
+
+        private Tab tabAt(float x) {
+            for (Tab one : tabs) if (x >= one.left && x < one.right) return one;
+            return null;
         }
 
         /** The tabs TikTok has in the bar at the moment. True when they are not the ones known. */
@@ -615,6 +719,7 @@ final class NavBar {
                 tab.view = (ViewGroup) child;
                 tab.kind = kind(tab.view, at, count);
                 tab.open = tab.from = tab.to = child.isSelected() ? 1f : 0f;
+                hold(tab, bar);
                 next[at++] = tab;
             }
             tabs = next;
@@ -645,10 +750,22 @@ final class NavBar {
                 top = 0f;
                 bottom = tall;
             }
-            float room = Math.min(bottom - top - 6f * unit, 52f * unit);
+            boolean glass = Design.glass();
+            float room = Math.min(bottom - top - 6f * unit, (glass ? 58f : 52f) * unit);
             float middle = (top + bottom) / 2f;
-            body.set(8f * unit, middle - room / 2f, wide - 8f * unit, middle + room / 2f);
+            // Liquid glass: a capsule floating clear of the screen's edges, as Apple's tab bar
+            float side = (glass ? 18f : 8f) * unit;
+            body.set(side, middle - room / 2f, wide - side, middle + room / 2f);
             float inside = 4f * unit, left = body.left + inside, right = body.right - inside;
+            if (glass) {
+                // every tab the same width; nothing opens to show its name, the name is always there
+                float each = (right - left) / tabs.length;
+                for (int i = 0; i < tabs.length; i++) {
+                    tabs[i].left = left + each * i;
+                    tabs[i].right = left + each * (i + 1);
+                }
+                return;
+            }
             int centre = tabs.length / 2;
             if (tabs.length % 2 == 1 && tabs[centre].kind == CREATE) {
                 // The button in the middle stays in the middle. A name that
@@ -710,6 +827,33 @@ final class NavBar {
             int lit = mix(accent | 0xFF000000, ink, 0.40f);
             int quiet = mix(shell, ink, 0.80f);
 
+            if (Design.glass()) {
+                boolean moving = settleDrop();
+                if (hold > 0.01f && tabs.length > 0 && LiveGlass.available() && canvas.isHardwareAccelerated()) {
+                    // the bar goes into a node of its own, so the bubble can show it, icons and all
+                    barNode.setPosition(0, 0, Math.max(1, wide), Math.max(1, tall));
+                    android.graphics.RecordingCanvas inside = barNode.beginRecording(Math.max(1, wide), Math.max(1, tall));
+                    glassBar(inside, ink, shell, lit);
+                    barNode.endRecording();
+                    canvas.drawRenderNode(barNode);
+                    // grows out of the resting drop into a lens a little taller than the bar
+                    float each = (body.width() - 8f * unit) / tabs.length;
+                    float restW = each / 2f - 2f * unit, restH = body.height() / 2f - 4f * unit;
+                    float heldW = each / 2f + 10f * unit, heldH = body.height() / 2f + 12f * unit;
+                    float halfW = restW + (heldW - restW) * hold, halfH = restH + (heldH - restH) * hold;
+                    box.set(dropX - halfW, body.centerY() - halfH, dropX + halfW, body.centerY() + halfH);
+                    if (bubbleGlass == null) bubbleGlass = new LiveGlass();
+                    bubbleGlass.bubble(canvas, barNode, box, 1f + 0.06f * hold, unit, hold);
+                } else {
+                    glassBar(canvas, ink, shell, lit);
+                }
+                if (moving) {
+                    View host = glassHost.get();
+                    if (host != null) host.postInvalidateOnAnimation();
+                }
+                if (veil >= 0) canvas.restoreToCount(veil);
+                return;
+            }
             // a pill unless the style gives the bar corners of its own
             float round = Design.style().bar<0?body.height()/2f:Design.style().bar*unit;
             fill.setColor(shell);
@@ -781,6 +925,66 @@ final class NavBar {
                 if (saved >= 0) canvas.restoreToCount(saved);
             }
             if (veil >= 0) canvas.restoreToCount(veil);
+        }
+
+        /**
+         * The bar as Apple's liquid glass tab bar: a capsule of glass, each tab an icon with its
+         * name under it, and the chosen one in a lighter drop of glass, in the accent colour.
+         */
+        private void glassBar(Canvas canvas, int ink, int shell, int lit) {
+            float round = body.height() / 2f;
+            fill.setColor(shell);
+            if (!Design.draw(canvas, this, glassHost.get(), body, round, round, shell, 0)) {
+                fill.setColor((shell & 0xffffff) | 0xD0000000);
+                canvas.drawRoundRect(body, round, round, fill);
+            }
+            boolean dark = NavBar.bright(ground) < .5f;
+            int quiet = mix(ground, ink, 0.86f);
+            float icon = 24f * unit, label = 10.5f * unit;
+            boolean peeking = SystemClock.uptimeMillis() < peekUntil;
+            if (!Float.isNaN(dropX) && tabs.length > 0 && hold < 0.99f) {
+                // the drop: always on the chosen tab, sliding to the next one, fading as it grows into the lens
+                float each = (body.width() - 8f * unit) / tabs.length;
+                float halfW = each / 2f - 2f * unit, halfH = body.height() / 2f - 4f * unit;
+                box.set(dropX - halfW, body.centerY() - halfH, dropX + halfW, body.centerY() + halfH);
+                fill.setColor(dark ? 0xFFFFFFFF : 0xFF000000);
+                fill.setAlpha(Math.round((dark ? 34f : 20f) * (1f - hold)));
+                canvas.drawRoundRect(box, halfH, halfH, fill);
+            }
+            for (Tab tab : tabs) {
+                int saved = -1;
+                float seen = peeking ? 1f : tab.shown;
+                if (seen < 0.99f) saved = canvas.saveLayerAlpha(tab.left, body.top, tab.right, body.bottom, Math.round(seen * 255f));
+                float centre = (tab.left + tab.right) / 2f;
+                if (tab.kind == CREATE) {
+                    create(canvas, centre, body.centerY(), ink, lit);
+                    if (saved >= 0) canvas.restoreToCount(saved);
+                    continue;
+                }
+                float lift = Float.isNaN(dropX) ? tab.open
+                        : Math.max(0f, 1f - Math.abs(centre - dropX) / Math.max(1f, tab.right - tab.left));
+                int colour = mix(quiet, lit, lift);
+                boolean named = tab.name != null && tab.name.length() > 0;
+                float iconTop = named ? body.centerY() - (icon + 2f * unit + label) / 2f : body.centerY() - icon / 2f;
+                emblem(canvas, tab, centre - icon / 2f, iconTop, icon, colour);
+                if (named) {
+                    words.setTextSize(label);
+                    words.setColor(colour);
+                    words.setAlpha(255);
+                    String name = tab.name;
+                    float room = tab.right - tab.left - 4f * unit;
+                    if (words.measureText(name) > room) {
+                        int keep = words.breakText(name, true, room - words.measureText("…"), null);
+                        name = name.substring(0, Math.max(0, keep)) + "…";
+                    }
+                    Paint.FontMetrics metrics = words.getFontMetrics();
+                    canvas.drawText(name, centre - words.measureText(name) / 2f, iconTop + icon + 2f * unit - metrics.ascent, words);
+                    words.setTextSize(13f * unit);
+                }
+                if (tab.count != null) number(canvas, tab.count, centre + icon / 2f - 6f * unit, iconTop - 4f * unit, shell);
+                else if (tab.dot) spot(canvas, centre + icon / 2f - 2f * unit, iconTop + 3f * unit, shell);
+                if (saved >= 0) canvas.restoreToCount(saved);
+            }
         }
 
         /** The icon of a tab: one of the mod's, or TikTok's own for a tab the mod has none for. */

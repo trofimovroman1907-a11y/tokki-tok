@@ -37,10 +37,16 @@ public final class Launcher {
     /** The empty name is TikTok's own, the one the build did not add. */
     public static final String DEFAULT = "";
 
+    /** The mint note: the default until 2.3.0, a choice since, shown right after the default. */
+    static final String CLASSIC = "classic";
+
     public static String[] all() {
         String[] out = new String[Shots.KEYS.length + 1];
         out[0] = DEFAULT;
-        System.arraycopy(Shots.KEYS, 0, out, 1, Shots.KEYS.length);
+        int at = 1;
+        // the build keeps its own order (an alias is named by its place); the list on screen puts the classic second
+        for (String key : Shots.KEYS) if (CLASSIC.equals(key)) out[at++] = key;
+        for (String key : Shots.KEYS) if (!CLASSIC.equals(key)) out[at++] = key;
         return out;
     }
 

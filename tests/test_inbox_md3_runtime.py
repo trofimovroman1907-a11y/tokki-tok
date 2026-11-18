@@ -107,27 +107,8 @@ public static void main(String[] args){
  InboxMd3.list(list,true);
  ck(list.getChildCount()==6&&list.getChildAt(1)==followers&&list.getChildAt(5)==chat,"native RecyclerView order and identities unchanged");
  ck(followers.getLayoutParams().height==72&&activity.getLayoutParams().height==72&&system.getLayoutParams().height==72&&money.getLayoutParams().height==72,"native service rows remain visible alongside shortcuts");
- ck(filters.getChildCount()==2&&filters.getLayoutParams().height==166,"tiles reserve space in the existing filter header");
- LinearLayout panel=(LinearLayout)filters.getChildAt(1),grid=(LinearLayout)panel.getChildAt(0);ck(panel.getTop()==44&&grid.getChildCount()==4,"panel sits below native filters");
+ ck(filters.getChildCount()==1&&filters.getLayoutParams().height==44,"no shortcut tiles: the filter header stays native");
  ck(chat.getLayoutParams().height==76&&name.getText().toString().equals("Person")&&preview.getText().toString().equals("Real native message"),"chat style preserves real content");
- FrameLayout first=(FrameLayout)grid.getChildAt(0);TextView badge=(TextView)first.getChildAt(1);ck("99+".contentEquals(badge.getText()),"custom native badge count and max are mirrored");
- Badge nativeFollowers=(Badge)followers.findViewById(id("nhs"));nativeFollowers.count=7;InboxMd3.refresh();ck("7".contentEquals(badge.getText()),"two-digit limit does not truncate seven followers to 2+");
- FrameLayout initialActivityTile=(FrameLayout)grid.getChildAt(1);TextView activityCount=(TextView)initialActivityTile.getChildAt(1);
- ck("99+".contentEquals(activityCount.getText()),"Activity uses 99+ for a two-digit native badge");
- for(int[] sample:new int[][]{{0,2},{9,1},{10,1},{99,2},{100,2},{500,0},{Integer.MAX_VALUE,9}}){
-  nativeFollowers.count=sample[0];nativeFollowers.digits=sample[1];InboxMd3.refresh();
-  String expected=sample[0]==0?"":sample[0]==10?"9+":sample[0]==100?"99+":sample[0]==Integer.MAX_VALUE?"999999999+":String.valueOf(sample[0]);
-  ck(expected.contentEquals(badge.getText()),"native badge digit boundary "+sample[0]+"/"+sample[1]);
-  ck(badge.getVisibility()==(sample[0]==0?View.GONE:View.VISIBLE),"zero unread count is hidden");
- }
- nativeFollowers.count=7;nativeFollowers.digits=2;InboxMd3.refresh();
- followers.removeView(nativeFollowers);PaintedBadge painted=named(new PaintedBadge(),"nhs");followers.addView(painted);InboxMd3.refresh();
- ck("99+".contentEquals(badge.getText()),"tile copies the text drawn by a native Tux badge");
- painted.LL=new BadgeText("1.2K");InboxMd3.refresh();ck("1.2K".contentEquals(badge.getText()),"native compact formatting is preserved");
- painted.LL=new LegacyBadgeText("7");InboxMd3.refresh();ck("7".contentEquals(badge.getText()),"legacy native badge text is preserved");
- painted.LL=new BadgeText("");InboxMd3.refresh();ck(badge.getVisibility()==View.GONE,"native dot-only badge does not invent a numeric count");
- followers.removeView(painted);followers.addView(nativeFollowers);InboxMd3.refresh();
- first.performClick();ck(opens==1,"tile uses native row action");
  LinearLayout fab=(LinearLayout)inboxPage.getChildAt(inboxPage.getChildCount()-1);fab.performClick();ck(compose==1,"compose uses native picker without sending anything");
  ck(fab.getParent()==inboxPage&&root.getChildCount()==2,"compose is owned by the inbox page rather than the activity content");
  FrameLayout conversationPage=new FrameLayout(c);root.addView(conversationPage);
@@ -171,7 +152,6 @@ public static void main(String[] args){
  ck(cell.getLayoutParams().width==104&&cell.getLayoutParams().height==150,"self story cell is not narrowed or shortened");
  ck(note.getScaleY()==1&&note.getTranslationY()==0&&caption.getTranslationY()==0,"native notes and captions keep their layout");
  caption.getLayoutParams().height=26;InboxMd3.refresh();ck(caption.getLayoutParams().height==26,"native larger text measurement is preserved");
- Md3.page=0xfff2edf7;InboxMd3.refresh();ck(((GradientDrawable)((LayerDrawable)first.getBackground()).getDrawable(0)).fill!=0,"light theme repaints ripple content");
  ProfileLayout.shown=false;InboxMd3.refresh();ck(fab.getVisibility()==View.GONE,"offscreen cached inbox cannot overlay the profile or feed");ProfileLayout.shown=true;
  // A recycled notification row must regain its original dimensions and opacity.
  ((TextView)followers.findViewById(id("nhq"))).setText("another native row");((TextView)followers.findViewById(id("brn"))).setText("Unknown type");
@@ -183,7 +163,7 @@ public static void main(String[] args){
  ck(camera.getTranslationX()==0&&camera.getTranslationY()==0&&name.getMaxWidth()==Integer.MAX_VALUE,"native chat positions restored");
  ck(avatar.picture.getScaleX()==1&&note.getScaleY()==1&&note.getTranslationY()==0,"native story geometry restored");
  ck(cell.getClipToPadding()&&cell.getPaddingBottom()==10,"native story clipping and padding restored");
- Md3.on=true;InboxMd3.list(list,true);ck(filters.getChildCount()==2,"reenabling works without stale header state");
+ Md3.on=true;InboxMd3.list(list,true);ck(filters.getChildCount()==1,"reenabling adds no tiles");
  // Accounts without the filter header retain their real notification entry.
  list.removeView(filters);InboxMd3.refresh();
  ck(activity.getLayoutParams().height==72&&activity.getAlpha()==1,"removing the header restores Activity");int before=opens;activity.performClick();ck(opens==before+1,"Activity still opens without a header");
@@ -194,22 +174,6 @@ public static void main(String[] args){
  filters.setVisibility(View.VISIBLE);activity.setOnClickListener(null);InboxMd3.refresh();ck(activity.getLayoutParams().height==72,"nonactionable replacement never hides native entry");
  activity.setOnClickListener(v->opens++);((TextView)activity.findViewById(id("brn"))).setId(id("brj"));((TextView)activity.findViewById(id("nhq"))).setId(id("nhr"));
  InboxMd3.refresh();ck(activity.getLayoutParams().height==72&&activity.getAlpha()==1,"alternate native labels never change service row visibility");
- panel=(LinearLayout)filters.getChildAt(1);filters.removeView(panel);InboxMd3.frame();
- ck(filters.getChildCount()==2&&filters.getChildAt(1)!=panel,"native header rebinding is repaired before drawing");
- panel=(LinearLayout)filters.getChildAt(1);grid=(LinearLayout)panel.getChildAt(0);
- FrameLayout activityTile=(FrameLayout)grid.getChildAt(1);LinearLayout tileBody=(LinearLayout)activityTile.getChildAt(0);View tileIcon=tileBody.getChildAt(0);
- ck(((GradientDrawable)tileIcon.getBackground()).fill==Accent.colour(),"Activity starts in its final accent colour");
- Recycler recycled=new Recycler();root.addView(recycled);FrameLayout recycledFilters=new FrameLayout(c);recycledFilters.setLayoutParams(new LinearLayout.LayoutParams(-1,44));recycledFilters.addView(new HorizontalScrollView(c));recycled.addView(recycledFilters);
- ViewGroup recycledActivity=notice("Activity","");recycled.addView(recycledActivity);InboxMd3.list(recycled,true);
- LinearLayout recycledPanel=(LinearLayout)recycledFilters.getChildAt(1),recycledGrid=(LinearLayout)recycledPanel.getChildAt(0);View shortcut=recycledGrid.getChildAt(1);
- recycled.removeView(recycledActivity);recycledActivity.attached=false;InboxMd3.frame();
- ck(shortcut.getVisibility()==View.VISIBLE&&recycledFilters.getLayoutParams().height==166,"shortcut survives recycling of its native source row");
- before=opens;shortcut.performClick();ck(opens==before+1,"recycled shortcut opens a freshly bound native Activity action");
- recycled.removeView(recycledFilters);FrameLayout replacementFilters=new FrameLayout(c);replacementFilters.setLayoutParams(new LinearLayout.LayoutParams(-1,44));replacementFilters.addView(new HorizontalScrollView(c));recycled.addView(replacementFilters);InboxMd3.frame();
- ck(replacementFilters.getChildCount()==2,"a different filter holder gets its panel before drawing");
- recycledPanel=(LinearLayout)replacementFilters.getChildAt(1);recycledGrid=(LinearLayout)recycledPanel.getChildAt(0);shortcut=recycledGrid.getChildAt(1);
- ck(shortcut.getVisibility()==View.VISIBLE,"Activity survives replacing the whole filter holder");
- recycled.adapter=new Adapter();InboxMd3.refresh();ck(shortcut.getVisibility()==View.GONE,"changing accounts or adapters drops stale native actions");
  // A service first encountered below the viewport must be left completely native.
  LinearLayout lateList=new LinearLayout(c);root.addView(lateList);lateList.addView(new View(c));InboxMd3.list(lateList,true);
  ViewGroup lateSystem=notice("System notifications",""),lateActivity=notice("Activity","");lateSystem.setMinimumHeight(44);lateSystem.setAlpha(.85f);

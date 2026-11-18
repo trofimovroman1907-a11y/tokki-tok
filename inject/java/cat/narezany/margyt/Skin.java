@@ -82,6 +82,19 @@ final class Skin {
         return fallback(context);
     }
 
+    /**
+     * MargyT's own settings in Material 3: the page as remembered, the cards a step
+     * above it in the same neutral (surface container), not the lighter card TikTok
+     * draws. Glass and Fluent keep the measured one.
+     */
+    static Skin forSettings(Context context) {
+        Skin kept = remembered(context);
+        if (Design.frosted()) return kept;
+        int page = Design.pageColour(context);
+        int card = Design.cardColour(context);
+        return new Skin(page, card, kept.text, kept.margin, kept.radius, false);
+    }
+
     /** A detail window follows the actual page below its anchor, including TikTok's own theme choice. */
     static Skin onPage(Context context, int page) {
         Skin kept = remembered(context);

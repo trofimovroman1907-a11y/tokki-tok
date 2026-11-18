@@ -321,6 +321,21 @@ public final class Flags {
     // back: the same flag is read as a number in one place and as yes-or-no
     // in the next.
 
+    /**
+     * TikTok's player reads its own settings through another door (PlayerSettingService).
+     * With liquid glass the video goes into the SurfaceView's own surface rather than a layer
+     * of its own made from the view's SurfaceControl: that layer is out of reach of the app,
+     * and the glass over the video had nothing to show. Read once, when the first player is
+     * made: a change of style is for the next start.
+     */
+    public static Object playerFlag(String key, java.lang.reflect.Type type) {
+        try {
+            if ("surfaceview_use_surface_control".equals(key) && Design.glass()) return Boolean.FALSE;
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
     public static Boolean forcedBoolean(String key) {
         Object value = forced(key);
         if (value instanceof Boolean) return (Boolean) value;

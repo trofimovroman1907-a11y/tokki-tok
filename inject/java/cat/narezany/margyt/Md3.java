@@ -368,7 +368,7 @@ final class Md3 {
         if (now - coloured < 500L) return;
         coloured = now;
         ProfileMd3.refresh();
-        InboxMd3.refresh();
+        InboxMd3.tick();
         View[] views;
         Shape[] shapes;
         synchronized (WORN) {
