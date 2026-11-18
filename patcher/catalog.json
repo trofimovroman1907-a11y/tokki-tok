@@ -25,6 +25,36 @@
       },
       "releases": [
         {
+          "version": "2.3.0",
+          "beta": false,
+          "base": {
+            "name": "TikTok 47.2.41",
+            "sha256": "4bcad2a15ac82da68d373629a9520f855781c3ec46f0e2937e605040285ba75c",
+            "size": 346017026,
+            "sources": [
+              {
+                "name": "margy.narez.xyz",
+                "url": "https://margy.narez.xyz/original/tiktok-47-2-41.apk",
+                "direct": true
+              }
+            ]
+          },
+          "patch": {
+            "url": "https://git.narez.xyz/narezany/MargyT/releases/download/v2.3.0/margyt-2.3.0.mpatch",
+            "sha256": "db3b8c84b86c1a532e495508ceddf8c9a1addb57b43725b43c26e82a90798cbc",
+            "size": 74293276
+          },
+          "result": {
+            "sha256": "842c33f0d4594c047032d404dfdd760b9ea36e93964c30a82ee114cef40cbfc3",
+            "size": 397625824
+          },
+          "notes": {
+            "ru": "Тема «Вайс-Сити (GTA VI)» с градиентами и иконка Вайс-Сити по умолчанию (обычная иконка MargyT в настройках). Акцент теперь внутри тем, выбранная готовая тема отмечается. Встроена «Анимация текста», размытие в движении, чистые ссылки при копировании, статистика видео, готовые цвета для темы Material. Антивыгорание больше не просвечивает нижнюю полосу. Меньше лагов. Убраны деп-калькулятор и плитки во входящих.",
+            "uk": "Тема «Вайс-Сіті (GTA VI)» з градієнтами та іконка Вайс-Сіті за замовчуванням (звичайна іконка MargyT у налаштуваннях). Акцент тепер усередині тем, вибрана готова тема позначається. Вбудовано «Анімацію тексту», розмиття в русі, чисті посилання під час копіювання, статистику відео, готові кольори для теми Material. Антивигорання більше не просвічує нижню смугу. Менше лагів. Прибрано деп-калькулятор і плитки у вхідних.",
+            "en": "Vice City (GTA VI) theme with gradients and the Vice City icon by default (the usual MargyT icon is in the settings). Accent colour now lives inside themes, and the chosen preset is ticked. Built-in text animation, motion blur, clean links when copying, video stats, preset colours for the Material theme. Anti burn-in no longer makes the bottom strip see-through. Less lag. Removed the dep calculator and the inbox tiles."
+          }
+        },
+        {
           "version": "2.2.3",
           "beta": false,
           "base": {

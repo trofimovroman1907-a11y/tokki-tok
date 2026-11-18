@@ -1,9 +1,9 @@
 {
   "_comment": "What the app checks to know whether it is out of date. It reads this from the project's own git server at startup and every five minutes; the badges come from the same box.",
-  "version": "2.2.3",
-  "title": "More Fun Update",
-  "url": "https://git.narez.xyz/narezany/MargyT/releases/download/v2.2.3/margyt.apk",
-  "notes": "Fixed disappearing double-tap hearts, access to service chats, unread counters, clipped story avatars and chat name colours in the inbox. The new chat button no longer stays over conversations. Added missing English and Ukrainian translations. Frame previews now follow the avatar shape. Removed the Material 3 conversation design.",
-  "notes_ru": "Исправлены пропадающая анимация лайка, доступ к служебным чатам, счётчики, обрезание аватарок и цвет имён во входящих. Кнопка нового чата больше не остаётся поверх переписки. Добавлены недостающие английские и украинские переводы. Предпросмотр рамок учитывает форму аватарки. Оформление самих переписок Material 3 удалено.",
-  "notes_uk": "Виправлено зникнення анімації вподобання, доступ до службових чатів, лічильники, обрізання аватарок і колір імен у вхідних. Кнопка нового чату більше не залишається поверх листування. Додано відсутні англійські й українські переклади. Попередній перегляд рамок враховує форму аватарки. Оформлення самих чатів Material 3 видалено."
+  "version": "2.3.0",
+  "title": "Epic Style Update",
+  "url": "https://git.narez.xyz/narezany/MargyT/releases/download/v2.3.0/margyt.apk",
+  "notes": "Vice City (GTA VI) theme with gradients and the Vice City icon by default (the usual MargyT icon is in the settings). Accent colour now lives inside themes, and the chosen preset is ticked. Built-in text animation, motion blur, clean links when copying, video stats, preset colours for the Material theme. Anti burn-in no longer makes the bottom strip see-through. Less lag. Removed the dep calculator and the inbox tiles.",
+  "notes_ru": "Тема «Вайс-Сити (GTA VI)» с градиентами и иконка Вайс-Сити по умолчанию (обычная иконка MargyT в настройках). Акцент теперь внутри тем, выбранная готовая тема отмечается. Встроена «Анимация текста», размытие в движении, чистые ссылки при копировании, статистика видео, готовые цвета для темы Material. Антивыгорание больше не просвечивает нижнюю полосу. Меньше лагов. Убраны деп-калькулятор и плитки во входящих.",
+  "notes_uk": "Тема «Вайс-Сіті (GTA VI)» з градієнтами та іконка Вайс-Сіті за замовчуванням (звичайна іконка MargyT у налаштуваннях). Акцент тепер усередині тем, вибрана готова тема позначається. Вбудовано «Анімацію тексту», розмиття в русі, чисті посилання під час копіювання, статистику відео, готові кольори для теми Material. Антивигорання більше не просвічує нижню смугу. Менше лагів. Прибрано деп-калькулятор і плитки у вхідних."
 }
