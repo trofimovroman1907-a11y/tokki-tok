@@ -25,6 +25,36 @@
       },
       "releases": [
         {
+          "version": "2.4.0",
+          "beta": false,
+          "base": {
+            "name": "TikTok 47.2.41",
+            "sha256": "4bcad2a15ac82da68d373629a9520f855781c3ec46f0e2937e605040285ba75c",
+            "size": 346017026,
+            "sources": [
+              {
+                "name": "margy.narez.xyz",
+                "url": "https://margy.narez.xyz/original/tiktok-47-2-41.apk",
+                "direct": true
+              }
+            ]
+          },
+          "patch": {
+            "url": "https://git.narez.xyz/narezany/MargyT/releases/download/v2.4.0/margyt-2.4.0.mpatch",
+            "sha256": "13c355a3efdd11cd2ce378cfc7186af6a5a18c3edceb17b1f9b378f8342a1393",
+            "size": 80222522
+          },
+          "result": {
+            "sha256": "1a06e5c84c5c9749dbd682093b9b22123e54527dd01a6af215ffd99102cf6c21",
+            "size": 402955544
+          },
+          "notes": {
+            "ru": "Мини-игра «Нарезанный против Селфкодинга», письмо-приглашение и значок-колпак до 27 ноября, торт вместо лайка 24 ноября. Почтовый ящик. Режим Ambient для видео и фото. Эффекты прокрутки ленты, фильтр скрытой рекламы по словам, блокировка TikTok и чатов, призрак без просмотров. MD3-чат, анимации интерфейса, лайк коммента двойным нажатием, опросы без голосования, лайки историй, полные числа, «Прочитать всё», продолжение видео. «Без рекомендаций» в смешнявках, раздел «Приватность», новая иконка. Меньше вылетов. Спасибо ttcuz, SkyTok и LotusTok.",
+            "uk": "Міні-гра «Нарізаний проти Селфкодингу», лист-запрошення і значок-ковпак до 27 листопада, торт замість вподобання 24 листопада. Поштова скринька. Режим Ambient для відео й фото. Ефекти прокручування стрічки, фільтр прихованої реклами за словами, блокування TikTok і чатів, привид без переглядів. MD3-чат, анімації інтерфейсу, вподобання коментаря подвійним натисканням, опитування без голосування, вподобання історій, повні числа, «Прочитати все», продовження відео. «Без рекомендацій» у розвагах, розділ «Приватність», нова іконка. Менше вильотів. Дякуємо ttcuz, SkyTok і LotusTok.",
+            "en": "The mini game \"Narezany vs Selfcoding\", an invitation letter and a party hat badge until 27 November, a cake instead of the like on 24 November. A mailbox. Ambient mode for videos and photos. Feed scroll effects, a hidden advert filter by words, a lock for TikTok and chats, ghost mode without video views. MD3 chat, interface animations, double-tap to like a comment, poll results without voting, story likes, full numbers, \"Read all\", resuming videos. \"No recommendations\" in the fun section, a Privacy section, a new icon. Fewer crashes. Thanks to ttcuz, SkyTok and LotusTok."
+          }
+        },
+        {
           "version": "2.3.0",
           "beta": false,
           "base": {
