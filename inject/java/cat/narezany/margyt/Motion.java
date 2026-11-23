@@ -1,13 +1,29 @@
 package cat.narezany.margyt;
+// Из ttcuz (автор tremorttcuz), перенесено в MargyT с разрешения автора.
 
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.os.Build;
 import android.provider.Settings;
+import android.view.animation.PathInterpolator;
 
 /** Respect the phone's animation scale, including disabled motion. */
 final class Motion {
+    static final PathInterpolator OUT = new PathInterpolator(.25f, 1f, .5f, 1f);
+    static final PathInterpolator IN = new PathInterpolator(.3f, 0f, .8f, .15f);
+    static final PathInterpolator BOTH = new PathInterpolator(.4f, 0f, .2f, 1f);
+    static final PathInterpolator EMPHASIZED = new PathInterpolator(.05f, .7f, .1f, 1f);
+
     private Motion() {}
+
+    /** A duration as the mod's animations are set: as it is for now (2.4 adds the speeds with the animations). */
+    static long time(long millis) { return millis; }
+
+    static boolean haptics() {
+        Context context = Margy.context();
+        return context != null && context.getSharedPreferences(Margy.PREFS, Context.MODE_PRIVATE)
+                .getBoolean("motion_haptics", false);
+    }
 
     /** A small press response keeps the original click and scrolling intact. */
     static void press(android.view.View view) {

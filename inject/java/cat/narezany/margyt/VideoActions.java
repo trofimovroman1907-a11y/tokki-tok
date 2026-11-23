@@ -8,6 +8,8 @@ public final class VideoActions {
  static void selected(Object holder,Object post){
   Object content=NativeRead.get(holder,"getContentView");
   if(content instanceof View){selected=post;selectedView=new WeakReference<View>((View)content);Repost.reload();}
+  // 2.4, from ttcuz: the video counts as seen, and is read for advertising inside it
+  try{Object own=NativeRead.get(holder,"getPlayerManager");AdWords.playing(holder,post,NativeRead.aid(post),own!=null?own:PlayerTools.player());}catch(Throwable error){Diary.note("ad select: "+error);}
  }
  public static String currentId(){Object post=downloadPost();return post==null?null:NativeRead.aid(post);}
  public static long currentPublishedTime(){Object post=downloadPost();return post==null?0:NativeRead.number(NativeRead.get(post,"getCreateTime"));}

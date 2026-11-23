@@ -628,6 +628,10 @@ final class Text {
             "Число на кнопке пропадёт и вернётся, когда придёт что-то новое.",
             "Число на кнопці зникне й повернеться, коли надійде щось нове.",
             "The number on the tab goes away and comes back when something new arrives.");
+    static final String TAB_READ_INBOX_NOTE = pick(
+            "Все чаты и активность отметятся прочитанными, как из меню ⋯ во входящих.",
+            "Усі чати й активність позначаться прочитаними, як із меню ⋯ у вхідних.",
+            "All chats and activity are marked as read, as from the ⋯ menu in the inbox.");
     static final String TAB_READ_ALL_YES = pick("Прочитать", "Прочитати", "Mark as read");
     static final String TAB_UNREAD_BACK = pick("Вернуть число?", "Повернути число?", "Bring the number back?");
     static final String TAB_UNREAD_BACK_NOTE = pick(
@@ -1535,7 +1539,7 @@ final class Text {
         return RU ? 0 : UK ? 1 : 2;
     }
 
-    private static String pick(String russian, String ukrainian, String english) {
+    static String pick(String russian, String ukrainian, String english) {
         if (RU) return russian;
         if (UK) return ukrainian;
         return english;

@@ -147,7 +147,7 @@ public final class Badge {
             Object uid = contact.getClass().getMethod("getUid").invoke(contact);
             if (name == null || !(uid instanceof String)) return name;
             String id = (String) uid;
-            if (!id.matches("[0-9]{1,24}")) return name;
+            if (!Ids.uid(id)) return name;
             String shown = marked(name, id, false);
             // the folders of chats know a row by whose it is, and the row shows this name
             ChatFolders.seen(name, id);

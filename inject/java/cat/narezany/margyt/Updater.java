@@ -344,6 +344,16 @@ public final class Updater {
                     }
                     waitingOnPermission = false;
 
+                    // 2.4, from ttcuz: a download that can not go on this phone is said so here, in words,
+                    // instead of Android's bare "app not installed"
+                    try {
+                        UpdatePackage.check(context, file(context));
+                    } catch (java.io.IOException refused) {
+                        Diary.note("update refused: " + refused.getMessage());
+                        Screen.say(refused.getMessage());
+                        return;
+                    }
+
                     Uri apk = MargyProvider.share(context, file(context));
                     if (apk == null) {
                         Screen.say(Text.UPDATE_FAILED);

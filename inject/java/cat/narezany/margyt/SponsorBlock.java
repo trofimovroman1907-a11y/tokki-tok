@@ -328,7 +328,8 @@ final class SponsorBlock {
 
     static boolean soundOn() {
         try {
-            return AccountAppearance.prefs(Margy.context()).getBoolean(KEY_SOUND, true);
+            // listening for adverts by their sound is the heaviest thing the mod does: off by default on a weak phone
+            return AccountAppearance.prefs(Margy.context()).getBoolean(KEY_SOUND, !DevicePerformance.limited(Margy.context()));
         } catch (Throwable ignored) {
             return true;
         }

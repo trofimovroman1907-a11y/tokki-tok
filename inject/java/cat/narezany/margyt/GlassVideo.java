@@ -41,7 +41,7 @@ public final class GlassVideo {
     }
     static boolean frameReady(View view){return !(view instanceof TextureView) || textureReady;}
     private static void event(Object owner,String id,long time,boolean force){
-        if(!Design.frosted())return;
+        if(!Design.frosted()&&!Ambient.on())return;
         if(Looper.myLooper()!=Looper.getMainLooper()){MAIN.post(()->event(owner,id,time,force));return;}
         long now=SystemClock.uptimeMillis();
         if(!force && controller.get()==owner && aid.equals(id) && position==time)return;
@@ -74,9 +74,10 @@ public final class GlassVideo {
             render=new WeakReference<>(next);surface=new WeakReference<>(nextSurface);aid=id;
             textureStamp=Long.MIN_VALUE;textureReady=false;
             android.util.Log.w("MargyTGlass","Current renderer "+type(next)+", surface="+(nextSurface!=null)+", generation="+generation);
+            Ambient.videoChanged();
         }
         position=time;lastEvent=now;playing=true;lastCheck=0;
-        GlassBackdrop.videoChanged(changed);
+        if(Design.frosted())GlassBackdrop.videoChanged(changed);
     }
     private static String type(Object value){return value==null?"none":value.getClass().getSimpleName();}
     private static View surfaceView(View view,int depth,int[] budget){

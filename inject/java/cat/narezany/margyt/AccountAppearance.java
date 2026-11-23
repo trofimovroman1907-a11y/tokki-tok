@@ -28,7 +28,7 @@ public final class AccountAppearance {
         String saved=context.getSharedPreferences(Margy.PREFS,0).getString(Account.KEY_ID,"");
         return valid(saved)?saved:"guest";
     }
-    private static boolean valid(String uid){return uid!=null && uid.matches("[0-9]{1,24}");}
+    private static boolean valid(String uid){return uid!=null && Ids.uid(uid);}
     static synchronized void select(String uid) {
         String next=valid(uid)?uid:"guest";
         if(next.equals(selected))return;

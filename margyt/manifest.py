@@ -306,7 +306,8 @@ def add_icon_alias(axml: Axml, name: str, target: str, icon: int,
 
 
 def add_activity(axml: Axml, class_name: str, label: str, theme: int,
-                 affinity: str = None, launcher: bool = False) -> None:
+                 affinity: str = None, launcher: bool = False,
+                 orientation: int = None, config_changes: int = None) -> None:
     """Declare an exported activity, last child of <application>.
 
     With `launcher` it also gets an entry on the home screen -- and then it
@@ -328,6 +329,11 @@ def add_activity(axml: Axml, class_name: str, label: str, theme: int,
     axml.set_attr_string(activity, "label", label)
     axml.set_attr_string(activity, "name", class_name)
     axml.set_attr_bool(activity, "exported", True)
+    # a game held sideways: it opens that way, and turning the phone does not start it over
+    if orientation is not None:
+        axml.set_attr(activity, "screenOrientation", 0x10, orientation)
+    if config_changes is not None:
+        axml.set_attr(activity, "configChanges", 0x11, config_changes)
 
     if not launcher:
         axml.insert_into(application(axml), [activity, axml.close_element(activity)])

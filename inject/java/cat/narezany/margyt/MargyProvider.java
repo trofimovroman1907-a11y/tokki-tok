@@ -68,6 +68,28 @@ public final class MargyProvider extends ContentProvider {
         } catch (Throwable error) {
             Diary.note("updates failed to start: " + error);
         }
+        // the mood's tempo, set again for this process
+        try {
+            Mailbox.start();
+        } catch (Throwable error) {
+            Diary.note("mailbox failed to start: " + error);
+        }
+        try {
+            CacheGuard.start(context);
+        } catch (Throwable error) {
+            Diary.note("cache guard failed to start: " + error);
+        }
+        try {
+            MemoryGuard.install(context);
+        } catch (Throwable error) {
+            Diary.note("memory guard failed to start: " + error);
+        }
+        try {
+            Context application = context.getApplicationContext();
+            if (application instanceof Application) Visits.start((Application) application);
+        } catch (Throwable error) {
+            Diary.note("visit tracking failed to start: " + error);
+        }
         try {
             DevLink.start(context);
         } catch (Throwable error) {

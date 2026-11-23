@@ -281,6 +281,45 @@ public final class Mine {
         });
     }
 
+    /**
+     * The party hat, for finishing the birthday game. The server gives it from 24 November (Moscow time) on;
+     * before that it answers "early", which comes back as the trouble.
+     */
+    public static void takeParty(final Said then) {
+        final String uid = Account.id();
+        final String token = token();
+        if (uid == null || token.length() == 0) {
+            if (then != null) then.said(false, PROVE);
+            return;
+        }
+        Net.away("badges: party", new Runnable() {
+            @Override
+            public void run() {
+                boolean ok = false;
+                String trouble = "";
+                try {
+                    Net.Said said = Net.talk(Badges.SERVER + "/party",
+                            new JSONObject().put("uid", uid).put("token", token).toString());
+                    if (said.ok()) {
+                        read(new JSONObject(said.body));
+                        ok = true;
+                    } else if (asksForProof(said)) {
+                        trouble = PROVE;
+                    } else if (said.code == 425) {
+                        trouble = "early";
+                    } else if (said.code == 429) {
+                        trouble = Text.MINE_TOO_OFTEN;
+                    } else {
+                        trouble = new JSONObject(said.body).optString("error", "");
+                    }
+                } catch (Throwable error) {
+                    Diary.note("badges: party -- " + error);
+                }
+                answer(then, ok, trouble);
+            }
+        });
+    }
+
     public interface Said {
         void said(boolean ok, String trouble);
     }

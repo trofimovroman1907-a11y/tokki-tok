@@ -101,6 +101,11 @@ public final class Accent {
     static void reload() { cached = 0; forget(); }
 
     public static int colour() {
+        return chosen();
+    }
+
+    /** The accent as chosen in the settings, whatever the adaptive interface shows now. */
+    static int chosen() {
         int known = cached;
         if (known != 0) return known;
         SharedPreferences prefs = prefs();
@@ -1784,6 +1789,7 @@ public final class Accent {
         int mapped = LikeColors.forView(icon, colour, swap(colour));
         icon.setColor(AppearanceColors.forView(icon, mapped));
         LikeColors.syncCount(icon, LikeColors.liked(colour));
+        LikeCake.painted(icon, LikeColors.liked(colour));
     }
 
     private static void paintColorFilter(ImageView view, int colour, PorterDuff.Mode mode) {
@@ -1793,6 +1799,7 @@ public final class Accent {
         if (mode == null) view.setColorFilter(chosen);
         else view.setColorFilter(chosen, mode);
         LikeColors.syncCount(view, LikeColors.liked(colour));
+        LikeCake.painted(view, LikeColors.liked(colour));
     }
 
     /** Repaint visible likes after their chosen accent changes. */

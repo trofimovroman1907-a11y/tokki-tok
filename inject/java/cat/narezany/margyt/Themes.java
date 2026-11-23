@@ -68,8 +68,14 @@ public final class Themes {
     public static void setMaterial(boolean on) {
         SharedPreferences prefs = prefs();
         if (prefs != null) prefs.edit().putBoolean(KEY_MATERIAL, on).apply();
-        // the wallpaper's colours are the wallpaper's accent too: one switch for the whole look
-        if (on) { forgetPreset(); Accent.setMaterial(true); }
+        // the wallpaper's colours are the wallpaper's accent too: one switch for the whole look. With a seed picked
+        // below the accent follows that seed, as picking it does, not the wallpaper (it did, until 2.3.1)
+        if (on) {
+            forgetPreset();
+            int seed = MaterialSeeds.seed();
+            if (seed == 0) Accent.setMaterial(true);
+            else Accent.set(MaterialSeeds.tone(seed, 48, 0, 60));
+        }
         forget();
     }
 
@@ -445,6 +451,19 @@ public final class Themes {
             new ArrayList<WeakReference<View>>();
 
     /** Refresh custom role colours in visible TikTok screens after a setting changes. */
+    /** Only the accent repainted, for the adaptive interface: no fonts, no badges, no other colours. */
+    static void repaintAccent() {
+        Accent.epoch++;
+        synchronized (watchedRoots) {
+            for (int i = watchedRoots.size() - 1; i >= 0; i--) {
+                View root = watchedRoots.get(i).get();
+                if (root == null) { watchedRoots.remove(i); continue; }
+                Accent.repaintTree(root);
+                root.invalidate();
+            }
+        }
+    }
+
     public static void repaintVisible() {
         // asked for after a setting has changed, whichever it was: nothing
         // remembered about any view is to be trusted

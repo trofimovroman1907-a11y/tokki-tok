@@ -24,6 +24,19 @@ EXTRA = {
         "button": "Got it",
         "claimable": 1,
     },
+    # the birthday one (2.3.1): given by the server for finishing the birthday game, from the 24th of November
+    "party_hat": {
+        "colour": "F2B33D",
+        "image": "party_hat.png",
+        "title": "Party hat",
+        "title_ru": "Праздничный колпак",
+        "title_uk": "Святковий ковпак",
+        "text": "Was at Нарезанный's birthday party",
+        "text_ru": "Побывал на днюхе у Нарезанного",
+        "text_uk": "Побував на днюсі в Нарізаного",
+        "button": "Yay",
+        "claimable": 0,
+    },
 }
 
 #: which of the mod's own pictures a badge is drawn with
@@ -57,12 +70,14 @@ def main():
 
     for key, badge in EXTRA.items():
         db.execute(
-            "INSERT INTO badge (id, colour, image, title, text, text_ru, text_uk,"
-            " button, claimable) VALUES (?,?,?,?,?,?,?,?,?)"
+            "INSERT INTO badge (id, colour, image, title, title_ru, title_uk, text, text_ru, text_uk,"
+            " button, claimable) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
             " ON CONFLICT(id) DO UPDATE SET colour=excluded.colour,"
-            " image=excluded.image, text=excluded.text, text_ru=excluded.text_ru,"
+            " image=excluded.image, title_ru=excluded.title_ru, title_uk=excluded.title_uk,"
+            " text=excluded.text, text_ru=excluded.text_ru,"
             " text_uk=excluded.text_uk, claimable=excluded.claimable",
-            (key, badge["colour"], badge["image"], badge["title"], badge["text"],
+            (key, badge["colour"], badge["image"], badge["title"], badge.get("title_ru", ""),
+             badge.get("title_uk", ""), badge["text"],
              badge["text_ru"], badge["text_uk"], badge["button"], badge["claimable"]))
 
     db.commit()

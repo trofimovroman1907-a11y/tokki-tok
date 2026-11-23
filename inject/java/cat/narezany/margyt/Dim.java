@@ -1,4 +1,5 @@
 package cat.narezany.margyt;
+// Из ttcuz (автор tremorttcuz), перенесено в MargyT с разрешения автора.
 
 import android.app.Activity;
 import android.content.Context;
@@ -185,6 +186,13 @@ public final class Dim {
     private static java.util.Map<View,Integer> inspection;
     private static final java.util.Map<Class<?>,String> typeNames=new java.util.HashMap<>();
     private static String typeName(View view){Class<?> type=view.getClass();String name=typeNames.get(type);if(name==null){name=type.getName().toLowerCase(java.util.Locale.ROOT);typeNames.put(type,name);}return name;}
+
+    static boolean creationActivity(String lowerName) {
+        return lowerName.contains(".shortvideo.") || lowerName.contains(".gamora.") || lowerName.contains(".ftc.")
+                || lowerName.contains(".tako.") || lowerName.contains(".publish.") || lowerName.contains("matisse")
+                || lowerName.contains("camera") || lowerName.contains("record") || lowerName.contains("publish")
+                || lowerName.contains("choosemedia") || lowerName.contains("gallerypicker") || lowerName.contains("effectcreator");
+    }
     private static final class PanelIdentity {int id;boolean blocked;PanelIdentity(int id,boolean blocked){this.id=id;this.blocked=blocked;}}
     private static final java.util.Map<View,PanelIdentity> panelIdentity=new java.util.WeakHashMap<>();
     private static final java.util.Map<View,java.lang.ref.WeakReference<View>> commentBoundaries=new java.util.WeakHashMap<>();

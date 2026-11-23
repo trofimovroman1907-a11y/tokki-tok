@@ -452,6 +452,8 @@ public final class Frames {
     // --------------------------------------------------------------- their pictures
 
     private static final Map<String, Bitmap> art = new HashMap<>();
+
+    static void trimMemory() { synchronized (art) { art.clear(); } }
     private static final Map<String, Long> asked = new HashMap<>();
 
     /** The frame's picture, untouched: unlike a badge's it keeps its margin, the size depends on it. */

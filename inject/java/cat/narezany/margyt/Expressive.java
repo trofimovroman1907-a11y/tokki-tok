@@ -287,6 +287,11 @@ final class Expressive {
                     && Color.alpha(((android.graphics.drawable.ColorDrawable) background).getColor()) == 0;
         }
 
+        /** After rows were shown or hidden: adding and removing restyle by themselves, a change of visibility does not. */
+        void refresh() {
+            restyle();
+        }
+
         private void restyle() {
             int count = getChildCount(), first = -1, last = -1;
             for (int i = 0; i < count; i++) {

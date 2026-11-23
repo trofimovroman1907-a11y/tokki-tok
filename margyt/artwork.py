@@ -121,4 +121,5 @@ MASTER_PNG = "icon_out/play/ic_launcher-512.png"
 # The icon a fresh install wears, when it is a picture rather than the vectors above: the Vice City one for the
 # GTA VI release (assets/make_vicecity_icon.py). Empty to go back to the mint note. The mint note stays a choice
 # in the settings either way, as "classic".
-DEFAULT_RASTER = "icons/vicecity"
+# 2.3.1 (Birthday Bash): the mint note in a burst of confetti (assets/make_confetti_icon.py); Vice City is a choice now.
+DEFAULT_RASTER = "icons/party"

@@ -1,7 +1,8 @@
 package cat.narezany.margyt;
 import android.widget.ImageView;import android.graphics.*;import java.util.*;import java.lang.ref.WeakReference;
 final class FriendAvatars {
- private static final Map<String,Bitmap> cache=new LinkedHashMap<>();private static final Map<String,List<WeakReference<ImageView>>> waiting=new HashMap<>();
+ private static final Map<String,Bitmap> cache=new LinkedHashMap<>();
+ static void trimMemory(){synchronized(cache){cache.clear();}}private static final Map<String,List<WeakReference<ImageView>>> waiting=new HashMap<>();
  private static final java.util.concurrent.ExecutorService workers=java.util.concurrent.Executors.newFixedThreadPool(2,r->{Thread t=new Thread(r,"margyt-friend-avatar");t.setDaemon(true);return t;});
  static void bind(ImageView view,String url){if(url==null||!url.startsWith("https://"))return;view.setTag(url);
   synchronized(cache){Bitmap known=cache.get(url);if(known!=null){view.setImageBitmap(known);return;}List<WeakReference<ImageView>> list=waiting.get(url);if(list!=null){if(list.size()<64)list.add(new WeakReference<>(view));return;}list=new ArrayList<>();list.add(new WeakReference<>(view));waiting.put(url,list);}

@@ -157,7 +157,7 @@ final class ChatFolders {
 
     /** TikTok asked for the name of an account while it dressed a row: now it is known whose the name is. */
     static void seen(String name, String uid) {
-        if (name == null || uid == null || !uid.matches("[0-9]{1,24}")) return;
+        if (name == null || uid == null || !Ids.uid(uid)) return;
         String clean = clean(name);
         if (clean.length() == 0) return;
         synchronized (uidByName) {

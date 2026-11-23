@@ -57,6 +57,7 @@ import patcher
 import mc
 import admin_mod
 import sponsor
+import mail
 import tiktok
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -969,6 +970,39 @@ def chat_badge(body, ip):
         db.close()
 
 
+#: The birthday badge (MargyT 2.3.1): for finishing the birthday game, from Нарезанный's birthday on
+PARTY = "party_hat"
+PARTY_FROM = 1795467600            # 2026-11-24 00:00 UTC+3
+PARTY_UNTIL = 1796072400           # 2026-12-01 00:00 UTC+3: the invitation runs out, the game stays
+
+
+def party(body, ip):
+    """The party hat, for an account that has proved itself and finished the birthday game.
+
+    Before the day only the owner can take it, to try it out; everybody else hears "too early".
+    """
+    db = connect()
+    try:
+        uid = vouched(db, body)
+        if not uid:
+            return 403, {"error": "prove"}
+        now = int(time.time())
+        owner = db.execute("SELECT 1 FROM held WHERE uid = ? AND badge = 'owner'", (uid,)).fetchone()
+        if now < PARTY_FROM and not owner:
+            return 425, {"error": "too early"}
+        if now >= PARTY_UNTIL:
+            return 410, {"error": "that one is over"}
+        wait = too_soon(db, uid, ip)
+        if wait:
+            return 429, {"error": "too often", "wait": wait}
+        db.execute("INSERT OR IGNORE INTO held (uid, badge, given_at) VALUES (?, ?, ?)", (uid, PARTY, now))
+        wrote(db, uid, ip)
+        db.commit()
+        return 200, {"badges": mine(uid)}
+    finally:
+        db.close()
+
+
 def free(body, ip):
     """The badge anybody running the mod before the day gets, and nothing else.
 
@@ -1771,6 +1805,10 @@ class Handler(BaseHTTPRequestHandler):
             code, out = dep_play(body, ip)
         elif path == "/margychat":
             code, out = chat_badge(body, ip)
+        elif path == "/party":
+            code, out = party(body, ip)
+        elif path == "/mail":
+            code, out = mail.inbox(body)
         elif path == "/verdict":
             code, out = verdict(body, ip)
         elif path == "/mod/device":
@@ -1804,6 +1842,8 @@ def main():
     sponsor.use.update(connect=connect, vouched=vouched)
     db = connect()
     sponsor.prepare(db)
+    mail.use.update(connect=connect, sane=sane)
+    mail.prepare(db)
     db.close()
     server = ThreadingHTTPServer(("127.0.0.1", 8080), Handler)
     server.serve_forever()

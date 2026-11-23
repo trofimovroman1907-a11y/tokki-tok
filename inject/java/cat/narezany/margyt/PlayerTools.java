@@ -4,6 +4,8 @@ import android.content.Context;import java.lang.ref.WeakReference;
 public final class PlayerTools {
  static final String SPEED="player_default_speed",STEP="player_seek_step",REVERSE="player_reverse_rate";
  private static WeakReference<Object> current=new WeakReference<Object>(null);
+ /** The player of the video now playing, or null. */
+ static Object player(){return current.get();}
  private static String aid="";private static WeakReference<Object> post=new WeakReference<Object>(null);private static Runnable rewind;private static final android.os.Handler handler=new android.os.Handler(android.os.Looper.getMainLooper());
  static float speed(){try{float v=AccountAppearance.prefs(Margy.context()).getFloat(SPEED,2f);return validSpeed(v)?v:2f;}catch(Throwable ignored){return 2f;}}
  static boolean validSpeed(float v){return !Float.isNaN(v)&&!Float.isInfinite(v)&&v>=.5f&&v<=3f;}
@@ -15,6 +17,8 @@ public final class PlayerTools {
    post=new WeakReference<Object>(playing);
    Object manager=NativeRead.get(controller,"getPlayerManager");if(manager==null)return;
    current=new WeakReference<Object>(manager);
+   VideoResume.playing(next,manager);
+   AdWords.playing(controller,playing,next,manager);
    if(next.equals(aid)){SponsorBlock.playing(next);return;}
    aid=next;cancelSmooth();
    VideoStats.report(playing);

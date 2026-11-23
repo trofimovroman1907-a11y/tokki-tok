@@ -48,7 +48,8 @@ final class LiveGlass {
             + "return srcOver(half4(foreground_color_premultiplied),img.eval(uv));}\n";
 
     static boolean available() {
-        return android.os.Build.VERSION.SDK_INT >= 31;
+        // the live glass reads what is under it every frame: a weak phone keeps the plain frosted look
+        return android.os.Build.VERSION.SDK_INT >= 31 && !DevicePerformance.limited(Margy.context());
     }
 
     private final RenderNode source = new RenderNode("margyt-glass-under");

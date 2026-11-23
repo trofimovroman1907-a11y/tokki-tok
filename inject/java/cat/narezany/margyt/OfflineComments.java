@@ -22,12 +22,12 @@ public final class OfflineComments {
  private static final ConcurrentHashMap<String,String> errors=new ConcurrentHashMap<String,String>();
  private static WeakReference<Object> active=new WeakReference<Object>(null);
  private static SharedPreferences prefs(){return Margy.context().getSharedPreferences(Margy.PREFS,0);}
- private static String account(){String uid=Account.liveId();return uid!=null&&uid.matches("[0-9]{1,24}")?uid:"local";}
+ private static String account(){String uid=Account.liveId();return uid!=null&&Ids.uid(uid)?uid:"local";}
  private static File archive(String account,String aid){return new File(new File(Margy.context().getFilesDir(),"margyt"),"offline-comments-"+account+"-"+aid+".zip");}
  public static void cached(Object post,String videoPath){
   try{
    if(Margy.context()==null||!prefs().getBoolean(ENABLED,false))return;
-   String aid=NativeRead.aid(post);if(!aid.matches("[0-9]{1,24}")||videoPath==null||videoPath.isEmpty())return;
+   String aid=NativeRead.aid(post);if(!Ids.uid(aid)||videoPath==null||videoPath.isEmpty())return;
    String user=account(),key=user+":"+aid;
    if(!pending.add(key))return;
    int count=Math.max(1,Math.min(OfflineCommentArchive.MAX_COUNT,prefs().getInt(COUNT,10)));
@@ -99,7 +99,7 @@ public final class OfflineComments {
  public static void content(Object component){active=new WeakReference<Object>(component);}
  public static void closed(Object component){if(active.get()==component)active.clear();}
  private static boolean hasNativeArchive(String aid){
-  if(aid==null||!aid.matches("[0-9]{1,24}")||Margy.context()==null)return false;
+  if(aid==null||!Ids.uid(aid)||Margy.context()==null)return false;
   Object component=active.get();if(component==null)return false;
   Object pager=NativeRead.get(component,"Bc");
   return aid.equals(NativeRead.aid(NativeRead.get(pager,"LJII")))&&archive(account(),aid).isFile();
@@ -146,7 +146,7 @@ public final class OfflineComments {
    LinearLayout wrapper=new LinearLayout(nativeView.getContext());wrapper.setOrientation(1);wrapper.setLayoutParams(nativeView.getLayoutParams());
    wrapper.addView(nativeView,new LinearLayout.LayoutParams(-1,-2));
    TextView button=new TextView(nativeView.getContext());button.setText(Local.of("Сохранённые комментарии"));button.setTextSize(13);button.setTextColor(Skin.of(nativeView).text);button.setGravity(Gravity.CENTER);button.setPadding(0,dp(nativeView.getContext(),8),0,dp(nativeView.getContext(),8));
-   button.setOnClickListener(v->{Activity activity=activity(v.getContext());if(activity==null)return;Object component=active.get();Object pager=NativeRead.get(component,"Bc");String aid=NativeRead.aid(NativeRead.get(pager,"LJII"));if(aid.matches("[0-9]{1,24}"))show(activity,account(),aid);else library(activity);});wrapper.addView(button,new LinearLayout.LayoutParams(-1,dp(nativeView.getContext(),40)));return wrapper;
+   button.setOnClickListener(v->{Activity activity=activity(v.getContext());if(activity==null)return;Object component=active.get();Object pager=NativeRead.get(component,"Bc");String aid=NativeRead.aid(NativeRead.get(pager,"LJII"));if(Ids.uid(aid))show(activity,account(),aid);else library(activity);});wrapper.addView(button,new LinearLayout.LayoutParams(-1,dp(nativeView.getContext(),40)));return wrapper;
   }catch(Throwable e){return nativeView;}
  }
  private static Activity activity(Context context){for(int i=0;i<10;i++){if(context instanceof Activity)return (Activity)context;if(!(context instanceof ContextWrapper))break;Context next=((ContextWrapper)context).getBaseContext();if(next==context)break;context=next;}return null;}

@@ -195,6 +195,8 @@ public final class Launcher {
 
     private static final Map<String, Bitmap> drawn = new HashMap<String, Bitmap>();
 
+    static void trimMemory() { synchronized (drawn) { drawn.clear(); } }
+
     private static int indexOf(String which) {
         if (which == null) return -1;
         for (int i = 0; i < Shots.KEYS.length; i++) {

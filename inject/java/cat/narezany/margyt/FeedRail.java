@@ -73,6 +73,7 @@ public final class FeedRail {
     private static View[] seen=new View[0];private static int[] kinds=new int[0];private static long listed;
     private static long idled;
     static void icons(){
+        LikeCake.tick();
         long now=android.os.SystemClock.uptimeMillis();
         // with the round icons off there is nothing to swap; it is looked at
         // twice a second all the same, so that turning them off puts TikTok's back

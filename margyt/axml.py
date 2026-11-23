@@ -48,8 +48,11 @@ ATTR_IDS = {
     "exported": 0x01010010,
     "shell": 0x01010594,
     "enabled": 0x0101000E,
+    "drawable": 0x01010199,
+    "debuggable": 0x0101000F,
     "configChanges": 0x0101001F,
     "launchMode": 0x0101001D,
+    "screenOrientation": 0x0101001E,
     "roundIcon": 0x0101052C,
     "authorities": 0x01010018,
     # 16842779, read out of android.jar rather than written down: the build

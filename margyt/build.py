@@ -13,6 +13,7 @@ import base64
 import json
 import os
 import re
+import shutil
 import time
 from typing import Dict, List, Optional
 
@@ -129,6 +130,9 @@ def _java_name(owner: str) -> str:
     return owner[1:-1].replace("/", ".")
 
 
+# a beta for testers and supporters: the birthday game and its letter are not in it at all
+NO_PARTY = os.environ.get("MARGYT_NO_PARTY") == "1"
+
 class Build:
     def __init__(self, apk_path: str, out_path: str, root: str, tools: Toolchain,
                  workspace: str, keystore: Optional[str] = None,
@@ -208,7 +212,7 @@ class Build:
 
         self.say("Building the mod's own dex")
         dex_path = self.tools.compile_dex(
-            os.path.join(self.root, "inject", "java"), self.workspace, api,
+            self.java_sources(), self.workspace, api,
             os.path.join(self.root, "inject", "stubs"),
         )
         injected = open(dex_path, "rb").read()
@@ -245,6 +249,11 @@ class Build:
             self.detail("%s declared, reached from TikTok's own settings" % SETTINGS_ACTIVITY)
         manifest_module.add_activity(manifest, STORE_ACTIVITY, SETTINGS_LABEL, theme)
         manifest_module.add_activity(manifest, PACKAGE + ".PluginEditorActivity", SETTINGS_LABEL, theme)
+        # the birthday game (2.3.1): sideways (6 = sensorLandscape), and a turn or a keyboard does not restart it
+        if not NO_PARTY:
+            manifest_module.add_activity(manifest, PACKAGE + ".PartyActivity", SETTINGS_LABEL,
+                                         self.tools.framework_constant("Theme_Black_NoTitleBar_Fullscreen"),
+                                         orientation=6, config_changes=0x0DA0)
         # where MargyCode asks to be let in: a window over whatever's on screen, 0x01030010 is Theme.Translucent.NoTitleBar
         manifest_module.add_activity(manifest, PACKAGE + ".DevLinkActivity", SETTINGS_LABEL, 0x01030010)
         # a .mtp opened from a file manager comes to the mod (Theme.NoDisplay: it only hands the file on)
@@ -274,6 +283,10 @@ class Build:
         if os.environ.get("MARGYT_PROFILEABLE") == "1":
             manifest_module.add_profileable(manifest)
             self.detail("profileable: simpleperf may attach")
+        if os.environ.get("MARGYT_DEBUGGABLE") == "1":
+            # leak hunting only: lets `am dumpheap` take a heap snapshot; never for a release
+            manifest.set_attr_bool(manifest_module.application(manifest), "debuggable", True)
+            self.detail("debuggable: heap dumps allowed")
         manifest_module.add_meta_data(manifest, "cat.narezany.margyt.mod",
                                       "margyt-lite" if self.lite else "margyt")
         manifest_module.add_meta_data(manifest, "cat.narezany.margyt.version", self.mod_version())
@@ -317,7 +330,7 @@ class Build:
         # first compile above validates the call surface before dex work starts.
         self.write_build_info()
         dex_path = self.tools.compile_dex(
-            os.path.join(self.root, "inject", "java"), self.workspace, api,
+            self.java_sources(), self.workspace, api,
             os.path.join(self.root, "inject", "stubs"),
         )
         injected = open(dex_path, "rb").read()
@@ -479,6 +492,22 @@ class Build:
         with open(path, encoding="utf-8") as handle:
             return handle.read().strip().replace("\\", "").replace('"', "")
 
+    def java_sources(self) -> str:
+        """The mod's sources. A beta for testers (MARGYT_NO_PARTY=1) leaves the birthday out entirely: no Party*
+        class, no game, no letter, no sprite goes in, only an empty Party (inject/beta) for the few calls to it."""
+        full = os.path.join(self.root, "inject", "java")
+        if not NO_PARTY:
+            return full
+        beta = os.path.join(self.workspace, "java-beta")
+        shutil.rmtree(beta, ignore_errors=True)
+        shutil.copytree(full, beta)
+        mod = os.path.join(beta, "cat", "narezany", "margyt")
+        for name in os.listdir(mod):
+            if name.startswith("Party") and name.endswith(".java"):
+                os.remove(os.path.join(mod, name))
+        shutil.copy(os.path.join(self.root, "inject", "beta", "Party.java"), os.path.join(mod, "Party.java"))
+        return beta
+
     def write_version(self, tiktok: str, test: bool = False) -> None:
         """Both versions, so the app can say what it is and what it patched."""
         mod = self.mod_version()
@@ -513,9 +542,15 @@ class Build:
                 "    static final boolean PROFILE = %s;\n"
                 "    /** Built into TikTok Lite: only what does not need TikTok's own classes runs. */\n"
                 "    static final boolean LITE = %s;\n"
+                "    /** A preview of the birthday (MARGYT_PARTY_PREVIEW=1): the game, the letter and the cake before the day. */\n"
+                "    static final boolean PARTY_PREVIEW = %s;\n"
+                "    /** A beta for testers (MARGYT_NO_PARTY=1): no game and no letter, the cake on show all the time. */\n"
+                "    static final boolean BETA = %s;\n"
                 "}\n" % (mod, name, tiktok, "true" if test else "false",
                            "true" if os.environ.get("MARGYT_PROFILE") == "1" else "false",
-                           "true" if self.lite else "false")
+                           "true" if self.lite else "false",
+                           "true" if os.environ.get("MARGYT_PARTY_PREVIEW") == "1" else "false",
+                           "true" if NO_PARTY else "false")
             )
         self.detail("MargyT %s%s%s on TikTok %s%s"
                     % ("Lite " if self.lite else "", mod, " «%s»" % name if name else "", tiktok, ", a test build" if test else ""))
@@ -604,6 +639,17 @@ class Build:
         # both from Google Fonts under the OFL, which travels with them
         for font in ("nunito.ttf", "nunito-OFL.txt", "caveat.ttf", "caveat-OFL.txt"):
             entries.append(("assets/margyt/fonts/" + font, os.path.join(asset_root, "fonts", font)))
+        # the birthday game (2.3.1): its sprites, its font, its music; music is opened as a file
+        # descriptor straight out of the apk, which only works because assets here are stored
+        # the cake on his like button (LikeCake): apart from the game, so a beta has it too
+        for name in ("cake", "cake_lit_0", "cake_lit_1"):
+            entries.append(("assets/margyt/cake/%s.png" % name, os.path.join(asset_root, "party", name + ".png")))
+        party_root = os.path.join(asset_root, "party")
+        for folder, _, names in ([] if NO_PARTY else os.walk(party_root)):
+            for name in sorted(names):
+                path = os.path.join(folder, name)
+                relative = os.path.relpath(path, party_root).replace(os.sep, "/")
+                entries.append(("assets/margyt/party/" + relative, path))
         for destination, path in entries:
             with open(path, "rb") as handle:
                 raw = handle.read()
@@ -676,6 +722,8 @@ class Build:
         ("margyrial3", "Margyrial 3"),
         # 2.3.0: the default is the Vice City picture now, so the mint note is a choice like the others
         ("classic", "Обычный MargyT"),
+        # 2.3.1: the party hat is the default now, so Vice City is a choice like the others
+        ("vicecity", "Вайс-Сити"),
     ]
 
     ICON_PACKAGE = 0x30
@@ -704,6 +752,9 @@ class Build:
                 out = _io.BytesIO()
                 picture.convert("RGBA").resize((432, 432), Image.LANCZOS).save(out, "PNG", optimize=True)
                 layers[key] = out.getvalue()
+        # themed icons (Android 13): the default's own one-colour layer, added with the choices (add_icon_choices)
+        if os.path.exists(os.path.join(folder, "monochrome.png")):
+            layers["monochrome_id"] = self._icon_id(self._mono_index(default=True))
         return layers
 
     def _icon_files(self) -> List[str]:
@@ -756,24 +807,107 @@ class Build:
             handle.write("    };\n}\n")
         self.detail("%d icons to choose from" % len(rows))
 
+    def _icon_id(self, index: int) -> int:
+        return (self.ICON_PACKAGE << 24) | (1 << 16) | index
+
+    def _mono_index(self, default: bool = False) -> int:
+        """Where the one-colour layers sit in the icons' package: after the icons, their backgrounds and foregrounds."""
+        return 3 * len(self.ICONS) + (1 if default else 0)
+
+    def _icon_layers(self, key: str, raw: bytes):
+        """A choice's two adaptive layers at 432 px (108 dp at xxxhdpi), as PNG bytes.
+
+        Its own layers when it has a folder of them (icons/<key>/background.png and foreground.png). Otherwise the
+        square picture itself, scaled to fill the middle 72 dp a launcher shows, over a blur of itself reaching to the
+        edges, and an empty foreground: a launcher then masks it to its shape like any other icon. As a plain picture
+        it was put inside a square with margins on most launchers.
+        """
+        from PIL import Image, ImageFilter
+        import io as _io
+
+        def encoded(im):
+            out = _io.BytesIO()
+            im.save(out, "PNG", optimize=True)
+            return out.getvalue()
+
+        folder = os.path.join(self.root, "icons", key)
+        if all(os.path.exists(os.path.join(folder, n + ".png")) for n in ("background", "foreground")):
+            with Image.open(os.path.join(folder, "background.png")) as bg, Image.open(os.path.join(folder, "foreground.png")) as fg:
+                return (encoded(bg.convert("RGBA").resize((432, 432), Image.LANCZOS)),
+                        encoded(fg.convert("RGBA").resize((432, 432), Image.LANCZOS)))
+        if key == "classic":
+            mint = Image.new("RGBA", (432, 432), (0x8D, 0xD1, 0xB0, 255))
+            with Image.open(os.path.join(self.root, "icon_out", "margyt-1024-glyph.png")) as glyph:
+                return encoded(mint), encoded(glyph.convert("RGBA").resize((432, 432), Image.LANCZOS))
+        with Image.open(_io.BytesIO(raw)) as picture:
+            picture = picture.convert("RGBA")
+            average = picture.resize((1, 1), Image.LANCZOS).getpixel((0, 0))
+            back = Image.new("RGBA", (432, 432), average[:3] + (255,))
+            back.alpha_composite(picture.resize((432, 432), Image.LANCZOS).filter(ImageFilter.GaussianBlur(18)))
+            middle = picture.resize((300, 300), Image.LANCZOS)
+            back.alpha_composite(middle, (66, 66))
+        clear = Image.new("RGBA", (432, 432), (0, 0, 0, 0))
+        return encoded(back), encoded(clear)
+
+    def _note_monochrome(self) -> bytes:
+        """The note alone, white: what the choices show when the phone tints icons to its own colours."""
+        from PIL import Image
+        import io as _io
+        with Image.open(os.path.join(self.root, "icon_out", "margyt-1024-glyph.png")) as glyph:
+            alpha = glyph.convert("RGBA").resize((432, 432), Image.LANCZOS).split()[3]
+        mono = Image.new("RGBA", (432, 432), (255, 255, 255, 0))
+        mono.putalpha(alpha)
+        out = _io.BytesIO()
+        mono.save(out, "PNG", optimize=True)
+        return out.getvalue()
+
     def add_icon_choices(self, apk: Apk, arsc: Arsc, manifest: Axml):
-        """Put the icons in the apk, in the table, and in the manifest."""
+        """Put the icons in the apk, in the table, and in the manifest.
+
+        Each choice is a picture below Android 8 and an adaptive icon from there on: background, foreground and a
+        one-colour layer for themed icons. Ids, in the icons' own package: the choices first (0..n-1, so a launcher
+        entry keeps its icon), then their backgrounds, their foregrounds, the note's one-colour layer, and the
+        default icon's one-colour layer.
+        """
         entry, target = manifest_module.launcher_entry(manifest)
         # the aliases take the app's own name; only the picture differs. It
         # said TikTok here, so picking any icon but the first also renamed the
         # thing on the home screen
         label = LABEL
+        n = len(self.ICONS)
+        mono_note = self._icon_id(self._mono_index())
 
-        names = []
+        rows, backs, fronts = [], [], []
         for index, (key, _label) in enumerate(self.ICONS):
-            path = "res/margyt/%s.png" % key
             with open(self._icon_files()[index], "rb") as handle:
-                apk.add(path, handle.read())
-            names.append((key, path))
+                raw = handle.read()
+            legacy = "res/margyt/%s.png" % key
+            apk.add(legacy, raw)
+            back, front = self._icon_layers(key, raw)
+            back_path, front_path = "res/margyt/%s_b.png" % key, "res/margyt/%s_f.png" % key
+            apk.add(back_path, back)
+            apk.add(front_path, front)
+            xml_path = "res/margyt/%s_a.xml" % key
+            apk.add(xml_path, icon_module.adaptive_xml(self._icon_id(n + index), self._icon_id(2 * n + index), mono_note))
+            rows.append((key, legacy, xml_path))
+            backs.append((key + "_b", back_path, back_path))
+            fronts.append((key + "_f", front_path, front_path))
+        mono_path = "res/margyt/note_mono.png"
+        apk.add(mono_path, self._note_monochrome())
+        layers = [("note_mono", mono_path, mono_path)]
+        party_mono = os.path.join(self.root, artwork.DEFAULT_RASTER or "", "monochrome.png")
+        if artwork.DEFAULT_RASTER and os.path.exists(party_mono):
+            from PIL import Image
+            import io as _io
+            out = _io.BytesIO()
+            with Image.open(party_mono) as picture:
+                picture.convert("RGBA").resize((432, 432), Image.LANCZOS).save(out, "PNG", optimize=True)
+            apk.add("res/margyt/default_mono.png", out.getvalue())
+            layers.append(("default_mono", "res/margyt/default_mono.png", "res/margyt/default_mono.png"))
 
-        extended = resadd.add_files(arsc.build(), self.ICON_PACKAGE, "mipmap", names)
-        self.detail("%d icons added to the resource table as package 0x%02X"
-                    % (len(names), self.ICON_PACKAGE))
+        extended = resadd.add_adaptive_icons(arsc.build(), self.ICON_PACKAGE, rows + backs + fronts + layers)
+        self.detail("%d icons added to the resource table as package 0x%02X, adaptive with a themed layer from Android 8"
+                    % (n, self.ICON_PACKAGE))
 
         for index, (key, name) in enumerate(self.ICONS):
             res_id = (self.ICON_PACKAGE << 24) | (1 << 16) | index

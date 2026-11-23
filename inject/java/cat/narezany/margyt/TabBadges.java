@@ -211,8 +211,10 @@ final class TabBadges {
             if (number == null) return false;  // nothing unread: the hold is TikTok's to have
             final boolean back = tab.hidden.get() != null;
             Panel.with(context, Skin.remembered(context), back ? Text.TAB_UNREAD_BACK : Text.TAB_READ_ALL)
-                    .text(back ? Text.TAB_UNREAD_BACK_NOTE : Text.TAB_READ_ALL_NOTE)
+                    .text(back ? Text.TAB_UNREAD_BACK_NOTE : "inbox".equals(tab.which) ? Text.TAB_READ_INBOX_NOTE : Text.TAB_READ_ALL_NOTE)
                     .primary(back ? Text.TAB_UNREAD_BACK_YES : Text.TAB_READ_ALL_YES, () -> {
+                        // the inbox is really read, chats and activity, as from its ⋯ menu
+                        if (!back && "inbox".equals(tab.which)) InboxReadAll.start();
                         remember(context, tab.which, back ? 0 : TabCount.of(number.getText()));
                         tab.seen = null;  // looked at afresh on the next frame
                         view.invalidate();

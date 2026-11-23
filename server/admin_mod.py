@@ -221,6 +221,13 @@ def act(body):
             db.commit()
             _tell("Админка: устройство <code>%s</code> отключено с %s" % (_escape(gone), _escape(device_name)))
             return 200, {"ok": True}
+        if str(op or "").startswith("mail_"):
+            import mail
+            code, out = mail.admin(db, op, said)
+            if op == "mail_send" and code == 200:
+                _tell("Админка (%s): письмо <b>%s</b> → %s" % (_escape(device_name), _escape(str(said.get("title") or "без заголовка")),
+                      _escape(str(said.get("to") or "всем"))))
+            return code, out
         return 400, {"error": "op"}
     finally:
         db.close()

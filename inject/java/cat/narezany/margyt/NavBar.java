@@ -717,7 +717,8 @@ final class NavBar {
                 if (child.getVisibility() != View.VISIBLE || !(child instanceof ViewGroup)) continue;
                 Tab tab = new Tab();
                 tab.view = (ViewGroup) child;
-                tab.kind = kind(tab.view, at, count);
+                // by its place in the whole bar: a tab TikTok or the mod hides (NoFeed) must not shift the others' icons
+                tab.kind = kind(tab.view, i, bar.getChildCount());
                 tab.open = tab.from = tab.to = child.isSelected() ? 1f : 0f;
                 hold(tab, bar);
                 next[at++] = tab;
@@ -1079,6 +1080,26 @@ final class NavBar {
         @Override public void setAlpha(int alpha) {}
         @Override public void setColorFilter(ColorFilter filter) {}
         @Override public int getOpacity() { return PixelFormat.TRANSLUCENT; }
+    }
+
+    // From LotusTok (pikmis): contrast as WCAG measures it, for the MD3 chat's colours.
+    private static float luminance(int colour) {
+        float[] channel = {Color.red(colour) / 255f, Color.green(colour) / 255f, Color.blue(colour) / 255f};
+        for (int i = 0; i < 3; i++) {
+            channel[i] = channel[i] <= 0.03928f ? channel[i] / 12.92f : (float) Math.pow((channel[i] + 0.055f) / 1.055f, 2.4f);
+        }
+        return 0.2126f * channel[0] + 0.7152f * channel[1] + 0.0722f * channel[2];
+    }
+
+    static float contrast(int one, int other) {
+        float a = luminance(one), b = luminance(other);
+        return (Math.max(a, b) + 0.05f) / (Math.min(a, b) + 0.05f);
+    }
+
+    /** A colour moved toward another, a tenth at a time, until it reads on what it lies on at least as well as is asked. */
+    static int readable(int colour, int on, int toward, float least) {
+        for (int step = 0; step < 10 && contrast(colour, on) < least; step++) colour = mix(colour, toward, 0.1f);
+        return colour;
     }
 
     static float bright(int colour) {

@@ -40,6 +40,51 @@ final class Local {
         add("Новый чат", "Новий чат", "New chat");
         add("Чаты", "Чати", "Chats");
         add("Откройте входящие ещё раз", "Відкрийте вхідні ще раз", "Reopen your inbox");
+        add("Настройки комментариев", "Налаштування коментарів", "Comment settings");
+        add("Формат чисел", "Формат чисел", "Number format");
+        add("Как в TikTok (1,2 тыс.)", "Як у TikTok (1,2 тис.)", "TikTok default (1.2K)");
+        add("Полностью (1 234)", "Повністю (1 234)", "Full (1,234)");
+        add("Полностью до миллиона", "Повністю до мільйона", "Full under one million");
+        add("Лайк комментария двойным тапом", "Подвійний дотик, щоб уподобати коментар", "Double-tap to like comments");
+        add("Результаты опросов без голосования", "Результати опитувань без голосування", "Poll results without voting");
+        add("Выключи, чтобы проголосовать в комментариях.", "Вимкни, щоб проголосувати в коментарях.", "Turn off to vote in comments.");
+        add("Пункт «Прочитать всё» во входящих", "Пункт «Прочитати все» у вхідних", "Show Mark all as read in Inbox");
+        add("Прочитать всё", "Прочитати все", "Mark all as read");
+        add("Прочитать все сообщения и активность", "Позначити всі повідомлення й активність як прочитані", "Mark all messages and activity as read");
+        add("Сначала войдите в аккаунт TikTok", "Спочатку увійдіть в акаунт TikTok", "Sign in to TikTok first");
+        add("Отмечаю сообщения и активность прочитанными…", "Позначаю повідомлення й активність як прочитані…", "Marking messages and activity as read…");
+        add("Сообщения и активность отмечены прочитанными", "Повідомлення й активність позначено як прочитані", "Messages and activity marked as read");
+        add("Сообщения прочитаны. Активность прочитать не удалось — повторите.", "Повідомлення прочитано. Не вдалося прочитати активність. Спробуйте ще раз.", "Messages marked as read. Couldn't mark activity as read. Try again.");
+        add("Активность прочитана. Часть сообщений пока остаётся непрочитанной.", "Активність прочитано. Деякі повідомлення залишилися непрочитаними.", "Activity marked as read. Some messages are still unread.");
+        add("Не удалось прочитать сообщения и активность. Повторите; подробности в журнале мода.", "Не вдалося прочитати повідомлення й активність. Спробуйте ще раз. Подробиці в журналі мода.", "Couldn't mark messages and activity as read. Try again. See the mod log for details.");
+        add("Защита входа", "Захист входу", "App lock");
+        add("Защита входа в TikTok", "Захист входу в TikTok", "Lock TikTok");
+        add("Защита переписок", "Захист листування", "Lock chats");
+        add("Способ разблокировки", "Спосіб розблокування", "Unlock method");
+        add("Отпечаток или блокировка телефона", "Відбиток або блокування телефона", "Fingerprint or phone lock");
+        add("Код из 4 цифр", "Код із 4 цифр", "4-digit PIN");
+        add("Сменить код", "Змінити код", "Change PIN");
+        add("Нужен Android 9 или новее", "Потрібен Android 9 або новіший", "Requires Android 9 or later");
+        add("Поставь блокировку экрана в телефоне или выбери вход по коду", "Увімкни блокування екрана або вибери вхід за кодом", "Set up a phone screen lock or choose PIN unlock");
+        add("Для этого способа нужна блокировка экрана на Android 9 или новее", "Для цього способу потрібне блокування екрана на Android 9 або новішому", "This method requires a screen lock on Android 9 or later");
+        add("Придумай код из 4 цифр", "Придумай код із 4 цифр", "Choose a 4-digit PIN");
+        add("Повтори код", "Повтори код", "Re-enter the PIN");
+        add("Код сохранён", "Код збережено", "PIN saved");
+        add("Коды не совпали, ещё раз", "Коди не збігаються. Спробуй ще раз", "PINs didn't match. Try again");
+        add("Код сброшен: вход снова по блокировке телефона", "Код скинуто. Вхід знову через блокування телефона", "PIN reset. Use your phone lock to unlock.");
+        add("На телефоне нет блокировки: код можно сбросить только очисткой данных TikTok", "На телефоні немає блокування. Код можна скинути лише очищенням даних TikTok", "Your phone has no screen lock. Resetting the PIN requires clearing TikTok data.");
+        add("TikTok заблокирован", "TikTok заблоковано", "TikTok is locked");
+        add("Переписки", "Листування", "Chats");
+        add("Переписки скрыты", "Листування приховано", "Chats are locked");
+        add("Переписки открыты", "Листування відкрито", "Chats unlocked");
+        add("Введи код", "Введи код", "Enter your PIN");
+        add("Неверный код", "Неправильний код", "Incorrect PIN");
+        add("Слишком много попыток. Подожди", "Забагато спроб. Зачекай", "Too many attempts. Wait");
+        add("Забыл код", "Забув код", "Forgot PIN");
+        add("Разблокировать", "Розблокувати", "Unlock");
+        add("Стереть", "Стерти", "Delete");
+        add("Выйти", "Вийти", "Exit");
+        add("С возвращением", "З поверненням", "Welcome back");
         add("Изменить", "Редагувати", "Edit");
         add("Поделиться", "Поділитися", "Share");
         add("нажми на имя · зажми, чтобы открыть ссылку", "натисни на ім’я · утримуй, щоб відкрити посилання", "tap a name · hold to open the link");
@@ -1135,5 +1180,301 @@ final class Local {
         add("Толстый тилкайо",
                 "Товстий тілкайо",
                 "Fat tilcayo");
+        // 2.3.1: the mailbox
+        add("Автор SkyTok: анимации интерфейса и другое",
+                "Автор SkyTok: анімації інтерфейсу та інше",
+                "Made SkyTok: interface animations and more");
+        // 2.4
+        add("В папке пока пусто. Удерживайте диалог и выберите «Добавить в папку»",
+                "У папці поки порожньо. Утримуйте діалог і виберіть «Додати в папку»",
+                "The folder is empty for now. Hold a chat and choose \"Add to folder\"");
+        add("Добавить в папку",
+                "Додати в папку",
+                "Add to folder");
+        add("Новая папка",
+                "Нова папка",
+                "New folder");
+        add("Название папки",
+                "Назва папки",
+                "Folder name");
+        add("Создать",
+                "Створити",
+                "Create");
+        add("Введите название",
+                "Введіть назву",
+                "Enter a name");
+        add("Папок может быть не больше 12",
+                "Папок може бути не більше 12",
+                "There can be no more than 12 folders");
+        add("Добавлено в папку «",
+                "Додано в папку «",
+                "Added to folder \"");
+        add("Папка создана: ",
+                "Папку створено: ",
+                "Folder created: ");
+        add("Убрано из папки «",
+                "Прибрано з папки «",
+                "Removed from folder \"");
+        add("Чатов в папке: ",
+                "Чатів у папці: ",
+                "Chats in folder: ");
+        add("Переименовать",
+                "Перейменувати",
+                "Rename");
+        add("Состав папки",
+                "Склад папки",
+                "Folder contents");
+        add("Удалить папку",
+                "Видалити папку",
+                "Delete folder");
+        add("Чаты останутся на месте",
+                "Чати залишаться на місці",
+                "The chats stay where they are");
+        add("В папке нет чатов. Удерживайте диалог в списке и выберите «Добавить в папку».",
+                "У папці немає чатів. Утримуйте діалог у списку й виберіть «Додати в папку».",
+                "No chats in the folder. Hold a chat in the list and choose \"Add to folder\".");
+        add("Звонок",
+                "Дзвінок",
+                "Call");
+        add("В избранное",
+                "До обраного",
+                "To favourites");
+        add("Поздоровайтесь с ",
+                "Привітайтеся з ",
+                "Say hi to ");
+        add("Слова рекламы",
+                "Слова реклами",
+                "Advert words");
+        add("Видео, в описании которого есть такое слово, скрывается, а где его произносят в субтитрах — пропускается. По одному слову или фразе в строке.",
+                "Відео, в описі якого є таке слово, приховується, а де його вимовляють у субтитрах — пропускається. По одному слову чи фразі в рядку.",
+                "A video with such a word in its description is hidden, and where it is said in the subtitles that part is skipped. One word or phrase per line.");
+        add("Например: ggdrop, промокод",
+                "Наприклад: ggdrop, промокод",
+                "For example: ggdrop, promo code");
+        add("Встроенный список",
+                "Вбудований список",
+                "Built-in list");
+        add("Встроенные",
+                "Вбудовані",
+                "Built-in");
+        add("Сохранено. Сработает с новыми видео.",
+                "Збережено. Спрацює з новими відео.",
+                "Saved. It works from the next videos.");
+        add("Android спросит про микрофон: так мод слышит музыку TikTok. Сам микрофон не включается",
+                "Android запитає про мікрофон: так мод чує музику TikTok. Сам мікрофон не вмикається",
+                "Android will ask about the microphone: that is how the mod hears TikTok's music. The microphone itself is not turned on");
+        add("Без этого разрешения вибрация в ритм не работает",
+                "Без цього дозволу вібрація в ритм не працює",
+                "Beat vibration does not work without this permission");
+        add("Свои слова и встроенный список",
+                "Свої слова і вбудований список",
+                "Your own words and the built-in list");
+        add("Эффект прокрутки",
+                "Ефект прокручування",
+                "Scroll effect");
+        add("Сила эффекта",
+                "Сила ефекту",
+                "Effect strength");
+        add("Глубина при прокрутке",
+                "Глибина під час прокручування",
+                "Depth while scrolling");
+        add("Вибрация в ритм музыки",
+                "Вібрація в ритм музики",
+                "Vibrate to the music");
+        add("Вибрировать на",
+                "Вібрувати на",
+                "Vibrate on");
+        add("Сила вибрации",
+                "Сила вібрації",
+                "Vibration strength");
+        add("Режим Ambient",
+                "Режим Ambient",
+                "Ambient mode");
+        add("Полосы вокруг видео светятся его же цветами, как в YouTube.",
+                "Смуги навколо відео світяться його ж кольорами, як у YouTube.",
+                "The bars around a video glow in its own colours, like on YouTube.");
+        add("Играть",
+                "Грати",
+                "Play");
+        add("Пропадают лента «Для вас» и кнопка «Главная» внизу. TikTok открывается на соседней вкладке. Выключите, и всё вернётся.",
+                "Зникають стрічка «Для вас» і кнопка «Головна» внизу. TikTok відкривається на сусідній вкладці. Вимкніть, і все повернеться.",
+                "The For You feed and the Home button at the bottom are gone. TikTok opens on the next tab. Turn it off and everything is back.");
+        add("Пружинящие кнопки",
+                "Пружні кнопки",
+                "Springy buttons");
+        add("«Подписаться» подпрыгивает",
+                "«Підписатися» підстрибує",
+                "\"Follow\" bounces");
+        add("Плавное появление комментариев и чатов",
+                "Плавна поява коментарів і чатів",
+                "Comments and chats ease in");
+        add("Идея из SkyTok.",
+                "Ідея з SkyTok.",
+                "An idea from SkyTok.");
+        add("Не отправлять просмотры видео",
+                "Не надсилати перегляди відео",
+                "Do not send video views");
+        add("Приватность",
+                "Приватність",
+                "Privacy");
+        add("Что TikTok узнаёт о вас: призрак, замок на вход и ссылки без меток слежки.",
+                "Що TikTok дізнається про вас: привид, замок на вхід і посилання без міток стеження.",
+                "What TikTok learns about you: ghost mode, the entry lock and links without tracking.");
+        add("Призрак, замок и чистые ссылки",
+                "Привид, замок і чисті посилання",
+                "Ghost, lock and clean links");
+        add("MD3 чат",
+                "MD3 чат",
+                "MD3 chat");
+        add("Ambient",
+                "Ambient",
+                "Ambient");
+        add("Без рекомендаций",
+                "Без рекомендацій",
+                "No recommendations");
+        add("Ни ленты «Для вас», ни кнопки «Главная»",
+                "Ні стрічки «Для вас», ні кнопки «Головна»",
+                "No For You feed and no Home button");
+        add("Анимации интерфейса",
+                "Анімації інтерфейсу",
+                "Interface animations");
+        add("Кнопки пружинят, списки плавно появляются",
+                "Кнопки пружинять, списки плавно з'являються",
+                "Buttons spring, lists ease in");
+        add("Переписка в формах Material 3",
+                "Листування у формах Material 3",
+                "Chats in Material 3 shapes");
+        add("Файл обновления пуст.",
+                "Файл оновлення порожній.",
+                "The update file is empty.");
+        add("Сервер вернул файл, который не является APK.",
+                "Сервер повернув файл, який не є APK.",
+                "The server returned a file that is not an APK.");
+        add("В APK нет версии для процессора этого телефона.",
+                "У APK немає версії для процесора цього телефону.",
+                "The APK has no build for this phone's processor.");
+        add("Файл обновления повреждён. Повторите загрузку.",
+                "Файл оновлення пошкоджено. Повторіть завантаження.",
+                "The update file is damaged. Download it again.");
+        add("Этот файл не является обновлением установленного приложения.",
+                "Цей файл не є оновленням встановленого застосунку.",
+                "This file is not an update of the installed app.");
+        add("Обновление требует более новой версии Android.",
+                "Оновлення потребує новішої версії Android.",
+                "The update needs a newer version of Android.");
+        add("Сервер предложил более старую сборку приложения.",
+                "Сервер запропонував старішу збірку застосунку.",
+                "The server offered an older build of the app.");
+        add("Подпись обновления отличается от установленной сборки. Нужен APK с той же подписью.",
+                "Підпис оновлення відрізняється від встановленої збірки. Потрібен APK з тим самим підписом.",
+                "The update's signature differs from the installed build. An APK with the same signature is needed.");
+        add("Басы",
+                "Баси",
+                "Bass");
+        add("Весь ритм",
+                "Весь ритм",
+                "The whole beat");
+        add("Слабо",
+                "Слабко",
+                "Weak");
+        add("Средне",
+                "Середньо",
+                "Medium");
+        add("Сильно",
+                "Сильно",
+                "Strong");
+        add("Мягко",
+                "М'яко",
+                "Soft");
+        add("Обычно",
+                "Звичайно",
+                "Normal");
+        add("Без эффекта",
+                "Без ефекту",
+                "No effect");
+        add("Куб",
+                "Куб",
+                "Cube");
+        add("Глубина",
+                "Глибина",
+                "Depth");
+        add("Стопка",
+                "Стос",
+                "Stack");
+        add("Отдаление",
+                "Віддалення",
+                "Zoom out");
+        add("Наклон",
+                "Нахил",
+                "Tilt");
+        add("Затухание",
+                "Згасання",
+                "Fade");
+        add("Почтовый ящик",
+                "Поштова скринька",
+                "Mailbox");
+        add("Новое письмо в почтовом ящике MargyT",
+                "Новий лист у поштовій скриньці MargyT",
+                "New letter in the MargyT mailbox");
+        add("Писем пока нет. Когда Нарезанный что-нибудь напишет, оно придёт сюда.",
+                "Листів поки немає. Коли Нарезаний щось напише, воно прийде сюди.",
+                "No letters yet. When Narezany writes something, it will arrive here.");
+        add("Новое",
+                "Нове",
+                "New");
+        add("Админка",
+                "Адмінка",
+                "Admin");
+        add("Написать письмо",
+                "Написати лист",
+                "Write a letter");
+        add("Отправленные",
+                "Надіслані",
+                "Sent");
+        add("Кому: id аккаунтов через пробел, пусто значит всем. Версия: например 2.3, пусто значит всем. Срок в днях, пусто значит навсегда.",
+                "Кому: id акаунтів через пробіл, порожньо означає всім. Версія: наприклад 2.3, порожньо означає всім. Строк у днях, порожньо означає назавжди.",
+                "To: account ids separated by spaces, empty means everyone. Version: for example 2.3, empty means everyone. Days to keep, empty means forever.");
+        add("Кому (пусто = всем)",
+                "Кому (порожньо = всім)",
+                "To (empty = everyone)");
+        add("Заголовок",
+                "Заголовок",
+                "Title");
+        add("Текст письма",
+                "Текст листа",
+                "Letter text");
+        add("Подпись",
+                "Підпис",
+                "Signature");
+        add("Версия (пусто = все)",
+                "Версія (порожньо = всі)",
+                "Version (empty = all)");
+        add("Срок в днях (пусто = навсегда)",
+                "Строк у днях (порожньо = назавжди)",
+                "Days (empty = forever)");
+        add("Письмо пустое",
+                "Лист порожній",
+                "The letter is empty");
+        add("Кому: только цифры id",
+                "Кому: лише цифри id",
+                "To: digits of ids only");
+        add("Письмо отправлено",
+                "Лист надіслано",
+                "Letter sent");
+        add("Пока ничего не отправлено.",
+                "Поки нічого не надіслано.",
+                "Nothing sent yet.");
+        add("всем",
+                "всім",
+                "everyone");
+        add("Удалить письмо?",
+                "Видалити лист?",
+                "Delete the letter?");
+        add("Оно пропадёт из почтовых ящиков у всех.",
+                "Він зникне з поштових скриньок у всіх.",
+                "It will disappear from everyone's mailbox.");
+        add("Нарезанный",
+                "Нарезаний",
+                "Narezany");
     }
 }

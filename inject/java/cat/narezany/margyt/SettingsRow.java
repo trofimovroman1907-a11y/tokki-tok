@@ -53,6 +53,12 @@ public final class SettingsRow implements Application.ActivityLifecycleCallbacks
     @Override
     public void onActivityResumed(Activity activity) {
         long probe = Probe.start();
+        // TikTok's light or dark always follows the phone (SystemTheme, from ttcuz)
+        SystemTheme.screen(activity);
+        // 2.4, from ttcuz: touches seen for the video opening out of its profile card; the feed's scroll effect
+        TouchHook.hook(activity);
+        Ambient.resumed(activity);
+        if (activity.getClass().getName().endsWith(".MainActivity")) { FeedScroll.attach(activity); NoFeed.attach(activity); }
         Plugins.onActivityResumed(activity);
         Plugins.screen(activity);
         FlagGuard.shown();

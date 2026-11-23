@@ -64,6 +64,9 @@ public final class Feed {
     /** TikTok's own number for a live room in the feed. */
     private static final int LIVE = 101;
 
+    /** A live room in the feed: never anything but the "hide live" switch takes it away. */
+    static boolean live(Object post) { return post instanceof Aweme && isLive((Aweme) post); }
+
     private static boolean isLive(Aweme post) {
         try {
             if (post.getAwemeType() == LIVE) return true;
@@ -74,7 +77,7 @@ public final class Feed {
         }
     }
 
-    private static boolean isPhotos(Aweme post) {
+    static boolean isPhotos(Aweme post) {
         try {
             return post.getPhotoModeImageInfo() != null;
         } catch (Throwable ignored) {
@@ -134,13 +137,15 @@ public final class Feed {
     }
     /** Native getter/ingress hook: does not run plugins or other feed preferences twice. */
     public static List withoutAds(List items){
-        if(items==null || !isEnabled())return items;
+        boolean ads=isEnabled(),words=AdWords.hides();
+        if(items==null || !(ads||words))return items;
         ArrayList kept=null;
         for(int i=0;i<items.size();i++){
             Object item=items.get(i);
             Object post=item instanceof Aweme?item:NativeRead.get(item,"getAweme");
             boolean card=!(item instanceof Aweme) && (NativeRead.get(item,"getPreciseAd")!=null || NativeRead.get(item,"getAiAdCard")!=null);
-            if(advert(post) || card){if(kept==null){kept=new ArrayList(items.size());kept.addAll(items.subList(0,i));}}
+            // TikTok's own ads, and advertising it does not call one (casinos, drops: AdWords)
+            if((ads&&(advert(post) || card)) || (words&&!(post instanceof Aweme&&mine((Aweme)post))&&AdWords.hidesPost(post))){if(kept==null){kept=new ArrayList(items.size());kept.addAll(items.subList(0,i));}}
             else if(kept!=null)kept.add(item);
         }
         return kept==null?items:kept;
@@ -190,6 +195,8 @@ public final class Feed {
      */
     public static List getItems(FeedItemList page) {
         if (page == null) return null;
+        // the video left off last time goes first, once (VideoResume)
+        VideoResume.into(page.getItems());
         long probe = Probe.start();
         List out = without(page.getItems());
         Probe.stop(Probe.FEED, probe);

@@ -111,6 +111,20 @@ class Icon:
 
     def _replace_adaptive(self, path: str, axml: Axml) -> None:
         self.log.append("  %s: adaptive icon, following its layers" % path)
+        mono = (self.raster or {}).get("monochrome_id")
+        if mono:
+            # Android 13 tints icons to the phone's colours from this layer; TikTok's icon has none, so it gets ours
+            roots = [n for n in axml.nodes if n.kind == 0x0102 and axml.pool.get(n.name) == "adaptive-icon"]
+            existing = list(axml.elements("monochrome"))
+            if existing:
+                for node in existing:
+                    axml.set_attr(node, "drawable", TYPE_REFERENCE, mono)
+            elif roots:
+                node = axml.make_element("monochrome")
+                axml.set_attr(node, "drawable", TYPE_REFERENCE, mono)
+                axml.insert_into(roots[0], [node, axml.close_element(node)])
+            self.apk.replace(path, axml.build())
+            self.log.append("    <monochrome> 0x%08x, for themed icons" % mono)
         for layer in ("background", "foreground"):
             for node in axml.elements(layer):
                 attr = axml.attr(node, "drawable")
@@ -148,3 +162,25 @@ def replace_everywhere(apk: Apk, arsc: Arsc, manifest: Axml, master_png: bytes, 
         icon.log.append("  icon resource 0x%08x" % res_id)
         icon.replace(res_id)
     return icon.log
+
+
+def adaptive_xml(background: int, foreground: int, monochrome: int) -> bytes:
+    """An adaptive icon of three layers, each a reference: what the choices of icon are on Android 8 and up."""
+    from . import axml as axml_module
+    from .axml import Node, StringPool
+    document = Axml(StringPool([], StringPool.UTF8, b"", []), [], [])
+    root = document.make_element("adaptive-icon")
+    inside = []
+    for name, res_id in (("background", background), ("foreground", foreground), ("monochrome", monochrome)):
+        node = document.make_element(name)
+        document.set_attr(node, "drawable", TYPE_REFERENCE, res_id)
+        inside += [node, document.close_element(node)]
+    end = document.close_element(root)
+    opened = Node(axml_module.RES_XML_START_NAMESPACE, 0, axml_module.NO_ENTRY)
+    closed = Node(axml_module.RES_XML_END_NAMESPACE, 0, axml_module.NO_ENTRY)
+    for node in (opened, closed):
+        node.prefix = document.pool.index("android")
+        node.uri = document.pool.index(axml_module.ANDROID_NS)
+    document.nodes = [opened, root] + inside + [end, closed]
+    document.pending = []
+    return document.build()

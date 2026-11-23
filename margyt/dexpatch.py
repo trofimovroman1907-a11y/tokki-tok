@@ -1,4 +1,5 @@
 """Rewriting the calls that ask the phone where it is.
+Из ttcuz (автор tremorttcuz), перенесено в MargyT с разрешения автора.
 
 Without root there is no Xposed, and without Xposed there is nothing to hook at
 runtime -- so the calls are redirected in the bytecode instead. Each one becomes
@@ -711,6 +712,33 @@ FORCED_FALSE: List[Tuple[str, str]] = [
     ("com/bytedance/lobby/google/GoogleAuth", "isAvailable()Z"),
 ]
 
+# TikTok's own memory "optimizers": native code that reaches into ART through offsets guessed for the phones TikTok
+# tested, switched on from TikTok's servers for some devices. On Android 16 and 17 (Xiaomi, HONOR, TECNO, Nothing
+# above all) the heap stopped being freed and TikTok died of OutOfMemoryError within minutes: two thirds of the crash
+# reports of 2.3.0. Testers on a build without them (20.11.2026) said it no longer lagged. The Java doors to them do
+# nothing now, so the heap is ART's own. (class, method signature, what it answers instead): None for void.
+STUBBED: List[Tuple[str, str, Optional[int]]] = [
+    ("com/bytedance/sysoptimizer/allocatorx/HeapGcRegulator", "optimize(Landroid/content/Context;FFFF)V", None),
+    ("com/bytedance/sysoptimizer/HeapGCOptimizer", "optimize(Landroid/content/Context;FFF)V", None),
+    ("com/bytedance/sysoptimizer/HeapGCOptimizer", "heapExpand(Landroid/content/Context;IZ)V", None),
+    ("com/bytedance/sysoptimizer/HeapGCOptimizer", "initOptimizeRegionSpaceVSS(Landroid/content/Context;I)V", None),
+    ("com/bytedance/sysoptimizer/HeapGCOptimizer",
+     "optimizeRegionSpaceVSS(Landroid/content/Context;Lcom/bytedance/sysoptimizer/HeapGCOptimizer$VssConfig;)V", None),
+    ("com/bytedance/sysoptimizer/HeapGCOptimizer", "reusePartialTLAB(Landroid/content/Context;)V", None),
+    # -3 is what it answers itself when it decides not to clamp
+    ("com/bytedance/sysoptimizer/heap/HeapClampHelper", "clampHeapMaxMemory(Landroid/content/Context;ZZJ)I", -3),
+    ("com/bytedance/common/jato/boost/GCOptionOpt", "LIZ(ZZ)V", None),
+    # 2.4, after SkyTok: a profile's video background plays at once -- TikTok holds it back on phones its own
+    # benchmark scores low ("isLowerDevice"); here no phone is
+    ("com/ss/android/ugc/profile/platform/business/background/ProfileBackgroundComponent", "Rq()Z", 0),
+    ("com/bytedance/common/jato/boost/GCOptionOpt", "LIZIZ(JJ)V", None),
+    ("com/bytedance/common/jato/boost/GCOptionOpt", "LIZJ(JJZZ)V", None),
+]
+# The start-up GC blocker has an off switch of TikTok's own: a file it looks for. "/" always exists.
+GC_BLOCKER_SWITCH = "/data/local/tmp/disable-gcblocker"
+STUB_LABEL = "TikTok's heap optimizers off"
+GC_BLOCKER_LABEL = "TikTok's GC blocker off"
+
 
 def rules() -> List[Tuple[str, "re.Pattern[str]", str]]:
     out = []
@@ -922,6 +950,24 @@ ANCHORED_SOURCES.append(("LX/0oir;","LX/0oir;","LIZ",
     "(Ljava/lang/String;Ljava/lang/String;Ljava/util/List;)Landroid/content/ClipData;",
     "Lcat/narezany/margyt/CommentClipboard;"))
 
+TAB_CHANGE_MANAGER = "Lcom/ss/android/ugc/aweme/main/TabChangeManager;"
+ANCHORED_SOURCES += [
+    (TAB_CHANGE_MANAGER, "LX/0VdL;", "LIZ", "(Ljava/lang/String;Ljava/lang/Object;)V",
+     "(Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V", "Lcat/narezany/margyt/TabChange;"),
+    (TAB_CHANGE_MANAGER, "LX/051c;", "LJI", "(Ljava/lang/String;Ljava/lang/String;)V",
+     "(Ljava/lang/String;Ljava/lang/String;)V", "Lcat/narezany/margyt/TabChange;"),
+]
+CLASS_ANCHORED_SOURCES.add(TAB_CHANGE_MANAGER)
+ANCHORED_STATIC_OWNERS = {"LX/0oir;", "LX/051c;"}
+
+MODEL_STATICS += [
+    ("LX/17GB;", "LIZ", "(Ljava/lang/Number;LX/17CR;ILjava/lang/Boolean;I)Ljava/lang/CharSequence;",
+     "(Ljava/lang/Number;Ljava/lang/Object;ILjava/lang/Boolean;I)Ljava/lang/CharSequence;", "Lcat/narezany/margyt/NumberStyle;"),
+    ("LX/16FO;", "LIZIZ", "(J)Ljava/lang/String;", "(J)Ljava/lang/String;", "Lcat/narezany/margyt/NumberStyle;"),
+    ("LX/16FO;", "LIZ", "(J)Ljava/lang/String;", "(J)Ljava/lang/String;", "Lcat/narezany/margyt/NumberStyle;"),
+]
+
+
 def anchored_rules() -> List[Tuple[str, str, "re.Pattern[str]", str]]:
     """Rules and the marker the class they belong in has to carry."""
     out = []
@@ -930,7 +976,7 @@ def anchored_rules() -> List[Tuple[str, str, "re.Pattern[str]", str]]:
             anchor,
             "%s->%s (in the class marked %s)" % (owner.rsplit("/", 1)[-1][:-1], name, anchor),
             re.compile(r"invoke-%s(/range)? (\{[^}]*\}), %s->%s%s"
-                       % ("static" if owner=="LX/0oir;" else "virtual", re.escape(owner), name, re.escape(original))),
+                       % ("static" if owner in ANCHORED_STATIC_OWNERS else "virtual", re.escape(owner), name, re.escape(original))),
             r"invoke-static\1 \2, %s->%s%s" % (target, name, replacement),
         ))
     # who draws, said just before the call: the register is given as a range,
@@ -1968,6 +2014,14 @@ def rewrite_cards(root: str) -> Dict[str, int]:
 # goes through the mod, which decides whether the mark goes on at all.
 RECALL_UPDATER = "LX/0RdK;"
 RECALL_CALL = re.compile(r"invoke-interface \{([^}]*)\}, LX/0RiV;->LLJJIJI\(LX/0RoP;Ljava/lang/String;Lkotlin/jvm/internal/AwS5S0201100_11;\)V")
+# 2.4, after SkyTok: the profile background video plays as soon as the profile is open (ProfileBanners)
+MODEL_SOURCES += [
+    ("Lcom/ss/android/ugc/profile/platform/base/data/ProfileBgBizData;", "getAutoPlay", "()Ljava/lang/Boolean;",
+     "(Ljava/lang/Object;)Ljava/lang/Boolean;", "Lcat/narezany/margyt/ProfileBanners;"),
+    ("Lcom/ss/android/ugc/profile/platform/base/data/ProfileBgVideoInfo;", ("getAutoPlay", "videoAutoPlay"), "()Z",
+     "(Ljava/lang/Object;)Z", "Lcat/narezany/margyt/ProfileBanners;"),
+]
+
 RECALL_TARGET = "Lcat/narezany/margyt/Recalled;->arrived(Ljava/lang/Object;Ljava/lang/Object;Ljava/lang/String;Ljava/lang/Object;)V"
 RECALL_LABEL = "native recall"
 
@@ -2180,6 +2234,63 @@ def force_false(root: str) -> Dict[str, int]:
     return counts
 
 
+def _parameter_registers(signature: str, static: bool) -> int:
+    inside = signature[signature.index("(") + 1:signature.index(")")]
+    count, at = (0 if static else 1), 0
+    while at < len(inside):
+        kind = inside[at]
+        array = False
+        while kind == "[":
+            array = True
+            at += 1
+            kind = inside[at]
+        if kind == "L":
+            at = inside.index(";", at)
+        count += 2 if kind in ("J", "D") and not array else 1
+        at += 1
+    return count
+
+
+def stub_out(root: str) -> Dict[str, int]:
+    """TikTok's heap optimizers in STUBBED do nothing, and its GC blocker finds its own off switch."""
+    counts: Dict[str, int] = {}
+    if os.environ.get("MARGYT_KEEP_HEAP_TUNING") == "1":
+        return counts
+    for class_name, signature, answer in STUBBED:
+        path = os.path.join(root, *class_name.split("/")) + ".smali"
+        if not os.path.exists(path):
+            continue
+        with open(path, encoding="utf-8") as handle:
+            text = handle.read()
+        pattern = re.compile(r"^\.method ([^\n]*?)%s\n.*?^\.end method$" % re.escape(signature), re.MULTILINE | re.DOTALL)
+        match = pattern.search(text)
+        if match is None:
+            raise RuntimeError("%s is in the apk but has no %s to switch off" % (class_name, signature))
+        modifiers = match.group(1)
+        registers = max(1, _parameter_registers(signature, " static " in " " + modifiers))
+        body = "    return-void" if answer is None else "    const/4 v0, %s\n\n    return v0" % (
+            "-0x%x" % -answer if answer < 0 else "0x%x" % answer)
+        stub = ".method %s%s\n    .registers %d\n\n%s\n.end method" % (modifiers, signature, registers, body)
+        text = text[: match.start()] + stub + text[match.end():]
+        with open(path, "w", encoding="utf-8") as handle:
+            handle.write(text)
+        counts[STUB_LABEL] = counts.get(STUB_LABEL, 0) + 1
+    for directory, _, files in os.walk(root):
+        for name in files:
+            if not name.endswith(".smali"):
+                continue
+            path = os.path.join(directory, name)
+            with open(path, encoding="utf-8") as handle:
+                text = handle.read()
+            if GC_BLOCKER_SWITCH not in text:
+                continue
+            text = text.replace('"%s"' % GC_BLOCKER_SWITCH, '"/"')
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(text)
+            counts[GC_BLOCKER_LABEL] = counts.get(GC_BLOCKER_LABEL, 0) + 1
+    return counts
+
+
 def interesting(dex: bytes, literals: Optional[Dict[str, str]] = None) -> bool:
     """A quick look at the raw dex before spending a minute on it.
 
@@ -2195,11 +2306,16 @@ def interesting(dex: bytes, literals: Optional[Dict[str, str]] = None) -> bool:
             or b"feed_fill_like/feed_fill_like_add_lottie.json" in dex):
         return True
     if (holds_the_pink(dex) or reads_a_colour(dex) or touches_a_model(dex)
-            or carries_an_anchor(dex) or draws_the_loader(dex) or holds_a_card(dex)):
+            or carries_an_anchor(dex) or draws_the_loader(dex) or holds_a_card(dex) or carries_a_port(dex)):
         return True
     for class_name, _signature in FORCED_FALSE:
         if ("L%s;" % class_name).encode() in dex:
             return True
+    for class_name, _signature, _answer in STUBBED:
+        if ("L%s;" % class_name).encode() in dex:
+            return True
+    if GC_BLOCKER_SWITCH.encode() in dex:
+        return True
     if (defines(dex, PLAYER_CONFIG) or defines(dex, SETTINGS_ROWS) or defines(dex, SETTINGS_GROUP)
             or defines(dex, STARTER) or defines(dex, RECALL_UPDATER) or defines(dex, IMAGE_LOADER)):
         return True
@@ -2301,6 +2417,155 @@ def dex_format(dex: bytes) -> str:
     return dex[4:7].decode("ascii", "replace")
 
 
+# --------------------------------------------------------- 2.4: ports from ttcuz
+#
+# Rules taken over from ttcuz (by its author's leave) that change a method of TikTok's in place, not one call:
+# (feature, markers the class must hold, method header regex, how, what). `how` is
+#   "start": `what` goes before the method's first instruction;
+#   "swap":  `what` is (pattern, replacement) inside the method;
+#   "after": `what` is (pattern, code) and the code, formatted with the method's LinearLayout, goes after each match.
+# A marker that is a class descriptor means the class that declares it; anything else is a string it must hold.
+
+POLL_CELL = "Lcom/ss/android/ugc/aweme/commentv2/commentlist/powercell/PollCell;"
+CHAT_ROOT = "Lcom/ss/android/ugc/aweme/im/sdk/chat/ui/singleactivity/BaseChatRootFragment;"
+INBOX_FRAGMENT = "Lcom/ss/android/ugc/aweme/inbox/v2/InboxFragmentV2;"
+
+PORTS: List[Tuple[str, Tuple[str, ...], str, str, object]] = [
+    ("ported chat lock", (CHAT_ROOT,), r"public onResume\(\)V", "start",
+     "    invoke-static/range {p0 .. p0}, Lcat/narezany/margyt/AppLock;->chat(Ljava/lang/Object;)V"),
+    ("ported chat lock", (CHAT_ROOT,), r"public onPause\(\)V", "start",
+     "    invoke-static/range {p0 .. p0}, Lcat/narezany/margyt/AppLock;->gone(Ljava/lang/Object;)V"),
+    ("ported chat lock", (INBOX_FRAGMENT,), r"public final onResume\(\)V", "start",
+     "    invoke-static/range {p0 .. p0}, Lcat/narezany/margyt/AppLock;->inbox(Ljava/lang/Object;)V"),
+    ("ported chat lock", (INBOX_FRAGMENT,), r"public final onHiddenChanged\(Z\)V", "start",
+     "    invoke-static/range {p0 .. p1}, Lcat/narezany/margyt/AppLock;->inboxHidden(Ljava/lang/Object;Z)V"),
+    ("ported chat lock", (INBOX_FRAGMENT,), r"public final onPause\(\)V", "start",
+     "    invoke-static/range {p0 .. p0}, Lcat/narezany/margyt/AppLock;->gone(Ljava/lang/Object;)V"),
+    ("ported comment double tap", ("Lcom/ss/android/ugc/aweme/commentv2/commentlist/powercell/BaseCommentCell;",),
+     r"public onItemViewCreated\(\)V", "swap",
+     (r"(?m)^    invoke-static \{\}, LX/0oOe;->LIZ\(\)Z$",
+      "    invoke-static {}, Lcat/narezany/margyt/CommentLike;->LIZ()Z")),
+    ("comment double tap window", ("Lcom/ss/android/ugc/aweme/commentv2/commentlist/powercell/BaseCommentCell;",),
+     r"public onItemViewCreated\(\)V", "swap",
+     (r"(CommentDoubleTapToLikeConfig;->intervalTime:J\n(?:.*\n){0,14}?)    invoke-static \{(\w+), (\w+)\}, Ljava/lang/Long;->valueOf\(J\)Ljava/lang/Long;",
+      r"\1    invoke-static {\2, \3}, Lcat/narezany/margyt/CommentLike;->interval(J)Ljava/lang/Long;")),
+    # 2.4, from ttcuz: a video opened from a profile card grows out of the card (VideoOpenTransition)
+    ("profile video opens from its card", ("Lcom/bytedance/router/route/ActivityRoute;",),
+     r"public openComponent\(Landroid/content/Context;Landroid/content/Intent;\)V", "swap",
+     (r"(?m)^    invoke-virtual \{([vp]\d+)\}, Lcom/bytedance/router/RouteIntent;->getAnimationBundle\(\)Landroid/os/Bundle;",
+      r"    invoke-static {p1, p2, \1}, Lcat/narezany/margyt/VideoOpenTransition;->prepare(Landroid/content/Context;Landroid/content/Intent;Ljava/lang/Object;)V"
+      "\n\n" r"\g<0>")),
+    ("ported inbox read all", ("inbox_messaging_setting_sheet",),
+     r"public static final \w+\$\d+\(L[^;]+;Landroid/view/View;\)V",
+     "after", (r"(?m)^    iput-object [vp]\d+, [vp]\d+, "
+               r"Lcom/bytedance/tux/sheet/sheet/TuxSheet;->LLJLLIL:Landroid/view/View;\n",
+               "    invoke-static/range {{{0} .. {0}}}, Lcat/narezany/margyt/InboxReadAll;->addMenu(Landroid/view/ViewGroup;)V\n")),
+    # 2.4: the likes of a story, drawn over its heart (StoryLikes)
+    ("story like count", ("Lcom/ss/android/ugc/aweme/story/feed/immersive/digg/ImmersiveStoryDiggAssem;",),
+     r"public final jq\(Lcom/ss/android/ugc/aweme/feed/model/VideoItemParams;\)V", "start",
+     "    invoke-static/range {p0 .. p1}, Lcat/narezany/margyt/StoryLikes;->story(Ljava/lang/Object;Ljava/lang/Object;)V"),
+    ("poll results without vote", (POLL_CELL,),
+     r"public static (?:D6\(Lcom/ss/android/ugc/aweme/comment/model/PollInfo;\)I|"
+     r"E6\(Lcom/ss/android/ugc/aweme/comment/model/PollInfo;\)Z)", "swap",
+     (r"(?m)^    iget-object ([vp]\d+), ([vp]\d+), "
+      r"Lcom/ss/android/ugc/aweme/comment/model/PollInfo;->userPollOption:Ljava/lang/Integer;$",
+      r"    invoke-static/range {\2 .. \2}, Lcat/narezany/margyt/PollPeek;->option(Ljava/lang/Object;)Ljava/lang/Integer;"
+      "\n\n" r"    move-result-object \1")),
+]
+
+CONTAINER = re.compile(r"new-instance (\w+), Landroid/widget/LinearLayout;")
+
+
+def _port_holds(text: str, marker: str) -> bool:
+    if marker.startswith("L") and marker.endswith(";"):
+        return text.split("\n", 1)[0].endswith(" " + marker)
+    return marker in text
+
+
+def _port_has_local(header: str, block: str) -> bool:
+    """v0 is free to use before TikTok's code runs only when the method has a register of its own."""
+    found = re.search(r"^\s*\.(registers|locals) (\d+)", block, re.M)
+    if not found:
+        return False
+    if found.group(1) == "locals":
+        return int(found.group(2)) > 0
+    params = re.sub(r"\[*(?:L[^;]+;|[ZBSCIF])", "x", re.sub(r"\[*[JD]", "xx", header[header.index("(") + 1:header.index(")")]))
+    return int(found.group(2)) - len(params) - (0 if " static " in header else 1) > 0
+
+
+def _port_start(block: str, code: str) -> str:
+    """`code` after the method's directives (registers, parameters, annotations), before its first instruction."""
+    lines = block.split("\n")
+    at, inside = 1, None
+    while at < len(lines):
+        line = lines[at].strip()
+        if inside:
+            if line == inside:
+                inside = None
+        elif line.startswith(".annotation"):
+            inside = ".end annotation"
+        elif line.startswith(".param"):
+            following = next((l.strip() for l in lines[at + 1:] if l.strip()), "")
+            if following.startswith(".annotation"):
+                inside = ".end param"
+        elif not (line == "" or line.startswith((".registers", ".locals", ".prologue"))):
+            break
+        at += 1
+    return "\n".join(lines[:at]) + "\n" + code + "\n" + "\n".join(lines[at:])
+
+
+def carries_a_port(dex: bytes) -> bool:
+    return any(all(marker.encode() in dex for marker in markers) for _f, markers, *_ in PORTS)
+
+
+def port_targets() -> List[str]:
+    return sorted(set(re.findall(r"Lcat/narezany/margyt/[\w/$]+;->[\w$<>]+\([^)]*\)\[*(?:L[\w/$]+;|[ZBSCIJFDV])",
+                                 repr([p[4] for p in PORTS]))))
+
+
+def rewrite_ported(root: str) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    if not PORTS:
+        return counts
+    for directory, _, files in os.walk(root):
+        for name in files:
+            if not name.endswith(".smali"):
+                continue
+            path = os.path.join(directory, name)
+            with open(path, encoding="utf-8") as handle:
+                text = handle.read()
+            changed = text
+            for feature, markers, header, how, what in PORTS:
+                if not all(_port_holds(changed, marker) for marker in markers):
+                    continue
+                def port(match, feature=feature, how=how, what=what):
+                    block = match.group(0)
+                    first = block.split("\n", 1)[0]
+                    if any(target in block for target in re.findall(r"Lcat/narezany/margyt/[^\s(]+\(", str(what))):
+                        return block
+                    if how == "start":
+                        if "v0" in what and not _port_has_local(first, block):
+                            print("    port %s: %s has no register of its own" % (feature, first.strip()))
+                            return block
+                        counts[feature] = counts.get(feature, 0) + 1
+                        return _port_start(block, what)
+                    if how == "swap":
+                        block, hits = re.subn(what[0], what[1], block)
+                    else:
+                        container = CONTAINER.search(block)
+                        if not container:
+                            return block
+                        block, hits = re.subn(what[0], lambda m: m.group(0) + what[1].format(container.group(1)), block)
+                    if hits:
+                        counts[feature] = counts.get(feature, 0) + hits
+                    return block
+                changed = re.sub(r"(?ms)^\.method (?:%s)\n.*?^\.end method" % header, port, changed)
+            if changed != text:
+                with open(path, "w", encoding="utf-8") as handle:
+                    handle.write(changed)
+    return counts
+
+
 # --------------------------------------------------------- the landing sites
 #
 # Every rewrite above turns a call into the app's own code into a call into
@@ -2315,6 +2580,7 @@ def dex_format(dex: bytes) -> str:
 def rewrite_targets() -> List[str]:
     """Every static the rewrites point at, as `Lowner;->name(descriptor)`."""
     out = ["%s->accent()I" % ACCENT]
+    out.extend(port_targets())
     out.append(RECALL_TARGET)
     out.append("%s->display(Ljava/lang/Object;)V" % FRAMES)
     out.append("%s->setAnimation(Ljava/lang/Object;Ljava/lang/String;)V" % ACCENT)
@@ -2516,9 +2782,11 @@ def rewrite_everything(root: str, literals: Optional[Dict[str, str]] = None,
     itself as well, a pass that could not find anything in it is not sent to
     read ten thousand files to learn that.
     """
-    counts = rewrite_smali(root)
+    counts = rewrite_ported(root)
+    counts.update(rewrite_smali(root))
     counts.update(rewrite_literals(root, literals or {}))
     counts.update(force_false(root))
+    counts.update(stub_out(root))
     counts.update(rewrite_models(root))
     counts.update(rewrite_flag_reader(root, dex))
     counts.update(rewrite_hdr_switch(root, dex))

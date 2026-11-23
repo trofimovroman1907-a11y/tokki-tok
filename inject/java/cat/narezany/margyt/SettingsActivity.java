@@ -94,6 +94,7 @@ public class SettingsActivity extends Activity {
     /** Where a receipt goes: the channel's own messages, not somebody's inbox. */
     private static final String CHANNEL_WRITE = "https://t.me/margytiktok?direct";
     private static final String TTCUZ = "https://t.me/ttcuzmod";
+    private static final String SKYTOK = "https://t.me/SkyTok_Mod";
     private static final String GIT = "https://git.narez.xyz/narezany/MargyT";
     private static final String DOCS_PLUGINS =
             "https://git.narez.xyz/narezany/MargyT/src/branch/main/docs/plugins.md";
@@ -139,6 +140,7 @@ public class SettingsActivity extends Activity {
             new Shelf(1, "font", "text_fields", Text.FONT, Text.PAGE_FONT_NOTE, Text.FONT),
             new Shelf(1, "typing", "edit", TYPING, TYPING_NOTE, TYPING),
             new Shelf(1, "motionblur", "animation", MOTION_BLUR, MOTION_BLUR_NOTE, MOTION_BLUR),
+            new Shelf(1, "uimotion", "animation", UI_MOTION, UI_MOTION_NOTE, UI_MOTION),
             new Shelf(2, "badges", "verified", Text.BADGES, Text.PAGE_BADGES_NOTE, Text.BADGES),
             new Shelf(2, "frames", "account_circle", FRAMES, FRAMES_NOTE, FRAMES),
             new Shelf(2, "gradient", "palette", Text.GRADIENT, Text.PAGE_GRADIENT_NOTE, Text.GRADIENT),
@@ -146,13 +148,12 @@ public class SettingsActivity extends Activity {
             new Shelf(2, "account", "fingerprint", Text.ACCOUNT, Text.PAGE_ACCOUNT_NOTE, Text.ACCOUNT),
             new Shelf(2, "reposts", "repeat", REPOSTS, REPOSTS_NOTE, REPOSTS),
             new Shelf(3, "feed", "view_compact", Text.FEED, Text.PAGE_FEED_NOTE, Text.FEED, Text.SIMPLE_FEED, Text.DATE_FILTER),
-            new Shelf(3, "video", "play_circle", Text.VIDEO, Text.PAGE_VIDEO_NOTE, Text.VIDEO, Text.FPS),
+            new Shelf(3, "video", "play_circle", Text.VIDEO, Text.PAGE_VIDEO_NOTE, Text.VIDEO, AMBIENT, Text.FPS),
             new Shelf(3, "sponsor", "fast_forward", SPONSOR, SPONSOR_NOTE, SPONSOR),
+            new Shelf(3, "region", "public", Text.REGION, Text.PAGE_REGION_NOTE, Text.REGION, Text.COUNTRY),
             new Shelf(3, "burn", "eye_open", BURN, Text.PAGE_BURN_NOTE, BURN),
             new Shelf(3, "motion", "animation", MOTION, MOTION_NOTE, MOTION),
-            new Shelf(3, "region", "public", Text.REGION, Text.PAGE_REGION_NOTE, Text.REGION, Text.COUNTRY),
             new Shelf(4, "downloads", "download", Text.DOWNLOADS, Text.PAGE_DOWNLOADS_NOTE, Text.DOWNLOADS),
-            new Shelf(4, "cleanlinks", "link", CLEAN_LINKS, CLEAN_LINKS_NOTE, CLEAN_LINKS),
             new Shelf(4, "backup", "restore", Text.BACKUP, Text.PAGE_BACKUP_NOTE, Text.BACKUP),
             new Shelf(4, "diagnostics", "bug_report", Text.DIAGNOSTICS, Text.PAGE_DIAGNOSTICS_NOTE, Text.DIAGNOSTICS),
             new Shelf(4, "diary", "article", Text.DIARY, Text.PAGE_DIARY_NOTE, Text.DIARY),
@@ -160,14 +161,18 @@ public class SettingsActivity extends Activity {
             new Shelf(5, "links", "link", Text.LINKS, Text.PAGE_LINKS_NOTE, Text.LINKS),
             new Shelf(5, "thanks", "favorite_border", Text.THANKS, Text.PAGE_THANKS_NOTE, Text.THANKS),
             new Shelf(6, "plugins", "extension", Text.PLUGINS, "", Text.PLUGINS),
-            new Shelf(7, "ghost", "visibility_off", GHOST, GHOST_NOTE, GHOST),
+            new Shelf(9, "ghost", "visibility_off", GHOST, GHOST_NOTE, GHOST),
+            new Shelf(9, "cleanlinks", "link", CLEAN_LINKS, CLEAN_LINKS_NOTE, CLEAN_LINKS),
             new Shelf(7, "streaks", "schedule", Text.STREAKS, Text.PAGE_STREAKS_NOTE, Text.STREAKS),
             new Shelf(7, "notifications", "notifications", Text.NOTIFICATIONS, Text.PAGE_NOTIFICATIONS_NOTE, Text.NOTIFICATIONS),
+            new Shelf(9, "applock", "lock", ENTRY_PROTECTION, "", ENTRY_PROTECTION),
+            new Shelf(8, "party", "star", PARTY_GAME, PARTY_NOTE, PARTY_GAME),
             new Shelf(8, "rubble", "open_with", Text.FUN_RUBBLE, Text.PAGE_RUBBLE_NOTE, Text.FUN_RUBBLE),
             new Shelf(8, "tilcayo", "animation", Text.FUN_TILCAYO_RUN, Text.PAGE_TILCAYO_NOTE, Text.FUN_TILCAYO_RUN),
             new Shelf(8, "screamers", "animation", Text.FUN_SCREAMERS, Text.PAGE_SCREAMERS_NOTE, Text.FUN_SCREAMERS),
             new Shelf(8, "avariyka", "notifications", Text.FUN_AVARIYKA, Text.PAGE_AVARIYKA_NOTE, Text.FUN_AVARIYKA),
             new Shelf(8, "lag", "bug_report", Text.FUN_LAG, "", Text.FUN_LAG),
+            new Shelf(8, "nofeed", "visibility_off", NO_FEED, NO_FEED_NOTE, NO_FEED),
             new Shelf(8, "cat", "image", Text.FUN_CAT, Text.PAGE_CAT_NOTE, Text.FUN_CAT),
         };
         return shelves;
@@ -177,6 +182,7 @@ public class SettingsActivity extends Activity {
         java.util.List<Shelf> out = new java.util.ArrayList<>();
         for (Shelf one : shelves()) {
             if (one.group != group) continue;
+            if (one.id.equals("party") && !Party.open()) continue;
             if (Version.LITE) { boolean any = false; for (String section : one.sections) any |= inLite(section); if (!any) continue; }
             out.add(one);
         }
@@ -251,6 +257,8 @@ public class SettingsActivity extends Activity {
         rebuild();
         maybeAskForSupport();
         if(getIntent().getBooleanExtra("margyt_tutorial",false))root.postDelayed(()->Tutorial.show(this),350L);
+        // from the birthday game: it needs a proved account, and this is where proving starts
+        if(getIntent().getBooleanExtra("margyt_prove",false))root.postDelayed(this::proveAccount,350L);
         openPluginFile(getIntent());
         openStyleFile(getIntent());
         openStats(getIntent());
@@ -278,6 +286,50 @@ public class SettingsActivity extends Activity {
     private static String share(long part, long of) {
         if (of <= 0) return "—";
         return String.format(Locale.ROOT, "%.2f%%", part * 100.0 / of).replace('.', ',');
+    }
+
+    private void editAdWords() {
+        Panel p = Panel.with(this, skin, Local.of("Слова рекламы"));
+        p.text(Local.of("Видео, в описании которого есть такое слово, скрывается, а где его произносят в субтитрах — пропускается. По одному слову или фразе в строке."));
+        final android.widget.EditText words = p.field(Local.of("Например: ggdrop, промокод"));
+        words.setSingleLine(false); words.setMinLines(4); words.setMaxLines(10); words.setGravity(Gravity.TOP | Gravity.START);
+        words.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+        words.setText(AdWords.own());
+        final boolean[] builtIn = {AdWords.defaults()};
+        p.view(liveToggleRow("block", Local.of("Встроенный список") + " (" + AdWords.BUILT_IN.length + ")", builtIn[0], on -> builtIn[0] = on));
+        p.text(Local.of("Встроенные") + ": " + String.join(", ", AdWords.BUILT_IN));
+        p.primary(Local.of("Сохранить"), () -> { AdWords.setWords(words.getText().toString(), builtIn[0]); Screen.say(Local.of("Сохранено. Сработает с новыми видео.")); });
+        p.quiet(Text.CANCEL, null);
+        p.show();
+    }
+
+    private static String[] localised(String[] russian) {
+        String[] out = new String[russian.length];
+        for (int i = 0; i < out.length; i++) out[i] = Local.of(russian[i]);
+        return out;
+    }
+
+    private static final int BEAT_PERMISSION = 0x7442;
+
+    /** Beat vibration reads TikTok's sound through Android's Visualizer, which needs "record audio" granted first. */
+    private void setBeat(boolean on) {
+        if (on && !BeatHaptics.allowed(this)) {
+            Screen.say(Local.of("Android спросит про микрофон: так мод слышит музыку TikTok. Сам микрофон не включается"));
+            requestPermissions(new String[]{android.Manifest.permission.RECORD_AUDIO}, BEAT_PERMISSION);
+            return;
+        }
+        BeatHaptics.set(on);
+        rebuild();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
+        super.onRequestPermissionsResult(code, permissions, results);
+        if (code != BEAT_PERMISSION) return;
+        boolean granted = results.length > 0 && results[0] == android.content.pm.PackageManager.PERMISSION_GRANTED;
+        BeatHaptics.set(granted);
+        if (!granted) Screen.say(Local.of("Без этого разрешения вибрация в ритм не работает"));
+        rebuild();
     }
 
     private View statRow(String picture, String title, String value) {
@@ -698,6 +750,11 @@ public class SettingsActivity extends Activity {
         Shelf open = shelf(settingsPage);
         if (open != null && open.group != settingsGroup) { settingsPage = null; open = null; }
         column.addView(title(settingsGroup == 0 ? (Version.LITE ? "MargyT Lite" : "MargyT") : open != null ? open.title : groupName(settingsGroup)));
+        // 2.3.1: the birthday letter, a gold note under the title that opens the invitation
+        if (settingsGroup == 0 && searchQuery.length() == 0) {
+            View letter = Party.letter(this, null);
+            if (letter != null) column.addView(letter);
+        }
         if(settingsGroup==0 || searchQuery.length()>0)column.addView(searchBox());
         if (open != null && open.note.length() > 0) { View lead = lead(open.note); lead.setTag(LEAD, Boolean.TRUE); column.addView(lead); }
         // a search builds every page as if to show it, reads them, and shows what it found instead
@@ -805,6 +862,9 @@ public class SettingsActivity extends Activity {
         loading.addView(toggleRow("tune", Design.caption(Text.MD3_INBOX), Md3.isOn(Md3.KEY_INBOX), on -> Md3.set(Md3.KEY_INBOX, on)));
         loading.addView(line());
         loading.addView(toggleRow("chat_bubble", Design.caption(Text.DESIGN_COMMENTS), CommentStyle.enabled(), CommentStyle::set));
+        loading.addView(line());
+        // 2.4, from LotusTok: a chat in the shapes of Material 3 Expressive
+        loading.addView(toggleRow("chat", Design.caption(CHAT_MD3), ChatM3.isEnabled(), ChatM3::setEnabled));
         column.addView(wrap(loading));
 
         column.addView(section(Text.THEME));
@@ -924,6 +984,16 @@ public class SettingsActivity extends Activity {
                 .hide(SettingsPictures.Feed.PHOTO, Feed.hides(Feed.KEY_PHOTOS))
                 .hide(SettingsPictures.Feed.STORY, Feed.hides(Feed.KEY_STORIES));
         feed.addView(strip);
+        // 2.4, from ttcuz: advertising TikTok does not call an ad (casinos, case drops, betting) is hidden or skipped
+        feed.addView(actionRow("edit", Local.of("Слова рекламы"), Local.of("Свои слова и встроенный список"), this::editAdWords));
+        feed.addView(line());
+        // 2.4, from ttcuz: how the feed turns from one video to the next
+        feed.addView(actionRow("swap_vert", Local.of("Эффект прокрутки"), FeedScroll.name(), () ->
+                new ModDialog.Builder(this).setSingleChoiceItems(localised(FeedScroll.NAMES), FeedScroll.effect(), (d, i) -> { FeedScroll.set(i); d.dismiss(); rebuild(); }).show()));
+        if (FeedScroll.effect() != FeedScroll.NONE || FeedScroll.blur())
+            feed.addView(slider("tune", Local.of("Сила эффекта"), FeedScroll.strength(), 100, 0, "%", FeedScroll::setStrength));
+        feed.addView(liveToggleRow("animation", Local.of("Глубина при прокрутке"), FeedScroll.depth(), on -> { FeedScroll.setDepth(on); rebuild(); }));
+        feed.addView(line());
         feed.addView(toggleRow("visibility_off", Text.HIDE_LIVE, Feed.hides(Feed.KEY_LIVE), on -> {
             Feed.setHides(Feed.KEY_LIVE, on);
             strip.hide(SettingsPictures.Feed.LIVE, on).settle();
@@ -938,7 +1008,11 @@ public class SettingsActivity extends Activity {
             Feed.setHides(Feed.KEY_STORIES,on);
             strip.hide(SettingsPictures.Feed.STORY, on).settle();
         }));
+        feed.addView(line());
+        feed.addView(actionRow("tag", Local.of("Формат чисел"), NumberStyle.names()[NumberStyle.style()],
+                this::chooseNumberStyle));
         column.addView(wrap(feed));
+
 
         column.addView(section(Text.SIMPLE_FEED));
         LinearLayout simpler = card();
@@ -976,6 +1050,7 @@ public class SettingsActivity extends Activity {
         dates.addView(caption(Text.DATE_FILTER_NOTE));
         column.addView(wrap(dates));
 
+
         column.addView(section(Text.VIDEO));
         LinearLayout video = card();
         // a finger on the edge of a video: the speed while held, and swiped down to keep it
@@ -1002,8 +1077,24 @@ public class SettingsActivity extends Activity {
             Flags.set(Flags.KEY_SPEED_LOCK, on);
             speedArt.set(PlayerTools.speed(), on);
         }));
+        // 2.4, from ttcuz: the phone taps along with the music of the video
+        video.addView(line());
+        video.addView(liveToggleRow("vibration", Local.of("Вибрация в ритм музыки"), BeatHaptics.on(), this::setBeat));
+        if (BeatHaptics.on()) {
+            video.addView(actionRow("music_note", Local.of("Вибрировать на"), Local.of(BeatHaptics.MODES[BeatHaptics.mode()]), () ->
+                    new ModDialog.Builder(this).setSingleChoiceItems(localised(BeatHaptics.MODES), BeatHaptics.mode(), (dialog, index) -> { BeatHaptics.setMode(index); dialog.dismiss(); rebuild(); }).show()));
+            video.addView(actionRow("tune", Local.of("Сила вибрации"), Local.of(BeatHaptics.POWERS[BeatHaptics.power()]), () ->
+                    new ModDialog.Builder(this).setSingleChoiceItems(localised(BeatHaptics.POWERS), BeatHaptics.power(), (dialog, index) -> { BeatHaptics.setPower(index); dialog.dismiss(); rebuild(); }).show()));
+        }
 
         column.addView(wrap(video));
+
+        // 2.4: the bars round a video glow in its colours, as on YouTube
+        column.addView(section(AMBIENT));
+        LinearLayout ambient = card();
+        ambient.addView(liveToggleRow("gradient", Local.of("Режим Ambient"), Ambient.on(), Ambient::set));
+        ambient.addView(caption(Local.of("Полосы вокруг видео светятся его же цветами, как в YouTube.")));
+        column.addView(wrap(ambient));
 
         column.addView(section(Text.FPS));
         LinearLayout fps = card();
@@ -1169,7 +1260,29 @@ public class SettingsActivity extends Activity {
         notifications.addView(liveToggleRow("notifications",Text.NOTIFY_OTHER,ModNotifications.option(2),on->{ModNotifications.set(ModNotifications.OTHER,on);notices.set(2,on).settle();if(!on)rebuildAfterSwitchAnimation();}));
         notifications.addView(liveToggleRow("notifications_off",Text.NOTIFY_NO_PROMPTS,ModNotifications.noPrompts(),on->{AccountAppearance.prefs(this).edit().putBoolean(ModNotifications.NO_PROMPTS,on).apply();ModNotifications.reload();}));
         notifications.addView(actionRow("settings",Text.NOTIFY_SETTINGS,null,()->ModNotifications.settings(this)));
+        notifications.addView(line());
+        notifications.addView(liveToggleRow("chat", Local.of("Пункт «Прочитать всё» во входящих"),
+                InboxReadAll.enabled(), InboxReadAll::set));
         column.addView(wrap(notifications));
+
+        column.addView(section(ENTRY_PROTECTION));
+        LinearLayout protection = card();
+        protection.addView(liveToggleRow("lock", Local.of("Защита входа в TikTok"), AppLock.app(), on -> {
+            if (!AppLock.set(this, AppLock.APP, on)) rebuild();
+        }));
+        protection.addView(line());
+        protection.addView(liveToggleRow("chat", Local.of("Защита переписок"), AppLock.chats(), on -> {
+            if (!AppLock.set(this, AppLock.CHATS, on)) rebuild();
+        }));
+        protection.addView(line());
+        protection.addView(actionRow("fingerprint", Local.of("Способ разблокировки"),
+                Local.of(AppLock.METHODS[AppLock.method()]), this::chooseAppLockMethod));
+        if (AppLock.usesPin()) {
+            protection.addView(line());
+            protection.addView(actionRow("key", Local.of("Сменить код"), null,
+                    () -> AppLock.choosePin(this, this::rebuild)));
+        }
+        column.addView(wrap(protection));
 
         column.addView(section(Text.CHANNEL));
         column.addView(channelBanner());
@@ -1231,6 +1344,13 @@ public class SettingsActivity extends Activity {
         donateAnchor = wrap(actionRow("favorite_border", Text.THANKS, Text.PAGE_THANKS_NOTE, this::showThanks));
         column.addView(donateAnchor);
 
+        if (Party.open()) {
+            column.addView(section(PARTY_GAME));
+            LinearLayout party = card();
+            party.addView(actionRow("play_arrow", Local.of("Играть"), PARTY_NOTE, () -> Party.play(this)));
+            column.addView(wrap(party));
+        }
+
         column.addView(section(Text.FUN_SCREAMERS));
         LinearLayout screamers = card();
         screamers.addView(new SettingsPictures.Scream(this, skin));
@@ -1273,6 +1393,13 @@ public class SettingsActivity extends Activity {
         lag.addView(liveToggleRow("bug_report", Text.FUN_LAG, FakeLag.isOn(this), on -> FakeLag.set(this, on)));
         lag.addView(quiet(Text.LAG_NOTE));
         column.addView(wrap(lag));
+
+        // 2.4: TikTok without the For You feed, and without its button
+        column.addView(section(NO_FEED));
+        LinearLayout noFeed = card();
+        noFeed.addView(liveToggleRow("visibility_off", NO_FEED, NoFeed.on(), NoFeed::set));
+        noFeed.addView(quiet(Local.of("Пропадают лента «Для вас» и кнопка «Главная» внизу. TikTok открывается на соседней вкладке. Выключите, и всё вернётся.")));
+        column.addView(wrap(noFeed));
 
         column.addView(section(Text.FUN_CAT));
         column.addView(fatCat());
@@ -1364,6 +1491,20 @@ public class SettingsActivity extends Activity {
         reposts.addView(actionRow("repeat", Local.of("Удалить все мои репосты"), Local.of("Все репосты пропадут из профиля"), () -> RepostPurge.begin(this)));
         column.addView(wrap(reposts));
 
+        // 2.4, after SkyTok: TikTok's buttons spring, follow pops, rows ease in
+        column.addView(section(UI_MOTION));
+        LinearLayout motion = card();
+        motion.addView(liveToggleRow("touch_app", Local.of("Пружинящие кнопки"), UiMotion.on(UiMotion.KEY_PRESS), on -> UiMotion.set(UiMotion.KEY_PRESS, on)));
+        motion.addView(line());
+        motion.addView(liveToggleRow("person_add", Local.of("«Подписаться» подпрыгивает"), UiMotion.on(UiMotion.KEY_FOLLOW), on -> UiMotion.set(UiMotion.KEY_FOLLOW, on)));
+        motion.addView(line());
+        motion.addView(liveToggleRow("view_compact", Local.of("Плавное появление комментариев и чатов"), UiMotion.on(UiMotion.KEY_LISTS), on -> UiMotion.set(UiMotion.KEY_LISTS, on)));
+        motion.addView(line());
+        motion.addView(actionRow("tune", Local.of("Сила"), Local.of(UiMotion.STRENGTHS[UiMotion.strength()]), () ->
+                new ModDialog.Builder(this).setSingleChoiceItems(localised(UiMotion.STRENGTHS), UiMotion.strength(), (d, i) -> { UiMotion.setStrength(i); d.dismiss(); rebuild(); }).show()));
+        motion.addView(caption(Local.of("Идея из SkyTok.")));
+        column.addView(wrap(motion));
+
         column.addView(section(GHOST));
         LinearLayout ghost = card();
         final NewPictures.Ghosting ghostArt = new NewPictures.Ghosting(this, skin, Ghost.on(Ghost.KEY));
@@ -1380,7 +1521,8 @@ public class SettingsActivity extends Activity {
                     {Ghost.READ, Local.of("Не отправлять «прочитано»")},
                     {Ghost.TYPING, Local.of("Не отправлять «печатает»")},
                     {Ghost.STORIES, Local.of("Не отмечать просмотр историй")},
-                    {Ghost.PROFILES, Local.of("Не отмечать посещение профилей")}};
+                    {Ghost.PROFILES, Local.of("Не отмечать посещение профилей")},
+                    {Ghost.VIEWS, Local.of("Не отправлять просмотры видео")}};
             for (String[] part : parts) {
                 final String key = part[0];
                 ghost.addView(line());
@@ -3592,6 +3734,38 @@ public class SettingsActivity extends Activity {
                 .show();
     }
 
+    private void chooseNumberStyle() {
+        new ModDialog.Builder(this, skin)
+                .setTitle(Local.of("Формат чисел"))
+                .setSingleChoiceItems(NumberStyle.names(), NumberStyle.style(), (dialog, index) -> {
+                    dialog.dismiss();
+                    NumberStyle.setStyle(index);
+                    rebuild();
+                })
+                .setNegativeButton(Text.CANCEL, null)
+                .show();
+    }
+
+    private void chooseAppLockMethod() {
+        String[] choices = {Local.of(AppLock.METHODS[AppLock.SYSTEM]), Local.of(AppLock.METHODS[AppLock.CODE])};
+        new ModDialog.Builder(this, skin)
+                .setTitle(Local.of("Способ разблокировки"))
+                .setSingleChoiceItems(choices, AppLock.method(), (dialog, index) -> {
+                    dialog.dismiss();
+                    if (index == AppLock.method()) return;
+                    if (index == AppLock.CODE) {
+                        AppLock.choosePin(this, this::rebuild);
+                    } else if ((AppLock.app() || AppLock.chats()) && !AppLock.possible(this)) {
+                        Screen.say(Local.of("Для этого способа нужна блокировка экрана на Android 9 или новее"));
+                    } else {
+                        AppLock.clearPin();
+                        rebuild();
+                    }
+                })
+                .setNegativeButton(Text.CANCEL, null)
+                .show();
+    }
+
     private void chooseAccentColour() {
         LinearLayout content = new LinearLayout(this);
         content.setOrientation(LinearLayout.VERTICAL);
@@ -4315,6 +4489,8 @@ public class SettingsActivity extends Activity {
                 ThanksSpace.EGG_LOTUS, () -> open(LOTUSTOK)));
         people.add(new ThanksSpace.Person("TT Extras", Local.of("Плагин для MargyT: из него призрак и длинные комментарии"),
                 ThanksSpace.EGG_GHOST, null));
+        people.add(new ThanksSpace.Person("небесный", Local.of("Автор SkyTok: анимации интерфейса и другое"),
+                ThanksSpace.EGG_CONSTELLATION, () -> open(SKYTOK)));
         people.add(new ThanksSpace.Person("санек :3 (санечек)", Local.of("Часть дизайна MargyT"), ThanksSpace.EGG_HEART, () -> open(SANEK)));
         java.util.List<ThanksSpace.Planet> planets = new java.util.ArrayList<>();
         planets.add(new ThanksSpace.Planet(Text.YOOMONEY, 0xFF8B5CF6, () -> open(YOOMONEY)));
@@ -5003,6 +5179,11 @@ public class SettingsActivity extends Activity {
         name.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
         name.setPadding(dp(12), 0, 0, 0);
         bar.addView(name);
+        if (settingsGroup == 0 && !Version.LITE) {
+            // the mailbox, at the far end of the bar
+            bar.addView(new View(this), new LinearLayout.LayoutParams(0, 1, 1f));
+            bar.addView(Mailbox.button(this, skin.text, dp(48)), new LinearLayout.LayoutParams(dp(48), dp(48)));
+        }
         bar.setContentDescription(settingsGroup == 0 ? "TikTok" : Local.of("Настройки"));
         bar.setOnClickListener(v -> goBack());
         return bar;
@@ -5069,6 +5250,7 @@ public class SettingsActivity extends Activity {
                 topBar.addView(mark, markSize);
             }
             topBar.addView(view, grow());
+            if (settingsGroup == 0 && !Version.LITE) topBar.addView(Mailbox.button(this, skin.text, dp(48)), new LinearLayout.LayoutParams(dp(48), dp(48)));
             View none = new View(this); none.setVisibility(View.GONE);
             return none;
         }
@@ -5468,6 +5650,7 @@ public class SettingsActivity extends Activity {
             case 6: return Local.of("Плагины");
             case 7: return Local.of("Чаты, серии, уведомления");
             case 8: return Text.FUN;
+            case 9: return Local.of("Приватность");
             default: return "MargyT";
         }
     }
@@ -5479,23 +5662,25 @@ public class SettingsActivity extends Activity {
                 Local.of("Скачивание, копии настроек, диагностика и журнал."),
                 Local.of("Здесь находятся версия мода, обновления, журнал и участники."), Local.of("Магазин и настройки плагинов. Ставь только те, которым доверяешь."),
                 Local.of("Автопродление серий и уведомления мода."),
-                Text.FUN_HELP};
+                Text.FUN_HELP,
+                Local.of("Что TikTok узнаёт о вас: призрак, замок на вход и ссылки без меток слежки.")};
         Panel.with(this,skin,Local.of("Подсказки")).text(notes[Math.max(0,Math.min(notes.length-1,settingsGroup))])
                 .quiet(Local.of("Обучение"),() -> Tutorial.show(this)).primary(Local.of("Понятно"),null).show();
     }
 
     private View groupNavigation() {
         LinearLayout list = card();
-        String[] icons = {"palette", "group", "play_circle", "tune", "info", "extension", "chat", "flare"};
+        String[] icons = {"palette", "group", "play_circle", "tune", "info", "extension", "chat", "flare", "lock"};
         String[] notes = {Local.of("Акцент, тема и шрифты"),
                 Local.of("Значки, градиент и аккаунт"),
                 Local.of("Просмотр, кнопки, защита экрана и регион"),
                 Local.of("Скачивание, копии и диагностика"),
                 Local.of("Версия, обновления и участники"), Local.of("Магазин и установленные"),
-                Local.of("Серии и уведомления"), Text.FUN_NOTE};
+                Local.of("Серии и уведомления"), Text.FUN_NOTE,
+                Local.of("Призрак, замок и чистые ссылки")};
         // Shelf order on screen: what people touch daily first, the project itself last.
         // Lite has the shelves that have something on them for it
-        int[] shelf = Version.LITE ? new int[] {1, 3, 2, 4, 8, 5} : new int[] {1, 2, 3, 7, 4, 6, 8, 5};
+        int[] shelf = Version.LITE ? new int[] {1, 3, 2, 4, 8, 5} : new int[] {1, 2, 3, 9, 7, 4, 6, 8, 5};
         for (int n = 0; n < shelf.length; n++) {
             final int i = shelf[n];
             final int chosen = i;
@@ -5531,6 +5716,9 @@ public class SettingsActivity extends Activity {
     /** The pages of a shelf, each with what it is for. */
     private View shelfList(java.util.List<Shelf> pages) {
         LinearLayout list = card();
+        // 2.4: a shelf of many pages shows its first four, the ones most looked for, and the rest behind "more"
+        final boolean fold = settingsGroup != 8 && pages.size() > 5;
+        final java.util.List<View> later = new java.util.ArrayList<>();
         for (int n = 0; n < pages.size(); n++) {
             final Shelf one = pages.get(n);
             if (n > 0) list.addView(line());
@@ -5552,6 +5740,24 @@ public class SettingsActivity extends Activity {
                 Motion.navigate(column, 1f, () -> { settingsPage = one.id; page.scrollTo(0, 0); navigate(); navigating = false; });
             });
             list.addView(entry);
+            if (fold && n >= 4) {
+                later.add(entry);
+                if (list.getChildCount() >= 2) later.add(list.getChildAt(list.getChildCount() - 2));
+                entry.setVisibility(View.GONE);
+            }
+        }
+        if (fold && !later.isEmpty()) {
+            for (View hidden : later) hidden.setVisibility(View.GONE);
+            final View sep = line();
+            list.addView(sep);
+            final View[] more = new View[1];
+            more[0] = actionRow("expand_more", Local.of("Ещё") + " " + (pages.size() - 4), null, () -> {
+                for (View hidden : later) hidden.setVisibility(View.VISIBLE);
+                if (more[0] != null) more[0].setVisibility(View.GONE);
+                sep.setVisibility(View.GONE);
+                if (list instanceof Expressive.Group) ((Expressive.Group) list).refresh();
+            });
+            list.addView(more[0]);
         }
         return wrap(list);
     }
@@ -5660,6 +5866,9 @@ public class SettingsActivity extends Activity {
     }
 
     private static final String BURN = Local.of("Защита экрана");
+    /** The birthday game (2.3.1): in the silly things for good, from the 24th of November on. */
+    private static final String PARTY_GAME = Party.title();
+    private static final String PARTY_NOTE = Party.note();
     private static final String FRAMES = Local.of("Рамки аватарки"),
             FRAMES_NOTE = Local.of("Рамка вокруг аватарки, её видят все с модом"),
             MOTION = Local.of("Защита от укачивания"),
@@ -5678,8 +5887,17 @@ public class SettingsActivity extends Activity {
             REPOSTS = Local.of("Мои репосты"),
             REPOSTS_NOTE = Local.of("Удалить все репосты разом"),
             MESSAGES = Local.of("Личные сообщения"),
+            CHAT_MD3 = Local.of("MD3 чат"),
+            AMBIENT = Local.of("Ambient"),
+            NO_FEED = Local.of("Без рекомендаций"),
+            NO_FEED_NOTE = Local.of("Ни ленты «Для вас», ни кнопки «Главная»"),
+            UI_MOTION = Local.of("Анимации интерфейса"),
+            UI_MOTION_NOTE = Local.of("Кнопки пружинят, списки плавно появляются"),
+            CHAT_MD3_NOTE = Local.of("Переписка в формах Material 3"),
             MESSAGES_NOTE = Local.of("Папки чатов и полоса историй"),
             INBOX_CLEAN = Local.of("Что скрыть во «Входящих»"),
+            COMMENT_OPTIONS = Local.of("Настройки комментариев"),
+            ENTRY_PROTECTION = Local.of("Защита входа"),
             GHOST = Local.of("Режим призрака"),
             GHOST_NOTE = Local.of("Без «в сети», «прочитано» и «печатает»");
     private static final String LOTUSTOK = "https://github.com/pikmis/lotustok";
