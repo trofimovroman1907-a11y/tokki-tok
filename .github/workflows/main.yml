@@ -18,6 +18,9 @@ jobs:
       with:
         python-version: '3.x'
 
+    - name: Install test dependencies
+      run: python -m pip install cryptography pillow
+
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
