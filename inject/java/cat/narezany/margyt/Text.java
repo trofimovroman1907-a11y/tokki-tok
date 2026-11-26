@@ -71,7 +71,7 @@ final class Text {
     static final String DL_LOW=pick("Минимальное доступное","Мінімальна доступна","Lowest available");
     static final String DL_AUDIO=pick("Только звук","Лише звук","Audio only");
     static final String FRAME_QUALITY=pick("Размер кадра","Розмір кадру","Frame size");
-    static final String VIDEO_ACTIONS_HINT=pick("Удерживайте «Отправить» на видео, чтобы открыть действия MargyT.","Утримуйте «Надіслати» на відео, щоб відкрити дії MargyT.","Hold Share on a video to open MargyT actions.");
+    static final String VIDEO_ACTIONS_HINT=pick("Удерживайте «Отправить» на видео, чтобы открыть действия Tokki Tok.","Утримуйте «Надіслати» на відео, щоб відкрити дії Tokki Tok.","Hold Share on a video to open Tokki Tok actions.");
     static final String APPLY=pick("Применить","Застосувати","Apply");
     static final String RAIL=pick("Кнопки видео","Кнопки відео","Video buttons");
     static final String RAIL_LIKE=pick("Лайк","Вподобайка","Like");
@@ -98,9 +98,9 @@ final class Text {
     static final String PROFILE_STYLE = pick("Оформление профиля",
             "Оформлення профілю", "Profile style");
     static final String LITE_GOOGLE = pick(
-            "Вход через Google в MargyT Lite не работает. Войди по почте или номеру телефона.",
-            "Вхід через Google у MargyT Lite не працює. Увійди за поштою або номером телефону.",
-            "Signing in with Google does not work in MargyT Lite. Use your e-mail or phone number.");
+            "Вход через Google в Tokki Tok Lite не работает. Войди по почте или номеру телефона.",
+            "Вхід через Google у Tokki Tok Lite не працює. Увійди за поштою або номером телефону.",
+            "Signing in with Google does not work in Tokki Tok Lite. Use your e-mail or phone number.");
     static final String APPEARANCE = pick("Внешний вид", "Зовнішній вигляд", "Appearance");
     static final String DESIGN = pick("Стиль интерфейса", "Стиль інтерфейсу", "Interface style");
     static final String DESIGN_NOTE = pick("Как выглядят меню и экраны TikTok", "Як виглядають меню й екрани TikTok", "How TikTok’s menus and screens look");
@@ -1508,15 +1508,15 @@ final class Text {
     static final String TUTORIAL_DONE = pick("Готово", "Готово", "Done");
     static final String TUTORIAL_SKIP = pick("Пропустить", "Пропустити", "Skip");
     static final String[] TUTORIAL_TITLES = {
-            pick("Добро пожаловать в MargyT", "Ласкаво просимо в MargyT", "Welcome to MargyT"),
+            pick("Добро пожаловать в Tokki Tok", "Ласкаво просимо в Tokki Tok", "Welcome to Tokki Tok"),
             pick("Своя палитра", "Своя палітра", "Your own palette"),
             pick("Защита экрана", "Захист екрана", "Screen protection"),
             pick("Значки и градиент", "Значки й градієнт", "Badges and a gradient"),
             pick("Всё под рукой", "Все під рукою", "Everything at hand")};
     static final String[] TUTORIAL_WORDS = {
-            pick("Все функции мода собраны в одном месте: профиль → меню → настройки TikTok → MargyT.",
-                    "Усі функції мода зібрано в одному місці: профіль → меню → налаштування TikTok → MargyT.",
-                    "Every feature of the mod lives in one place: profile → menu → TikTok settings → MargyT."),
+            pick("Все функции мода собраны в одном месте: профиль → меню → настройки TikTok → Tokki Tok.",
+                    "Усі функції мода зібрано в одному місці: профіль → меню → налаштування TikTok → Tokki Tok.",
+                    "Every feature of the mod lives in one place: profile → menu → TikTok settings → Tokki Tok."),
             pick("Откройте «Внешний вид» → «Акцент». Круг — доступный цвет, квадрат — выбранный.",
                     "Відкрийте «Зовнішній вигляд» → «Акцент». Коло — доступний колір, квадрат — вибраний.",
                     "Open Appearance → Accent. A circle is an available colour, a square is the chosen one."),
@@ -1526,9 +1526,9 @@ final class Text {
             pick("В разделе «Профиль» лежат значки и градиент на ник. Чтобы менять их, аккаунт подтверждается один раз: код на минуту ставится в описание профиля.",
                     "У розділі «Профіль» лежать значки й градієнт на нік. Щоб змінювати їх, акаунт підтверджується один раз: код на хвилину ставиться в опис профілю.",
                     "Badges and the gradient on your name live under Profile. Changing them takes proving the account once: a code sits in your bio for a minute."),
-            pick("Прозрачность меняется сразу. Если другой настройке нужен перезапуск, снизу появится кнопка. Отчёты о сбоях включаются в «Диагностике». Это обучение можно открыть снова в MargyT.",
-                    "Прозорість змінюється одразу. Якщо іншому налаштуванню потрібен перезапуск, знизу з’явиться кнопка. Звіти про збої вмикаються в «Діагностиці». Це навчання можна відкрити знову в MargyT.",
-                    "Transparency changes at once. When another setting needs a restart, a button appears at the bottom. Crash reports are switched in Diagnostics. You can reopen this tour in MargyT.")};
+            pick("Прозрачность меняется сразу. Если другой настройке нужен перезапуск, снизу появится кнопка. Отчёты о сбоях включаются в «Диагностике». Это обучение можно открыть снова в Tokki Tok.",
+                    "Прозорість змінюється одразу. Якщо іншому налаштуванню потрібен перезапуск, знизу з’явиться кнопка. Звіти про збої вмикаються в «Діагностиці». Це навчання можна відкрити знову в Tokki Tok.",
+                    "Transparency changes at once. When another setting needs a restart, a button appears at the bottom. Crash reports are switched in Diagnostics. You can reopen this tour in Tokki Tok.")};
 
     /** 0 for Russian, 1 for Ukrainian, 2 for everything else: for {@link Local}. */
     static int language3() {
