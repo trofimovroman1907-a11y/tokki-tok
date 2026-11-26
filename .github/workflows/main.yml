@@ -18,11 +18,8 @@ jobs:
       with:
         python-version: '3.12'
 
-    - name: Install test dependencies
-      run: python -m pip install cryptography pillow pyTelegramBotAPI requests
-
     - name: Install Python test dependencies
-      run: python -m pip install --upgrade pip cryptography pillow
+      run: python -m pip install --upgrade pip cryptography pillow pyTelegramBotAPI requests
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
