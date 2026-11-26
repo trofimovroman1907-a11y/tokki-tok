@@ -21,6 +21,9 @@ A TikTok mod for Android.
 ### ⚠️ APK Not Included
 This repository does not include the TikTok APK. To build Tokki Tok, you must supply the proprietary original TikTok APK locally. It is someone else's proprietary code and is not ours to redistribute.
 
+### Tokki Tok look
+The app icon is Tokki Tok's own note mark. The default accent is a soft mint (`#8DD1B0`), replacing TikTok pink across the parts of the interface the patcher can recolour. You can still choose another accent in the mod settings or pass `--accent RRGGBB` when building. The output file is `build/tokki-tok.apk`.
+
 ### Region Spoofing Notice
 The mod allows changing the region the app thinks you are in (reaching `carrier_region` and `sys_region`). Note that this **does not change your server-side account/store_region**, which is fixed when the account is registered. Changing your IP for other purposes requires a VPN.
 
