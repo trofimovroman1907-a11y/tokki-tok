@@ -147,7 +147,7 @@ class Build:
         self.key_password = key_password
         self.test = test
         self.lite = False
-        self.accent = dexpatch.TIKTOK_PINK if accent is None else accent
+        self.accent = 0xFF8DD1B0 if accent is None else accent  # Tokki Tok mint
         self.started = time.time()
         self.patched_dex_count = 0
         self.total_dex_count = 0
