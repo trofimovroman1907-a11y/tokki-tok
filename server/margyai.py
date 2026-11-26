@@ -274,7 +274,7 @@ class Assistant:
         self.direct, self.passive = collections.deque(), {}
         self.passive_at, self.rates, self.error_at = {}, {}, {}
         self.backoff = 0
-        self._catalog = (0, '')
+        self._catalog = (float('-inf'), '')
         self._pruned = 0
         self._worker = None
         self.prepare()
