@@ -94,7 +94,7 @@ public class SettingsActivity extends Activity {
     /** Where a receipt goes: the channel's own messages, not somebody's inbox. */
     private static final String CHANNEL_WRITE = "https://t.me/margytiktok?direct";
     private static final String TTCUZ = "https://t.me/ttcuzmod";
-    private static final String GIT = "https://git.narez.xyz/narezany/MargyT";
+    private static final String GIT = "https://github.com/trofimovroman1907-a11y/tokki-tok";
     private static final String DOCS_PLUGINS =
             "https://git.narez.xyz/narezany/MargyT/src/branch/main/docs/plugins.md";
     private static final String DOCS_STYLES =
