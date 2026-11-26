@@ -697,7 +697,7 @@ public class SettingsActivity extends Activity {
         }
         Shelf open = shelf(settingsPage);
         if (open != null && open.group != settingsGroup) { settingsPage = null; open = null; }
-        column.addView(title(settingsGroup == 0 ? (Version.LITE ? "MargyT Lite" : "MargyT") : open != null ? open.title : groupName(settingsGroup)));
+        column.addView(title(settingsGroup == 0 ? (Version.LITE ? "Tokki Tok Lite" : "Tokki Tok") : open != null ? open.title : groupName(settingsGroup)));
         if(settingsGroup==0 || searchQuery.length()>0)column.addView(searchBox());
         if (open != null && open.note.length() > 0) { View lead = lead(open.note); lead.setTag(LEAD, Boolean.TRUE); column.addView(lead); }
         // a search builds every page as if to show it, reads them, and shows what it found instead
