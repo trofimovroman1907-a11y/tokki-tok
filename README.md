@@ -36,7 +36,7 @@ Keeps TikTok's own package, `com.zhiliaoapp.musically`, so it goes in **instead*
 of the official app rather than beside it: uninstall TikTok first, then
 install this. arm64 only. No root.
 
-Everything the mod adds is on one screen: **Settings and privacy → MargyT**,
+Everything the mod adds is on one screen: **Settings and privacy → Tokki Tok**,
 the first row. There is no second icon on the home screen — the mod goes in
 through TikTok's own settings and nowhere else.
 
