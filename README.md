@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="assets/tokki-tok-icon.svg" alt="Tokki Tok" width="256">
+<img src="assets/tokki-tok-icon.png" alt="Tokki Tok" width="256">
 
 **Tokki Tok**
 
