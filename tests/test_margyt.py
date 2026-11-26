@@ -33,6 +33,11 @@ ROOT = os.path.dirname(HERE)
 FIXTURE = os.path.join(HERE, "data", "fixture.apk")
 
 
+def _read_source(relative_path):
+    with open(os.path.join(ROOT, relative_path), encoding="utf-8") as source:
+        return source.read()
+
+
 def fixture() -> Apk:
     return Apk(FIXTURE)
 
@@ -1266,19 +1271,18 @@ if __name__ == "__main__":
 
 class PrerecolouredLikeAnimationTest(unittest.TestCase):
     def test_like_animations_are_cached_and_prewarmed_off_the_ui_thread(self):
-        java = open(os.path.join(ROOT, "inject/java/cat/narezany/margyt/Accent.java"), encoding="utf-8").read()
+        java = _read_source("inject/java/cat/narezany/margyt/Accent.java")
         self.assertIn("likeAnimationJson(", java)
         self.assertIn("prewarmLikeAnimations", java)
         self.assertIn("margyt-like-prewarm", java)
-        margy = open(os.path.join(ROOT, "inject/java/cat/narezany/margyt/Margy.java"), encoding="utf-8").read()
+        margy = _read_source("inject/java/cat/narezany/margyt/Margy.java")
         self.assertIn("Accent.prewarmLikeAnimations(null)", margy)
 
 
 class PrerecolouredAtBuildTest(unittest.TestCase):
     def test_palette_matches_the_app(self):
         from margyt import prerecolour
-        accent = open(os.path.join(ROOT, "inject/java/cat/narezany/margyt/Accent.java"),
-                      encoding="utf-8").read()
+        accent = _read_source("inject/java/cat/narezany/margyt/Accent.java")
         found = re.search(r"PALETTE=\{([^}]*)\}", accent).group(1)
         values = [int(x, 16) for x in re.findall(r"0x([0-9A-Fa-f]{8})", found)]
         self.assertEqual(values, prerecolour.PALETTE)
@@ -1305,8 +1309,7 @@ class PrerecolouredAtBuildTest(unittest.TestCase):
                 self.assertNotIn("FE2C55", done.decode().upper())
                 self.assertNotEqual(body["layers"][0]["ks"]["k"][:3],
                                     [0.99607843, 0.17254902, 0.33333333])
-        java = open(os.path.join(ROOT, "inject/java/cat/narezany/margyt/Accent.java"),
-                    encoding="utf-8").read()
+        java = _read_source("inject/java/cat/narezany/margyt/Accent.java")
         self.assertIn('"margyt/rc/"', java)
         self.assertTrue(prerecolour.shipped_path("Like_Heart.json", 0xFF6750A4)
                         .startswith("assets/margyt/rc/6750A4/"))
@@ -1314,8 +1317,7 @@ class PrerecolouredAtBuildTest(unittest.TestCase):
 
 class CustomColourReadyTest(unittest.TestCase):
     def test_custom_colour_hearts_never_build_on_the_ui_thread(self):
-        java = open(os.path.join(ROOT, "inject/java/cat/narezany/margyt/Accent.java"),
-                    encoding="utf-8").read()
+        java = _read_source("inject/java/cat/narezany/margyt/Accent.java")
         body = java[java.index("public static void setAnimation"):java.index("// Pre-recoloured like animations.")]
         self.assertIn("likeAnimationReady(", body)
         self.assertIn("scheduleLikeBuild(", body)
