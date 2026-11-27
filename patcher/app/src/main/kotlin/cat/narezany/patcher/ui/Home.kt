@@ -87,7 +87,7 @@ fun HomeScreen(open: (String) -> Unit, settings: () -> Unit) {
         modifier = Modifier.nestedScroll(behaviour.nestedScrollConnection),
         topBar = {
             LargeTopAppBar(
-                title = { Text("Margy Patcher", fontWeight = FontWeight.SemiBold) },
+                title = { Text("Tokki Tok", fontWeight = FontWeight.SemiBold) },
                 actions = {
                     FilledTonalIconButton(onClick = settings, modifier = Modifier.padding(end = 8.dp)) {
                         Icon(Icons.Rounded.Settings, contentDescription = words.settings)
@@ -156,6 +156,29 @@ fun HomeScreen(open: (String) -> Unit, settings: () -> Unit) {
                 }
             }
             if (known != null) {
+                if (standings.isEmpty()) {
+                    item {
+                        Card(
+                            shape = RoundedCornerShape(28.dp),
+                            colors = CardDefaults.cardColors(
+                                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh),
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(20.dp)) {
+                                Text(
+                                    "Tokki Tok — alpha",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.SemiBold,
+                                )
+                                Spacer(Modifier.height(8.dp))
+                                Text(
+                                    "Установочная основа готова. Сам мод TikTok появится здесь после сборки и проверки первого патча.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
                 items(standings, key = { it.mod.id }) { standing ->
                     ModCard(standing, state, open = { open(standing.mod.id) })
                 }
