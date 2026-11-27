@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "MargyPatcher"
+rootProject.name = "TokkiTokAndroid"
 include(":core", ":app")
